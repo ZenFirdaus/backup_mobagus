@@ -8,7 +8,7 @@
 **Local Storage:** Hive  
 **Backend Services:** Supabase dan Supabase Edge Functions  
 **Design Direction:** Culinary Editorial Futurism  
-**Service Area:** Bandung, Jawa Barat
+**Service Area:** Daerah Istimewa Yogyakarta (DIY) dan Jawa Tengah
 
 ---
 
@@ -22,7 +22,9 @@ FOODIE adalah aplikasi mobile untuk membantu pengguna menemukan, mengeksplorasi,
 
 Aplikasi menggabungkan pencarian kuliner, rekomendasi AI, asisten LLM, peta digital, pemilihan makanan menggunakan sensor, mini game, sistem achievement, konversi mata uang, dan konversi zona waktu.
 
-FOODIE secara eksklusif menyediakan penemuan kuliner di wilayah layanan Bandung, Jawa Barat. Pengguna dapat mencari restoran, melihat informasi menu, menyimpan favorit, membaca rekomendasi, serta menemukan tempat makan yang sesuai dengan kebutuhan.
+FOODIE secara eksklusif menyediakan penemuan kuliner di wilayah Daerah Istimewa Yogyakarta (DIY) dan Provinsi Jawa Tengah. Pengguna dapat mencari restoran, melihat informasi menu, menyimpan favorit, membaca rekomendasi, serta menemukan tempat makan yang sesuai dengan kebutuhan.
+
+Cakupan layanan meliputi kabupaten dan kota di DIY dan Jawa Tengah sesuai batas administrasi resmi yang ditetapkan dalam konfigurasi aplikasi.
 
 Contoh penggunaan:
 
@@ -41,7 +43,7 @@ Menjadi aplikasi eksplorasi kuliner lokal yang membantu pengguna menemukan makan
 3. **Visual Appetite:** foto makanan harus menggugah selera.
 4. **Simple Interaction:** fitur mudah dipahami dan digunakan.
 5. **Trustworthy Information:** informasi berdasarkan data yang tersedia.
-6. **Local Discovery:** pencarian kuliner dibatasi pada wilayah layanan Bandung.
+6. **Local Discovery:** pencarian kuliner dibatasi pada wilayah DIY dan Jawa Tengah.
 7. **Smart Technology:** AI, sensor, dan blockchain harus memiliki fungsi yang jelas.
 8. **Simple Engineering:** kode sederhana, modular, dan mudah dikembangkan.
 
@@ -60,7 +62,7 @@ Menjadi aplikasi eksplorasi kuliner lokal yang membantu pengguna menemukan makan
 |---|---|
 | Mahasiswa | Kuliner terjangkau dan dekat |
 | Pekerja | Tempat makan praktis |
-| Wisatawan | Eksplorasi kuliner Bandung |
+| Wisatawan | Eksplorasi kuliner DIY dan Jawa Tengah |
 | Food Explorer | Menemukan makanan baru |
 | Pengguna umum | Rekomendasi sesuai preferensi |
 
@@ -108,7 +110,7 @@ Setiap fitur wajib benar-benar berfungsi. Tampilan tombol atau halaman tanpa imp
 - Search dan Explore.
 - Filter dan sorting.
 - Restaurant Detail.
-- LBS dan pembatasan wilayah Bandung.
+- LBS dan pembatasan wilayah DIY serta Jawa Tengah.
 - Supabase PostgreSQL.
 - Hive local storage.
 - Profile dan feedback.
@@ -138,51 +140,64 @@ Seluruh fitur yang diwajibkan mata kuliah tetap harus diimplementasikan. Priorit
 
 ---
 
-## 4. Geographic Scope — Bandung Only
+## 4. Geographic Scope — DIY & Jawa Tengah Only
 
 ### 4.1 Batas Wilayah
 
-FOODIE hanya menyediakan layanan eksplorasi kuliner di wilayah Bandung.
+FOODIE hanya menyediakan layanan eksplorasi kuliner di wilayah Daerah Istimewa Yogyakarta dan Provinsi Jawa Tengah.
 
-Sebelum implementasi, tim harus menetapkan apakah cakupan wilayah berarti Kota Bandung saja atau Bandung Raya, termasuk wilayah sekitarnya seperti Kabupaten Bandung, Kabupaten Bandung Barat, dan Kota Cimahi.
+Cakupan layanan meliputi seluruh kabupaten dan kota di kedua wilayah tersebut, dengan batas geografis mengikuti batas administrasi resmi.
 
-Batas geografis harus ditentukan secara eksplisit dan digunakan secara konsisten oleh aplikasi, database, dan API.
+Wilayah DIY meliputi:
+- Kota Yogyakarta.
+- Kabupaten Sleman.
+- Kabupaten Bantul.
+- Kabupaten Kulon Progo.
+- Kabupaten Gunungkidul.
+
+Wilayah Jawa Tengah meliputi kabupaten dan kota dalam Provinsi Jawa Tengah, termasuk Kota Surakarta, Kota Semarang, Kabupaten Klaten? 
+
+**Catatan batas administratif:** Kabupaten Klaten termasuk Provinsi Jawa Tengah. Seluruh wilayah layanan harus ditentukan berdasarkan data batas administrasi resmi, bukan hanya daftar kota populer.
+
+Batas geografis harus ditetapkan secara eksplisit dan digunakan secara konsisten oleh aplikasi, database, dan API. Data restoran wajib memiliki koordinat geografis yang valid agar dapat diverifikasi terhadap wilayah layanan.
 
 ### 4.2 Location Rules
 
-- Restoran di luar wilayah layanan tidak boleh muncul dalam pencarian.
-- Pengguna di luar Bandung tetap dapat membuka aplikasi.
-- Pengguna di luar wilayah layanan dapat memilih lokasi pencarian secara manual di dalam Bandung.
+- Restoran di luar DIY dan Jawa Tengah tidak boleh muncul dalam pencarian.
+- Pengguna di luar wilayah layanan tetap dapat membuka aplikasi.
+- Pengguna di luar wilayah layanan dapat memilih lokasi pencarian secara manual di DIY atau Jawa Tengah.
 - Izin GPS yang ditolak tidak boleh membuat fitur pencarian sepenuhnya tidak dapat digunakan.
 - Backend harus memvalidasi batas geografis.
 - Data kuliner yang tersimpan di Hive tetap mengikuti pembatasan wilayah.
 - Lokasi perangkat dan lokasi pencarian manual harus dibedakan.
+- Pengguna dapat mengeksplorasi kuliner lintas wilayah DIY dan Jawa Tengah melalui lokasi pencarian manual.
 
 Pesan ketika pengguna berada di luar wilayah:
 
-"FOODIE saat ini hanya menyediakan eksplorasi kuliner di Bandung. Pilih lokasi di Bandung untuk mulai menemukan makanan."
+"FOODIE saat ini hanya menyediakan eksplorasi kuliner di DIY dan Jawa Tengah. Pilih lokasi di wilayah tersebut untuk mulai menemukan makanan."
 
 ### 4.3 Location-Based Services
 
 Fitur LBS meliputi:
 
 - Mendeteksi lokasi pengguna setelah izin diberikan.
-- Menampilkan restoran terdekat.
+- Menampilkan restoran terdekat dari lokasi pencarian.
 - Menghitung jarak dari lokasi pencarian.
 - Menampilkan lokasi restoran pada peta.
 - Membuka rute melalui layanan peta.
 - Mendukung check-in sesuai aturan aplikasi.
+- Memastikan hasil pencarian berada di dalam batas DIY dan Jawa Tengah.
 
 ### 4.4 Geographic Acceptance Criteria
 
 | Kondisi | Hasil |
 |---|---|
-| Lokasi dalam wilayah layanan | Pencarian kuliner tersedia |
-| Lokasi di luar wilayah | Tampilkan informasi pembatasan |
+| Lokasi dalam DIY atau Jawa Tengah | Pencarian kuliner tersedia |
+| Lokasi di luar wilayah layanan | Tampilkan informasi pembatasan |
 | GPS ditolak | Pengguna dapat memilih lokasi manual |
 | Lokasi manual di luar area | Permintaan ditolak |
 | API menerima koordinat di luar area | Hasil dibatasi oleh backend |
-| AI diminta mencari kuliner kota lain | Jelaskan batas layanan dan tawarkan kuliner Bandung |
+| AI diminta mencari kuliner kota lain di luar cakupan | Jelaskan batas layanan dan tawarkan kuliner DIY atau Jawa Tengah |
 
 ---
 
@@ -293,7 +308,7 @@ Sorting:
 - Most Relevant.
 
 Rules:
-- Hasil harus berada dalam batas Bandung.
+- Hasil harus berada dalam batas DIY dan Jawa Tengah.
 - Filter aktif harus terlihat.
 - Pengguna dapat menghapus filter.
 - Sediakan Reset Filters.
@@ -346,9 +361,10 @@ AI tidak boleh menambahkan restoran di luar kandidat yang sudah divalidasi.
 ### 6.6 FOODIE AI Assistant — LLM
 
 Contoh pertanyaan:
-- "Makanan khas Bandung apa yang cocok untukku?"
+- "Makanan khas Yogyakarta apa yang cocok untukku?"
 - "Cari makanan pedas di bawah Rp30.000."
 - "Aku ingin jajanan yang dekat dari lokasi pencarianku."
+- "Rekomendasikan kuliner khas Jawa Tengah."
 
 Rules:
 - Fakta restoran berasal dari database atau API.
@@ -357,7 +373,7 @@ Rules:
 - API key LLM disimpan di backend.
 - Batasi request untuk mengendalikan biaya.
 - Jika AI gagal, fitur pencarian biasa tetap dapat digunakan.
-- Permintaan kuliner di luar wilayah layanan harus ditangani sesuai aturan Bandung-only.
+- Permintaan kuliner di luar wilayah layanan harus ditangani sesuai aturan DIY dan Jawa Tengah.
 
 ### 6.7 Accelerometer — Shake to Decide
 
@@ -529,7 +545,7 @@ Karakter visual:
 
 Futuristik diwujudkan melalui kualitas interface dan interaksi, bukan efek neon berlebihan.
 
-## 7.1 Color Palette
+### 7.1 Color Palette
 
 | Color | Hex | Usage |
 |---|---|---|
@@ -550,7 +566,7 @@ Rules:
 - Pastikan kontras teks memadai.
 - Hindari warna neon yang tidak relevan.
 
-## 7.2 Typography
+### 7.2 Typography
 
 Gunakan maksimal dua keluarga font:
 - **Display:** DM Serif Display atau Playfair Display.
@@ -558,7 +574,7 @@ Gunakan maksimal dua keluarga font:
 
 Serif digunakan sebagai aksen editorial. Sans-serif digunakan untuk navigasi, form, label, harga, dan informasi penting.
 
-## 7.3 Layout & Spacing
+### 7.3 Layout & Spacing
 
 - Grid dasar 4/8 px.
 - Padding halaman 20–24 px.
@@ -569,7 +585,7 @@ Serif digunakan sebagai aksen editorial. Sans-serif digunakan untuk navigasi, fo
 - Grid konsisten.
 - Layout asimetris digunakan secukupnya.
 
-## 7.4 Photography Direction
+### 7.4 Photography Direction
 
 Gunakan foto makanan dengan:
 - Pencahayaan hangat.
@@ -581,7 +597,7 @@ Gunakan foto makanan dengan:
 
 Jangan menggunakan foto yang tidak sesuai dengan nama menu. Gunakan placeholder jika gambar gagal dimuat.
 
-## 7.5 Component Rules
+### 7.5 Component Rules
 
 **Search Bar**
 - Placeholder: "Cari makanan, restoran, atau rasa..."
@@ -615,7 +631,7 @@ Jangan menggunakan foto yang tidak sesuai dengan nama menu. Gunakan placeholder 
 - Label harus jelas dan menunjukkan tindakan.
 - Setiap tombol harus memberikan feedback.
 
-## 7.6 Screen Layout
+### 7.6 Screen Layout
 
 **Home**
 1. Header dan lokasi.
@@ -662,7 +678,7 @@ Jangan menggunakan foto yang tidak sesuai dengan nama menu. Gunakan placeholder 
 - Feedback.
 - Settings dan logout.
 
-## 7.7 Motion & Accessibility
+### 7.7 Motion & Accessibility
 
 - Transisi sekitar 150–250 ms.
 - Animasi harus mendukung interaksi.
@@ -694,14 +710,14 @@ Jangan menggunakan foto yang tidak sesuai dengan nama menu. Gunakan placeholder 
 
 **Tidak menggunakan Laravel, MySQL, SQLite, atau Firebase sebagai komponen arsitektur FOODIE.**
 
-## 8.1 Supabase — Online Database
+### 8.1 Supabase — Online Database
 
 Supabase PostgreSQL menjadi sumber utama data yang perlu diakses lintas perangkat.
 
 | Table | Function |
 |---|---|
 | `profiles` | Profil pengguna |
-| `restaurants` | Data restoran Bandung |
+| `restaurants` | Data restoran DIY dan Jawa Tengah |
 | `foods` | Data menu |
 | `categories` | Kategori kuliner |
 | `favorites` | Favorit pengguna |
@@ -715,9 +731,23 @@ Supabase PostgreSQL menjadi sumber utama data yang perlu diakses lintas perangka
 
 Setiap tabel harus memiliki struktur, primary key, foreign key, constraint, dan indeks yang sesuai.
 
+Tabel `restaurants` setidaknya perlu mendukung:
+- Identitas restoran.
+- Nama dan kategori.
+- Alamat.
+- Koordinat latitude dan longitude.
+- Kabupaten/kota.
+- Provinsi.
+- Kisaran harga.
+- Rating jika tersedia.
+- URL foto jika tersedia.
+- Informasi jam operasional jika tersedia.
+
+Data wilayah harus mengikuti batas administrasi resmi DIY dan Jawa Tengah.
+
 Supabase Auth mengelola identitas dan sesi. Tabel `profiles` menyimpan informasi profil aplikasi yang berkaitan dengan user ID Supabase.
 
-## 8.2 Hive — Local Storage
+### 8.2 Hive — Local Storage
 
 Hive digunakan untuk penyimpanan lokal ringan di perangkat.
 
@@ -733,8 +763,7 @@ Data yang dapat disimpan:
 
 Hive tidak menggantikan Supabase sebagai database online. Hive digunakan agar aplikasi tetap responsif dan memiliki data lokal saat koneksi tidak tersedia.
 
-### Hive Rules
-
+**Hive Rules**
 - Inisialisasi Hive sebelum box digunakan.
 - Gunakan nama box yang konsisten.
 - Tentukan model atau format data yang stabil.
@@ -746,7 +775,7 @@ Hive tidak menggantikan Supabase sebagai database online. Hive digunakan agar ap
 - Tangani data rusak atau box gagal dibuka.
 - Jangan menyimpan data yang tidak diperlukan.
 
-## 8.3 Supabase Security
+### 8.3 Supabase Security
 
 - Aktifkan RLS pada tabel yang membutuhkan pembatasan akses.
 - Pengguna hanya boleh mengakses data yang diizinkan.
@@ -757,7 +786,7 @@ Hive tidak menggantikan Supabase sebagai database online. Hive digunakan agar ap
 - Batasi request jika diperlukan.
 - Bedakan data publik dan privat.
 
-## 8.4 Offline & Synchronization
+### 8.4 Offline & Synchronization
 
 1. Supabase menjadi sumber utama data online.
 2. Hive menyimpan cache dan draft lokal.
@@ -767,9 +796,9 @@ Hive tidak menggantikan Supabase sebagai database online. Hive digunakan agar ap
 6. Saat online kembali, perubahan dikirim melalui proses sinkronisasi.
 7. Cegah review, check-in, skor, dan reward terkirim ganda.
 8. Konflik data harus memiliki aturan yang jelas.
-9. Seluruh cache kuliner tetap mengikuti batas wilayah Bandung.
+9. Seluruh cache kuliner tetap mengikuti batas wilayah DIY dan Jawa Tengah.
 
-## 8.5 System Architecture
+### 8.5 System Architecture
 
 **Pencarian kuliner**
 
@@ -787,15 +816,14 @@ Flutter → Hive Service → Cache lokal → Sinkronisasi ke Supabase saat diper
 
 Flutter → Supabase Auth → Session/token → Secure Storage → Akses data sesuai RLS.
 
-### Architecture Rules
-
+**Architecture Rules**
 - Flutter mengelola UI dan interaksi.
 - Service layer menangani request dan integrasi.
 - Supabase menjadi layanan online utama.
 - Hive menangani penyimpanan lokal.
 - Edge Functions digunakan untuk secret dan operasi sensitif yang sesuai.
 - AI tidak menggantikan database restoran.
-- LBS mengikuti satu batas geografis.
+- LBS mengikuti satu batas geografis DIY dan Jawa Tengah.
 - Seed data dapat digunakan untuk demo jika sumber data eksternal belum tersedia.
 
 ---
@@ -861,7 +889,7 @@ Struktur dibuat modular, tetapi tidak memerlukan arsitektur yang terlalu komplek
 9. Tangani error secara eksplisit.
 10. Jangan membuat tombol dummy yang terlihat berfungsi.
 
-## 10.1 Dart Naming
+### 10.1 Dart Naming
 
 - Class: `PascalCase`.
 - Variable dan function: `camelCase`.
@@ -872,7 +900,7 @@ Struktur dibuat modular, tetapi tidak memerlukan arsitektur yang terlalu komplek
 - Jangan memanggil API di dalam `build()`.
 - Hindari null assertion tanpa pemeriksaan yang tepat.
 
-## 10.2 Supabase Rules
+### 10.2 Supabase Rules
 
 - Inisialisasi Supabase satu kali saat aplikasi dimulai.
 - Pisahkan autentikasi dan query melalui service.
@@ -884,7 +912,7 @@ Struktur dibuat modular, tetapi tidak memerlukan arsitektur yang terlalu komplek
 - Uji akses menggunakan beberapa akun.
 - Jangan mempercayai reward yang dikirim langsung oleh client.
 
-## 10.3 Hive Rules
+### 10.3 Hive Rules
 
 - Gunakan service khusus untuk akses Hive.
 - Jangan memanggil operasi storage berulang di dalam `build()`.
@@ -895,7 +923,7 @@ Struktur dibuat modular, tetapi tidak memerlukan arsitektur yang terlalu komplek
 - Jangan menganggap data Hive sebagai sumber utama data online.
 - Jangan membuat mekanisme sinkronisasi kompleks sebelum kebutuhan dasar berfungsi.
 
-## 10.4 Sensor Rules
+### 10.4 Sensor Rules
 
 - Listener hanya aktif ketika fitur digunakan.
 - Listener dihentikan ketika halaman ditutup.
@@ -903,7 +931,7 @@ Struktur dibuat modular, tetapi tidak memerlukan arsitektur yang terlalu komplek
 - Sediakan tombol manual.
 - Tangani perangkat yang tidak mendukung sensor.
 
-## 10.5 Code Quality
+### 10.5 Code Quality
 
 Sebelum fitur dianggap selesai:
 
@@ -964,7 +992,7 @@ Contoh error:
 
 Format ini merupakan kontrak untuk fungsi custom. Respons Supabase native dapat berbeda dan harus ditangani sesuai endpoint.
 
-## 11.1 Supabase Initialization Example
+### 11.1 Supabase Initialization Example
 
 ```dart
 import 'package:flutter/material.dart';
@@ -1013,7 +1041,7 @@ Contoh tersebut menunjukkan inisialisasi dasar. Model Hive yang menggunakan adap
 
 `SUPABASE_URL` dan `SUPABASE_ANON_KEY` harus disediakan pada konfigurasi build. Publishable/anon key boleh digunakan di client jika RLS dikonfigurasi dengan benar. Service-role key tidak boleh dimasukkan ke Flutter.
 
-## 11.2 Restaurant Model Example
+### 11.2 Restaurant Model Example
 
 ```dart
 class Restaurant {
@@ -1046,7 +1074,7 @@ class Restaurant {
 }
 ```
 
-## 11.3 Restaurant Service Example
+### 11.3 Restaurant Service Example
 
 ```dart
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1069,9 +1097,9 @@ class RestaurantService {
 }
 ```
 
-Ini adalah query dasar. Filter geografis, jarak, pagination, dan aturan akses harus ditambahkan sesuai schema dan backend. Jangan menjadikan query ini sebagai satu-satunya perlindungan Bandung-only.
+Ini adalah query dasar. Filter geografis, jarak, pagination, dan aturan akses harus ditambahkan sesuai schema dan backend. Jangan menjadikan query ini sebagai satu-satunya perlindungan DIY dan Jawa Tengah-only.
 
-## 11.4 Hive Cache Example
+### 11.4 Hive Cache Example
 
 ```dart
 import 'package:hive_flutter/hive_flutter.dart';
@@ -1113,7 +1141,7 @@ Contoh ini sesuai untuk data sederhana yang dapat disimpan sebagai map. Untuk mo
 - Endpoint sensitif memiliki kontrol akses.
 - Biometrik tidak mengirimkan data biometrik ke server.
 
-## 12.1 Privacy
+### 12.1 Privacy
 
 - Izin lokasi diminta sesuai kebutuhan.
 - Pengumpulan data dibatasi.
@@ -1121,7 +1149,7 @@ Contoh ini sesuai untuk data sederhana yang dapat disimpan sebagai map. Untuk mo
 - Data sensitif tidak disimpan sembarangan.
 - Integrasi pihak ketiga dijelaskan sesuai implementasi.
 
-## 12.2 Reliability
+### 12.2 Reliability
 
 - Tangani timeout dan kegagalan API.
 - Aplikasi tidak crash saat offline.
@@ -1129,7 +1157,7 @@ Contoh ini sesuai untuk data sederhana yang dapat disimpan sebagai map. Untuk mo
 - Retry tidak menghasilkan duplikasi.
 - Fitur inti tetap berjalan ketika AI gagal.
 
-## 12.3 Performance
+### 12.3 Performance
 
 - Optimalkan ukuran gambar.
 - Gunakan pagination untuk data panjang.
@@ -1138,7 +1166,7 @@ Contoh ini sesuai untuk data sederhana yang dapat disimpan sebagai map. Untuk mo
 - Hindari rebuild widget yang tidak diperlukan.
 - Jangan membaca Hive secara berulang di setiap build tanpa kebutuhan.
 
-## 12.4 Maintainability
+### 12.4 Maintainability
 
 - Pisahkan tanggung jawab kode.
 - Dokumentasikan schema dan integrasi.
@@ -1163,7 +1191,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 - Stale cache.
 - Permission denied.
 
-## 13.1 Error Rules
+### 13.1 Error Rules
 
 - Jangan menampilkan stack trace kepada pengguna.
 - Gunakan pesan yang mudah dipahami.
@@ -1178,7 +1206,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 
 ## 14. Core Product Rules
 
-1. Seluruh penemuan kuliner mengikuti batas Bandung.
+1. Seluruh penemuan kuliner mengikuti batas DIY dan Jawa Tengah.
 2. Search, filter, detail, dan rute merupakan fungsi inti.
 3. Fitur tambahan tidak boleh menghambat fungsi utama.
 4. Tidak boleh ada tombol yang berpura-pura aktif.
@@ -1186,7 +1214,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 6. Budget dan jarak eksplisit harus dihormati.
 7. Hasil kosong harus memberikan solusi berikutnya.
 
-## 14.1 UI/UX Rules
+### 14.1 UI/UX Rules
 
 8. Gunakan Culinary Editorial Futurism secara konsisten.
 9. Foto makanan menjadi fokus visual.
@@ -1196,7 +1224,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 13. Komponen dengan fungsi sama harus konsisten.
 14. Tombol penting harus memberikan feedback.
 
-## 14.2 AI & Data Rules
+### 14.2 AI & Data Rules
 
 15. Database/API menjadi sumber fakta restoran.
 16. AI tidak boleh mengarang fakta.
@@ -1205,7 +1233,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 19. Kegagalan AI tidak boleh mematikan pencarian.
 20. Rekomendasi harus menggunakan kandidat kuliner yang telah divalidasi.
 
-## 14.3 Security Rules
+### 14.3 Security Rules
 
 21. Jangan menyimpan password plaintext.
 22. Jangan mengekspos service-role key.
@@ -1214,7 +1242,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 25. Jangan mempercayai reward dari client.
 26. Jangan menulis token atau secret ke log.
 
-## 14.4 Location & Sensor Rules
+### 14.4 Location & Sensor Rules
 
 27. Izin lokasi harus kontekstual.
 28. Lokasi manual harus tersedia.
@@ -1223,16 +1251,16 @@ Halaman yang mengambil data harus menangani state yang relevan:
 31. Shake to Decide memiliki cooldown.
 32. Gyroscope memiliki fallback manual.
 
-## 14.5 Storage Rules
+### 14.5 Storage Rules
 
 33. Supabase menjadi sumber utama data online.
 34. Hive digunakan untuk cache dan penyimpanan lokal.
 35. Draft offline tidak boleh dianggap sudah terkirim.
 36. Sinkronisasi harus mencegah duplikasi.
-37. Cache kuliner harus mengikuti batas Bandung.
+37. Cache kuliner harus mengikuti batas DIY dan Jawa Tengah.
 38. Data sensitif tidak disimpan di Hive biasa tanpa perlindungan.
 
-## 14.6 Gamification & Blockchain Rules
+### 14.6 Gamification & Blockchain Rules
 
 39. Foodie Points memiliki aturan yang jelas.
 40. Reward online divalidasi server.
@@ -1240,14 +1268,14 @@ Halaman yang mengambil data harus menangani state yang relevan:
 42. Hash tidak membuktikan kebenaran review.
 43. Simulasi tidak boleh disebut blockchain terdesentralisasi.
 
-## 14.7 Converter & Notification Rules
+### 14.7 Converter & Notification Rules
 
 44. Currency mendukung IDR, USD, dan MYR.
 45. Timezone mendukung WIB, WITA, WIT, dan London.
 46. Perubahan tanggal dan daylight saving harus ditangani.
 47. Notifikasi mengikuti izin dan preferensi pengguna.
 
-## 14.8 Engineering Rules
+### 14.8 Engineering Rules
 
 48. Pisahkan UI, model, service, dan storage.
 49. Gunakan penamaan yang konsisten.
@@ -1269,7 +1297,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 | Biometric | Tersedia pada perangkat yang mendukung |
 | Supabase | Data online dibaca dan ditulis sesuai hak akses |
 | Hive | Cache dan draft tersimpan secara lokal |
-| Bandung-only | Hasil pencarian tidak melewati batas layanan |
+| DIY & Jawa Tengah-only | Hasil pencarian tidak melewati batas layanan |
 | Search | Search, filter, sorting, dan reset berfungsi |
 | LBS | Lokasi, jarak, dan rute berfungsi dengan fallback |
 | AI | Rekomendasi mengikuti filter dan data valid |
@@ -1294,7 +1322,7 @@ Halaman yang mengambil data harus menangani state yang relevan:
 2. **Authentication Testing:** login, logout, session, dan biometrik.
 3. **Database Testing:** Supabase, Hive, dan sinkronisasi.
 4. **Security Testing:** RLS, akses data, dan penyimpanan secret.
-5. **Location Testing:** lokasi Bandung, luar wilayah, izin ditolak, dan GPS mati.
+5. **Location Testing:** lokasi di DIY, Jawa Tengah, luar wilayah, izin ditolak, dan GPS mati.
 6. **Sensor Testing:** shake, cooldown, gyroscope, dan fallback.
 7. **AI Testing:** budget, jarak, hasil kosong, dan request luar wilayah.
 8. **Converter Testing:** input tidak valid, kurs gagal, dan pergantian tanggal.
@@ -1324,9 +1352,9 @@ Halaman yang mengambil data harus menangani state yang relevan:
 | Wilayah tidak konsisten | Gunakan satu konfigurasi batas geografis |
 | Konflik data lokal dan online | Tentukan aturan sinkronisasi |
 
-## 17.1 Development Roadmap
+### 17.1 Development Roadmap
 
-### Phase 1 — Foundation
+#### Phase 1 — Foundation
 - Setup Flutter.
 - Konfigurasi Supabase.
 - Schema database dan RLS.
@@ -1335,34 +1363,34 @@ Halaman yang mengambil data harus menangani state yang relevan:
 - Profile dan feedback.
 - Hive initialization.
 
-### Phase 2 — Culinary Discovery
-- Data restoran Bandung.
+#### Phase 2 — Culinary Discovery
+- Data restoran DIY dan Jawa Tengah.
 - Search dan filter.
 - Restaurant Detail.
 - LBS dan peta.
 - Favorites.
 - Hive cache.
 
-### Phase 3 — Mandatory Tools & Sensors
+#### Phase 3 — Mandatory Tools & Sensors
 - Currency Converter.
 - Timezone Converter.
 - Accelerometer.
 - Gyroscope.
 - Mobile notification.
 
-### Phase 4 — AI & Engagement
+#### Phase 4 — AI & Engagement
 - AI Recommendation.
 - LLM Assistant.
 - Check-in.
 - Mini Game.
 - Foodie Points dan achievement.
 
-### Phase 5 — Advanced Features
+#### Phase 5 — Advanced Features
 - Blockchain verification.
 - Panorama 360°.
 - Leaderboard jika memungkinkan.
 
-### Phase 6 — Testing & Finalization
+#### Phase 6 — Testing & Finalization
 - Functional testing.
 - Security testing.
 - Offline testing.
@@ -1390,7 +1418,7 @@ Fitur dianggap selesai jika:
 - Tidak ada tombol atau klaim palsu.
 - Dokumentasi diperbarui.
 
-## 18.1 Final Product Principles
+### 18.1 Final Product Principles
 
 **Crave-worthy:** makanan ditampilkan dengan visual yang menggugah selera.
 
