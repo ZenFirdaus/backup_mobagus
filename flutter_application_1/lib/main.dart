@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/intro.dart';
 import 'props/app_colors.dart';
@@ -13,7 +14,14 @@ import 'props/app_text.dart';
 ///
 ///  - Login & Register bisa saling pindah lewat tab "Masuk Akun / Daftar Akun".
 ///  - "Nanti Saja" di BiometricPage langsung ke HomePage.
-void main() => runApp(const FoodieApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: 'https://pasbipbzosiifdkqlxtl.supabase.co',
+    publishableKey: 'sb_publishable_DWyoa4A5cOH8vISaS375yA_oOvPybT1',
+  );
+  runApp(const FoodieApp());
+}
 
 class FoodieApp extends StatelessWidget {
   const FoodieApp({super.key});

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../utils/validators.dart';
 import '../widgets/buttons.dart';
 import '../widgets/text_field.dart';
-import '../widgets/auth_widgets.dart';
-import '../widgets/common_widgets.dart';
 import 'home.dart';
 import 'register.dart';
 
-/// Alur: Onboarding ─► LoginPage ─► HomePage
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -42,301 +40,238 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    // TODO: ganti dengan Supabase signInWithPassword(email, password)
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    _goHome(_email.text.trim().split('@').first);
-  }
 
-  Future<void> _loginWithFingerprint() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const _ScanningDialog(),
-    );
-    // TODO: ganti dengan local_auth (authenticate)
-    await Future.delayed(const Duration(milliseconds: 1400));
-    if (!mounted) return;
-    Navigator.of(context).pop(); // tutup dialog
-    _goHome('Kurator');
+    try {
+      final res = await Supabase.instance.client.auth.signInWithPassword(
+        email: _email.text.trim(),
+        password: _password.text,
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+      final name = res.user?.userMetadata?['name'] as String? ??
+          _email.text.trim().split('@').first;
+      _goHome(name);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      String msg = e.message;
+      if (msg.toLowerCase().contains('invalid login credentials')) {
+        msg = 'Email atau kata sandi salah. Silakan periksa kembali.';
+      } else if (msg.toLowerCase().contains('email not confirmed')) {
+        msg = 'Email belum diverifikasi. Masuk langsung dalam mode demo.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _goHome(_email.text.trim().split('@').first);
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _goHome(_email.text.trim().split('@').first);
+    }
   }
 
   void _toRegister() {
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const RegisterPage()));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const RegisterPage()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AuthHeader(),
-                const SizedBox(height: 14),
-                _banner(),
-                const SizedBox(height: 18),
-                Text('Sugeng Rawuh,', style: AppText.display(24)),
-                Text(
-                  'Kurator Rasa',
-                  style: AppText.display(
-                    24,
-                    italic: true,
-                    weight: FontWeight.w600,
-                    color: AppColors.red,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Masuk ke akun FOODIE Anda untuk mengakses 420+ kurasi kuliner legendaris, simpan favorit, dan kumpulkan Foodie Points.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AuthTabs(
-                  selected: 0,
-                  onChanged: (i) {
-                    if (i == 1) _toRegister();
-                  },
-                ),
-                const SizedBox(height: 18),
-                AppTextField(
-                  label: 'Alamat Email',
-                  hint: 'nama@email.com',
-                  icon: Icons.mail_outline,
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.email,
-                  showValid: Validators.email(_email.text) == null,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 14),
-                AppTextField(
-                  label: 'Kata Sandi',
-                  hint: 'Masukkan kata sandi',
-                  icon: Icons.lock_outline,
-                  controller: _password,
-                  isPassword: true,
-                  textInputAction: TextInputAction.done,
-                  validator: (v) => Validators.required(v, 'Kata sandi'),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: Checkbox(
-                        value: _remember,
-                        activeColor: AppColors.greenDark,
-                        visualDensity: VisualDensity.compact,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.greenDark,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        onChanged: (v) => setState(() => _remember = v ?? true),
+                        child: const Text(
+                          'FOODIE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                            color: AppColors.yellow,
+                          ),
+                        ),
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.location_on,
+                                size: 12, color: AppColors.red),
+                            SizedBox(width: 4),
+                            Text(
+                              'DIY & Jateng',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  Text('Masuk Akun', style: AppText.display(26)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Jelajahi warisan kuliner autentik Nusantara.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted,
                     ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Ingat Saya di Perangkat Ini',
+                  ),
+                  const SizedBox(height: 24),
+                  AppTextField(
+                    label: 'Email',
+                    hint: 'nama@email.com',
+                    icon: Icons.mail_outline_rounded,
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    validator: Validators.email,
+                  ),
+                  const SizedBox(height: 14),
+                  AppTextField(
+                    label: 'Kata Sandi',
+                    hint: 'Masukkan kata sandi',
+                    icon: Icons.lock_outline_rounded,
+                    controller: _password,
+                    isPassword: true,
+                    textInputAction: TextInputAction.done,
+                    validator: (v) => Validators.required(v, 'Kata sandi'),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: Checkbox(
+                          value: _remember,
+                          activeColor: AppColors.greenDark,
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          onChanged: (v) =>
+                              setState(() => _remember = v ?? true),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Ingat saya',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
+                          color: AppColors.textDark,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    LinkText(
-                      'Lupa Kata Sandi?',
-                      size: 10.5,
-                      onTap: () => showComingSoon(context, 'Reset kata sandi'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                PrimaryButton(
-                  label: 'Masuk dengan Supabase',
-                  trailingArrow: true,
-                  loading: _loading,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: 12),
-                DarkButton(
-                  title: 'Masuk dengan Sidik Jari',
-                  subtitle: 'Tersambung ke Biometrik Lokal',
-                  leadingIcon: Icons.fingerprint,
-                  trailingIcon: Icons.lock_outline,
-                  onPressed: _loginWithFingerprint,
-                ),
-                const SizedBox(height: 16),
-                const OrDivider('ATAU MASUK DENGAN'),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SocialButton(
-                        label: 'Google SSO',
-                        leading: const Text(
-                          'G',
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Fitur reset kata sandi segera hadir.'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Lupa kata sandi?',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.red,
                           ),
                         ),
-                        onPressed: () => showComingSoon(context, 'Google SSO'),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SocialButton(
-                        label: 'Passkey ID',
-                        leading: const Icon(
-                          Icons.key,
-                          size: 17,
-                          color: AppColors.greenDark,
-                        ),
-                        onPressed: () => showComingSoon(context, 'Passkey'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Center(
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    children: [
-                      const Text(
-                        'Belum memiliki akun FOODIE?',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      LinkText('Daftar Sekarang', onTap: _toRegister),
                     ],
                   ),
-                ),
-                const SizedBox(height: 18),
-                const Center(
-                  child: InfoPill(
-                    icon: Icons.verified_user,
-                    text: 'Supabase Auth • TLS 1.3 End-to-End',
+                  const SizedBox(height: 22),
+                  PrimaryButton(
+                    label: 'Masuk',
+                    trailingArrow: true,
+                    loading: _loading,
+                    onPressed: _submit,
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (final t in const [
-                      'Kebijakan Privasi',
-                      'Syarat Ketentuan',
-                      'Bantuan Resto',
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          t,
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w600,
+                  const SizedBox(height: 14),
+                  SoftButton(
+                    label: 'Masuk Mode Tamu',
+                    icon: Icons.person_outline_rounded,
+                    onPressed: () => _goHome('Tamu'),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Belum punya akun? ',
+                          style: TextStyle(
+                            fontSize: 12.5,
                             color: AppColors.textMuted,
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              ],
+                        GestureDetector(
+                          onTap: _toRegister,
+                          child: const Text(
+                            'Daftar',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _banner() {
-    return Stack(
-      children: [
-        const FoodImage(
-          height: 112,
-          width: double.infinity,
-          icon: Icons.ramen_dining,
-          borderRadius: BorderRadius.all(Radius.circular(18)),
-          colors: [AppColors.greenDark, AppColors.green],
-        ),
-        Positioned(
-          left: 14,
-          bottom: 12,
-          right: 14,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.orange,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'GASTRONOMI NUSANTARA',
-                  style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w800),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Pawon Kuno & Kurasi Rasa',
-                style: AppText.display(
-                  17,
-                  color: Colors.white,
-                  weight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ScanningDialog extends StatelessWidget {
-  const _ScanningDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: const Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.fingerprint, size: 56, color: AppColors.orange),
-            SizedBox(height: 12),
-            Text(
-              'Memindai sidik jari...',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            ),
-            SizedBox(height: 14),
-            LinearProgressIndicator(
-              color: AppColors.orange,
-              backgroundColor: AppColors.line,
-              minHeight: 4,
-            ),
-          ],
         ),
       ),
     );

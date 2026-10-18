@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../props/app_colors.dart';
 import '../widgets/common_widgets.dart';
+import 'home.dart';
 import 'login.dart';
 import 'register.dart';
 
@@ -25,6 +26,8 @@ class OnboardingPage extends StatelessWidget {
               _registerButton(context),
               const SizedBox(height: 10),
               _loginButton(context),
+              const SizedBox(height: 10),
+              _guestButton(context),
               const SizedBox(height: 14),
               const Text(
                 'Dengan melanjutkan, Anda menyetujui Ketentuan\nLayanan Kurasi FOODIE DIY & Jateng',
@@ -74,12 +77,17 @@ class OnboardingPage extends StatelessWidget {
       _progressDots(),
       const SizedBox(width: 14),
       GestureDetector(
-        onTap: () =>
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const LoginPage())),
+        onTap: () => Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomePage(name: 'Tamu')),
+          (route) => false,
+        ),
         child: const Text(
-          'Lewati',
-          style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+          'Masuk Mode Tamu',
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.greenDark,
+          ),
         ),
       ),
     ],
@@ -359,6 +367,26 @@ class OnboardingPage extends StatelessWidget {
       child: const Text(
         'Masuk ke Akun Anda',
         style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+      ),
+    ),
+  );
+
+  Widget _guestButton(BuildContext context) => SizedBox(
+    width: double.infinity,
+    height: 46,
+    child: OutlinedButton(
+      onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePage(name: 'Tamu')),
+        (route) => false,
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.textDark,
+        side: const BorderSide(color: AppColors.line),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: const Text(
+        'Jelajahi Sebagai Tamu',
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     ),
   );

@@ -120,13 +120,16 @@ class IntroPage extends StatelessWidget {
       children: [
         Icon(Icons.location_on, size: 13, color: AppColors.red),
         SizedBox(width: 6),
-        Text(
-          'DAERAH ISTIMEWA YOGYAKARTA & JAWA TENGAH',
-          style: TextStyle(
-            fontSize: 9.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.3,
-            color: AppColors.textDark,
+        Flexible(
+          child: Text(
+            'DIY & JAWA TENGAH',
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3,
+              color: AppColors.textDark,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -204,18 +207,21 @@ class IntroPage extends StatelessWidget {
   );
 
   Widget _spotlightHeader() => const Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Text(
-        'SOROTAN RASA HARI INI',
-        style: TextStyle(
-          fontSize: 9.5,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.5,
-          color: AppColors.textMuted,
+      Expanded(
+        child: Text(
+          'SOROTAN RASA HARI INI',
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+            color: AppColors.textMuted,
+          ),
+          overflow: TextOverflow.ellipsis,
         ),
       ),
       Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.local_fire_department, size: 12, color: AppColors.orange),
           SizedBox(width: 3),
