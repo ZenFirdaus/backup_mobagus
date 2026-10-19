@@ -54,16 +54,17 @@ class AuthHeader extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [
+                        border: Border.all(color: AppColors.line, width: 1),
+                        boxShadow: const [
                           BoxShadow(
-                            color: AppColors.tint(AppColors.orange, 0.25),
+                            color: Color(0x0A000000),
                             blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            offset: Offset(0, 2),
                           ),
                         ],
                       ),
                       child: const Icon(
-                        Icons.arrow_back,
+                        Icons.arrow_back_rounded,
                         size: 18,
                         color: AppColors.textDark,
                       ),
@@ -101,6 +102,7 @@ class AuthHeader extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 8.5,
                       fontWeight: FontWeight.w800,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -113,7 +115,7 @@ class AuthHeader extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerRight,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -126,7 +128,7 @@ class AuthHeader extends StatelessWidget {
                     width: 6,
                     height: 6,
                     decoration: const BoxDecoration(
-                      color: AppColors.orange,
+                      color: AppColors.green,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -134,8 +136,8 @@ class AuthHeader extends StatelessWidget {
                   const Text(
                     'DIY & Jateng',
                     style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textDark,
                     ),
                   ),
@@ -161,14 +163,14 @@ class AuthTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.tint(AppColors.yellow, 0.75),
+        color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.orange, 0.2)),
+        border: Border.all(color: AppColors.line, width: 1),
       ),
       child: Row(
         children: [
-          _tab(0, 'Masuk Akun', Icons.login),
-          _tab(1, 'Daftar Akun', Icons.person_add_alt_1),
+          _tab(0, 'Masuk Akun', Icons.login_rounded),
+          _tab(1, 'Daftar Akun', Icons.person_add_alt_1_rounded),
         ],
       ),
     );
@@ -184,24 +186,36 @@ class AuthTabs extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           height: 42,
           decoration: BoxDecoration(
-            color: active ? AppColors.greenDark : Colors.transparent,
+            color: active ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
+            boxShadow: active
+                ? const [
+                    BoxShadow(
+                      color: Color(0x0C000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ]
+                : null,
+            border: active
+                ? Border.all(color: AppColors.line.withValues(alpha: 0.8), width: 1)
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 15,
-                color: active ? AppColors.orange : AppColors.textMuted,
+                size: 16,
+                color: active ? AppColors.greenDark : AppColors.textMuted,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: active ? Colors.white : AppColors.textMuted,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                  color: active ? AppColors.textDark : AppColors.textMuted,
                 ),
               ),
             ],

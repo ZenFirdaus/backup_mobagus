@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../models/seed_data.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../widgets/auth_widgets.dart';
+import 'achievements_page.dart';
+import 'checkin_page.dart';
 import 'converter_page.dart';
 import 'game_page.dart';
-import 'achievements_page.dart';
 
 enum _NotifType { meal, geofence, game, achievement, currency }
 
@@ -70,16 +72,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
         body: 'Radar GPS mendeteksi kamu berada dalam radius 50m. Lakukan check-in fisik untuk klaim poin.',
         time: '18:30 WIB',
         type: _NotifType.geofence,
-        actionLabel: 'Buka Peta',
-        onAction: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Membuka radar geofence lokasi...'),
-              backgroundColor: AppColors.greenDark,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
+        actionLabel: 'Check-in Sekarang',
+        onAction: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CheckinPage(restaurant: kDefaultRestaurants.first),
+          ),
+        ),
       ),
       _NotifItem(
         id: 'n3',

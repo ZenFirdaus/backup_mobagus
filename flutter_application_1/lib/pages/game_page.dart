@@ -229,11 +229,12 @@ class _GamePageState extends State<GamePage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
+            border: Border.all(color: AppColors.line, width: 1),
+            boxShadow: const [
               BoxShadow(
-                color: AppColors.greenDark.withOpacity(0.07),
+                color: Color(0x06000000),
                 blurRadius: 12,
-                offset: const Offset(0, 4),
+                offset: Offset(0, 4),
               ),
             ],
           ),
@@ -433,11 +434,12 @@ class _GamePageState extends State<GamePage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [
+              border: Border.all(color: AppColors.line, width: 1),
+              boxShadow: const [
                 BoxShadow(
-                  color: AppColors.greenDark.withOpacity(0.08),
+                  color: Color(0x08000000),
                   blurRadius: 20,
-                  offset: const Offset(0, 6),
+                  offset: Offset(0, 6),
                 ),
               ],
             ),

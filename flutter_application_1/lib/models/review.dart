@@ -27,7 +27,17 @@ class Review {
       comment: json['comment'] as String? ?? '',
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
-      userName: profile?['display_name'] as String?,
+      userName: json['user_name'] as String? ?? profile?['display_name'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'user_id': userId,
+    'restaurant_id': restaurantId,
+    'rating': rating,
+    'comment': comment,
+    'created_at': createdAt.toIso8601String(),
+    'user_name': userName,
+  };
 }

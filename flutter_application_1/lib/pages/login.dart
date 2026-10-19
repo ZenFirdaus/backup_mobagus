@@ -91,6 +91,93 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _showForgotPasswordDialog() {
+    final resetEmailCtrl = TextEditingController(text: _email.text.trim());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Reset Kata Sandi', style: AppText.display(18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Masukkan email akun Anda untuk menerima tautan pemulihan kata sandi dari Supabase Auth.',
+              style: TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: resetEmailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+              decoration: InputDecoration(
+                hintText: 'nama@email.com',
+                prefixIcon: const Icon(Icons.mail_outline_rounded, size: 18),
+                filled: true,
+                fillColor: AppColors.surfaceSubtle,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.line),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.charcoal,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final mail = resetEmailCtrl.text.trim();
+              if (mail.isEmpty || !mail.contains('@')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Masukkan alamat email yang valid.'),
+                    backgroundColor: AppColors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              try {
+                await Supabase.instance.client.auth.resetPasswordForEmail(mail);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Tautan pemulihan kata sandi dikirim ke $mail'),
+                      backgroundColor: AppColors.green,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal mengirim email reset: ${e.toString()}'),
+                      backgroundColor: AppColors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Kirim Tautan'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,7 +207,7 @@ class _LoginPageState extends State<LoginPage> {
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
-                            color: AppColors.yellow,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -209,15 +296,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const Spacer(),
                       GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Fitur reset kata sandi segera hadir.'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
+                        onTap: _showForgotPasswordDialog,
                         child: const Text(
                           'Lupa kata sandi?',
                           style: TextStyle(

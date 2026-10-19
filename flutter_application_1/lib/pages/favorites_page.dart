@@ -5,6 +5,7 @@ import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/common_widgets.dart';
 import 'detail_page.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -281,17 +282,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.tint(AppColors.orange, 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.restaurant,
-                    size: 24, color: AppColors.greenDark),
-              ),
-              const SizedBox(width: 12),
+            FoodImage(
+              imageUrl: r.imageUrl,
+              width: 54,
+              height: 54,
+              borderRadius: BorderRadius.circular(14),
+              icon: Icons.restaurant_rounded,
+            ),
+            const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

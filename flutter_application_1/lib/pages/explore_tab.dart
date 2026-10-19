@@ -13,7 +13,16 @@ enum _Sort { terdekat, rating, termurah }
 
 class ExploreTab extends StatefulWidget {
   final String name;
-  const ExploreTab({super.key, this.name = ''});
+  final String? initialCategory;
+  final String? initialSearch;
+  final bool initialBudget;
+  const ExploreTab({
+    super.key,
+    this.name = '',
+    this.initialCategory,
+    this.initialSearch,
+    this.initialBudget = false,
+  });
 
   @override
   State<ExploreTab> createState() => _ExploreTabState();
@@ -23,6 +32,7 @@ class _ExploreTabState extends State<ExploreTab> {
   final _search = TextEditingController();
   bool _budgetOn = false;
   bool _openNowOn = false;
+  String? _selectedCategory;
   _Sort _sort = _Sort.terdekat;
   final Set<String> _favoriteIds = {};
 
@@ -33,6 +43,15 @@ class _ExploreTabState extends State<ExploreTab> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
+      _selectedCategory = widget.initialCategory;
+    }
+    if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
+      _search.text = widget.initialSearch!;
+    }
+    if (widget.initialBudget) {
+      _budgetOn = true;
+    }
     _load();
   }
 
@@ -53,6 +72,7 @@ class _ExploreTabState extends State<ExploreTab> {
         SupabaseService.instance.getRestaurants(
           search: _search.text.trim().isEmpty ? null : _search.text.trim(),
           maxPrice: _budgetOn ? 25000 : null,
+          category: _selectedCategory,
           sortBy: sortBy,
         ),
         SupabaseService.instance.getFavoriteIds(),
@@ -74,12 +94,16 @@ class _ExploreTabState extends State<ExploreTab> {
     }
   }
 
-  int get _activeFilters => (_budgetOn ? 1 : 0) + (_openNowOn ? 1 : 0);
+  int get _activeFilters =>
+      (_budgetOn ? 1 : 0) +
+      (_openNowOn ? 1 : 0) +
+      (_selectedCategory != null ? 1 : 0);
 
   void _reset() {
     setState(() {
       _budgetOn = false;
       _openNowOn = false;
+      _selectedCategory = null;
       _search.clear();
       _sort = _Sort.terdekat;
     });
@@ -201,7 +225,7 @@ class _ExploreTabState extends State<ExploreTab> {
                     '(DIY & Jateng)',
                     style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.greenDark.withOpacity(0.8),
+                      color: AppColors.greenDark.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -221,18 +245,24 @@ class _ExploreTabState extends State<ExploreTab> {
 
   Widget _roundIcon(IconData icon, {bool dot = false}) {
     return Container(
-      width: 38,
-      height: 38,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border:
-            Border.all(color: AppColors.tint(AppColors.greenDark, 0.15)),
+        border: Border.all(color: AppColors.line, width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Icon(icon, size: 20, color: AppColors.greenDark),
+          Icon(icon, size: 20, color: AppColors.textDark),
           if (dot)
             Positioned(
               top: 9,
@@ -257,26 +287,31 @@ class _ExploreTabState extends State<ExploreTab> {
         Expanded(
           child: Container(
             height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.tint(AppColors.greenDark, 0.15),
-              ),
+              border: Border.all(color: AppColors.line, width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 const Icon(
-                    Icons.search, size: 20, color: AppColors.greenDark),
+                    Icons.search_rounded, size: 20, color: AppColors.textMuted),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _search,
                     onSubmitted: _onSearchSubmit,
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(fontSize: 13.5, color: AppColors.textDark),
                     decoration: const InputDecoration(
-                      hintText: 'Cari kuliner, warung, ...',
+                      hintText: 'Cari kuliner, warung, soto, gudeg...',
                       hintStyle: TextStyle(
                         fontSize: 13,
                         color: AppColors.textMuted,
@@ -290,7 +325,7 @@ class _ExploreTabState extends State<ExploreTab> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Stack(
           clipBehavior: Clip.none,
           children: [
@@ -309,7 +344,7 @@ class _ExploreTabState extends State<ExploreTab> {
                 child: const Icon(
                   Icons.tune_rounded,
                   size: 21,
-                  color: AppColors.yellow,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -343,15 +378,15 @@ class _ExploreTabState extends State<ExploreTab> {
 
   Widget _coverageInfo() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.tint(AppColors.yellow, 0.35),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
+        color: AppColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line, width: 1),
       ),
       child: const Row(
         children: [
-          Icon(Icons.verified_outlined, size: 16, color: AppColors.greenDark),
+          Icon(Icons.verified_outlined, size: 16, color: AppColors.green),
           SizedBox(width: 8),
           Expanded(
             child: Text.rich(
@@ -364,8 +399,8 @@ class _ExploreTabState extends State<ExploreTab> {
                   TextSpan(
                     text: 'DIY & Jawa Tengah',
                     style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.greenDark,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
                     ),
                   ),
                 ],
@@ -423,6 +458,13 @@ class _ExploreTabState extends State<ExploreTab> {
             const SizedBox(width: 8),
             _activeChip('Buka Sekarang', () {
               setState(() => _openNowOn = false);
+              _load();
+            }),
+          ],
+          if (_selectedCategory != null) ...[
+            const SizedBox(width: 8),
+            _activeChip('Kategori: $_selectedCategory', () {
+              setState(() => _selectedCategory = null);
               _load();
             }),
           ],
@@ -664,11 +706,12 @@ class _PlaceCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
+          border: Border.all(color: AppColors.line.withValues(alpha: 0.7), width: 1),
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.greenDark.withOpacity(0.08),
+              color: Color(0x06000000),
               blurRadius: 14,
-              offset: const Offset(0, 5),
+              offset: Offset(0, 4),
             ),
           ],
         ),
@@ -716,7 +759,7 @@ class _PlaceCard extends StatelessWidget {
                           width: 7,
                           height: 7,
                           decoration: const BoxDecoration(
-                            color: AppColors.greenDark,
+                            color: AppColors.green,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -753,14 +796,14 @@ class _PlaceCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.greenDark,
+                              color: AppColors.orange,
                             ),
                           ),
                           SizedBox(width: 2),
                           Icon(
-                            Icons.arrow_forward,
+                            Icons.arrow_forward_rounded,
                             size: 14,
-                            color: AppColors.greenDark,
+                            color: AppColors.orange,
                           ),
                         ],
                       ),
@@ -786,7 +829,7 @@ class _PlaceCard extends StatelessWidget {
             Image.network(
               place.imageUrl!,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _fallback(),
+              errorBuilder: (_, _, _) => _fallback(),
             )
           else
             _fallback(),

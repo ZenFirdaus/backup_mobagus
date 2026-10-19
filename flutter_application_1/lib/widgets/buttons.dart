@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../props/app_colors.dart';
 
-/// Tombol utama (oranye).
+/// Tombol utama (oranye hangat, clean modern).
 class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -29,29 +29,31 @@ class PrimaryButton extends StatelessWidget {
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.orange,
-          disabledBackgroundColor: AppColors.tint(AppColors.orange, 0.45),
+          disabledBackgroundColor: AppColors.tint(AppColors.orange, 0.4),
           foregroundColor: AppColors.textDark,
-          disabledForegroundColor: AppColors.tint(AppColors.textDark, 0.55),
-          elevation: enabled ? 4 : 0,
-          shadowColor: AppColors.tint(AppColors.orange, 0.5),
+          disabledForegroundColor: AppColors.tint(AppColors.textDark, 0.4),
+          elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         child: loading
             ? const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
+                  strokeWidth: 2.2,
                   color: AppColors.textDark,
                 ),
               )
             : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 18),
+                    Icon(icon, size: 19),
                     const SizedBox(width: 8),
                   ],
                   Flexible(
@@ -59,14 +61,15 @@ class PrimaryButton extends StatelessWidget {
                       label,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ),
                   if (trailingArrow) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward, size: 18),
+                    const Icon(Icons.arrow_forward_rounded, size: 18),
                   ],
                 ],
               ),
@@ -96,24 +99,31 @@ class DarkButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.greenDark,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
+            ),
+          ),
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.orange, 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(leadingIcon, size: 20, color: AppColors.orange),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,26 +131,28 @@ class DarkButton extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
                     ),
-                    if (subtitle != null)
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
                       Text(
                         subtitle!,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.5,
                           color: AppColors.tint(AppColors.yellow, 0.85),
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
               if (trailingIcon != null)
                 Icon(
                   trailingIcon,
-                  size: 16,
+                  size: 18,
                   color: AppColors.tint(AppColors.yellow, 0.8),
                 ),
             ],
@@ -151,7 +163,7 @@ class DarkButton extends StatelessWidget {
   }
 }
 
-/// Tombol lembut (kuning muda) untuk aksi sekunder.
+/// Tombol sekunder yang lembut dan bersih.
 class SoftButton extends StatelessWidget {
   final String label;
   final IconData? icon;
@@ -168,22 +180,23 @@ class SoftButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 48,
+      height: 50,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.tint(AppColors.yellow, 0.55),
+          backgroundColor: AppColors.surfaceSubtle,
           foregroundColor: AppColors.textDark,
-          side: BorderSide(color: AppColors.tint(AppColors.orange, 0.35)),
+          side: const BorderSide(color: AppColors.line, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 17),
+              Icon(icon, size: 18, color: AppColors.textDark),
               const SizedBox(width: 8),
             ],
             Flexible(
@@ -191,7 +204,7 @@ class SoftButton extends StatelessWidget {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -219,14 +232,15 @@ class SocialButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 46,
+      height: 48,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textDark,
-          side: const BorderSide(color: AppColors.line),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          side: const BorderSide(color: AppColors.line, width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -236,13 +250,13 @@ class SocialButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             leading,
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Flexible(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                 ),
               ),

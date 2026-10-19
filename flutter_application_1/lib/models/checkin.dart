@@ -30,7 +30,18 @@ class Checkin {
       verified: json['verified'] as bool? ?? false,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
-      restaurantName: resto?['name'] as String?,
+      restaurantName: json['restaurant_name'] as String? ?? resto?['name'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'user_id': userId,
+    'restaurant_id': restaurantId,
+    'lat': lat,
+    'lng': lng,
+    'verified': verified,
+    'created_at': createdAt.toIso8601String(),
+    'restaurant_name': restaurantName,
+  };
 }

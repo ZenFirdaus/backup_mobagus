@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/restaurant.dart';
@@ -8,7 +10,9 @@ import '../models/checkin.dart';
 import '../models/seed_data.dart';
 
 class SupabaseService {
-  SupabaseService._();
+  SupabaseService._() {
+    _initStorage();
+  }
   static final instance = SupabaseService._();
 
   SupabaseClient get _client => Supabase.instance.client;
@@ -23,6 +27,102 @@ class SupabaseService {
   final List<Review> _localReviews = [];
   final List<Map<String, dynamic>> _localSearchHistory = [];
   int _localBonusPoints = 0;
+  bool _initialized = false;
+
+  Future<void> _initStorage() async {
+    if (_initialized) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = userId ?? 'guest';
+
+      // Load favorites
+      final favList = prefs.getStringList('foodie_fav_$uid');
+      if (favList != null) {
+        _localFavorites.addAll(favList);
+      }
+
+      // Load bonus points
+      _localBonusPoints = prefs.getInt('foodie_points_$uid') ?? 0;
+
+      // Load search history
+      final historyRaw = prefs.getStringList('foodie_hist_$uid');
+      if (historyRaw != null) {
+        _localSearchHistory.clear();
+        for (final item in historyRaw) {
+          try {
+            _localSearchHistory.add(jsonDecode(item) as Map<String, dynamic>);
+          } catch (_) {}
+        }
+      }
+
+      // Load checkins
+      final checkinsRaw = prefs.getStringList('foodie_chk_$uid');
+      if (checkinsRaw != null) {
+        _localCheckins.clear();
+        for (final item in checkinsRaw) {
+          try {
+            _localCheckins.add(Checkin.fromJson(jsonDecode(item) as Map<String, dynamic>));
+          } catch (_) {}
+        }
+      }
+
+      // Load reviews
+      final reviewsRaw = prefs.getStringList('foodie_rev_$uid');
+      if (reviewsRaw != null) {
+        _localReviews.clear();
+        for (final item in reviewsRaw) {
+          try {
+            _localReviews.add(Review.fromJson(jsonDecode(item) as Map<String, dynamic>));
+          } catch (_) {}
+        }
+      }
+
+      _initialized = true;
+    } catch (_) {}
+  }
+
+  Future<void> _persistFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = userId ?? 'guest';
+      await prefs.setStringList('foodie_fav_$uid', _localFavorites.toList());
+    } catch (_) {}
+  }
+
+  Future<void> _persistPoints() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = userId ?? 'guest';
+      await prefs.setInt('foodie_points_$uid', _localBonusPoints);
+    } catch (_) {}
+  }
+
+  Future<void> _persistHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = userId ?? 'guest';
+      final list = _localSearchHistory.map((e) => jsonEncode(e)).toList();
+      await prefs.setStringList('foodie_hist_$uid', list);
+    } catch (_) {}
+  }
+
+  Future<void> _persistCheckins() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = userId ?? 'guest';
+      final list = _localCheckins.map((c) => jsonEncode(c.toJson())).toList();
+      await prefs.setStringList('foodie_chk_$uid', list);
+    } catch (_) {}
+  }
+
+  Future<void> _persistReviews() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = userId ?? 'guest';
+      final list = _localReviews.map((r) => jsonEncode(r.toJson())).toList();
+      await prefs.setStringList('foodie_rev_$uid', list);
+    } catch (_) {}
+  }
 
   Future<void> signOut() async {
     _localFavorites.clear();
@@ -31,6 +131,7 @@ class SupabaseService {
     _localSearchHistory.clear();
     _localBonusPoints = 0;
     guestName = 'Tamu Mataraman';
+    _initialized = false;
     await _client.auth.signOut();
   }
 
@@ -223,6 +324,7 @@ class SupabaseService {
     } else {
       _localFavorites.add(restaurantId);
     }
+    _persistFavorites();
 
     final uid = userId;
     if (uid == null) return;
@@ -282,6 +384,8 @@ class SupabaseService {
     );
     _localReviews.insert(0, rev);
     _localBonusPoints += 20;
+    _persistReviews();
+    _persistPoints();
 
     final uid = userId;
     if (uid == null) return;
@@ -336,6 +440,8 @@ class SupabaseService {
 
     _localCheckins.insert(0, checkin);
     _localBonusPoints += 50;
+    _persistCheckins();
+    _persistPoints();
 
     final uid = userId;
     if (uid != null) {
@@ -378,6 +484,7 @@ class SupabaseService {
       'query': query,
       'created_at': DateTime.now().toIso8601String(),
     });
+    _persistHistory();
 
     final uid = userId;
     if (uid == null) return;
@@ -391,6 +498,7 @@ class SupabaseService {
 
   Future<void> clearSearchHistory() async {
     _localSearchHistory.clear();
+    _persistHistory();
     final uid = userId;
     if (uid == null) return;
     try {
@@ -419,6 +527,7 @@ class SupabaseService {
 
   Future<void> saveGameScore(int score) async {
     _localBonusPoints += score;
+    _persistPoints();
     final uid = userId;
     if (uid == null) return;
     try {
@@ -436,6 +545,7 @@ class SupabaseService {
     final points = profile?.points ?? 0;
     if (points < cost) return false;
     _localBonusPoints -= cost;
+    _persistPoints();
     return true;
   }
 

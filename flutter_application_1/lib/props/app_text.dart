@@ -15,7 +15,7 @@ class AppFonts {
 class AppText {
   AppText._();
 
-  /// Gaya judul (serif elegan).
+  /// Gaya judul (serif elegan Playfair Display).
   static TextStyle display(
     double size, {
     FontWeight weight = FontWeight.w700,
@@ -31,6 +31,40 @@ class AppText {
       fontStyle: italic ? FontStyle.italic : FontStyle.normal,
       color: color,
       height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  /// Gaya teks sans-serif modern (Manrope).
+  static TextStyle body(
+    double size, {
+    FontWeight weight = FontWeight.w500,
+    Color color = AppColors.textDark,
+    double? height = 1.45,
+    double? letterSpacing,
+  }) {
+    return TextStyle(
+      fontFamily: AppFonts.body,
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  /// Label kecil / pill badge.
+  static TextStyle caption({
+    double size = 11,
+    FontWeight weight = FontWeight.w600,
+    Color color = AppColors.textMuted,
+    double letterSpacing = 0.2,
+  }) {
+    return TextStyle(
+      fontFamily: AppFonts.body,
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
       letterSpacing: letterSpacing,
     );
   }

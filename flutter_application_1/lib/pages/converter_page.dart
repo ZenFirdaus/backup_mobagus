@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/buttons.dart';
 
 class ConverterPage extends StatefulWidget {
   const ConverterPage({super.key});
@@ -381,6 +383,25 @@ class _ConverterPageState extends State<ConverterPage>
         ),
         const SizedBox(height: 12),
         ..._meals.map(_mealScheduleCard),
+        const SizedBox(height: 16),
+        PrimaryButton(
+          label: 'Simpan Preferensi Zona Wisatawan',
+          icon: Icons.bookmark_added_rounded,
+          onPressed: () async {
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('foodie_tz_pref', 'WIB_GMT');
+            } catch (_) {}
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Preferensi zona waktu wisatawan berhasil disimpan.'),
+                backgroundColor: AppColors.charcoal,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
       ],
     );
   }

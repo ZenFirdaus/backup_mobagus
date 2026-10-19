@@ -415,11 +415,12 @@ class _DetailPageState extends State<DetailPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          boxShadow: [
+          border: Border.all(color: AppColors.line.withValues(alpha: 0.8), width: 1),
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.tint(AppColors.orange, 0.25),
+              color: Color(0x15000000),
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: Offset(0, 2),
             ),
           ],
         ),
@@ -515,22 +516,29 @@ class _DetailPageState extends State<DetailPage> {
       child: Column(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.yellow, 0.55),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.line, width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x06000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: Icon(icon, size: 22, color: AppColors.greenDark),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 7),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.greenDark,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
             ),
           ),
         ],
@@ -579,15 +587,12 @@ class _DetailPageState extends State<DetailPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.orange, 0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.lunch_dining_rounded,
-                size: 24, color: AppColors.orange),
+          FoodImage(
+            imageUrl: f.imageUrl,
+            width: 56,
+            height: 56,
+            borderRadius: BorderRadius.circular(12),
+            icon: Icons.lunch_dining_rounded,
           ),
           const SizedBox(width: 12),
           Expanded(

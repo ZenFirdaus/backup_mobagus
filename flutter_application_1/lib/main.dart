@@ -40,11 +40,38 @@ class FoodieApp extends StatelessWidget {
           primary: AppColors.orange,
           secondary: AppColors.green,
           error: AppColors.red,
+          surface: AppColors.surface,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.line, width: 1),
+          ),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: AppColors.line,
+          thickness: 1,
+          space: 1,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: true,
+          titleTextStyle: TextStyle(
+            fontFamily: AppFonts.display,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+          ),
+          iconTheme: IconThemeData(color: AppColors.textDark),
         ),
       ),
       // Di browser/desktop, tampilan dibatasi selebar HP supaya rapi.
       builder: (context, child) => ColoredBox(
-        color: const Color(0xFFEDE6D2),
+        color: const Color(0xFFEBE7DD),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),

@@ -7,7 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../widgets/buttons.dart';
-import 'home.dart';
+import 'biometric.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   final String name;
@@ -63,12 +63,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     return '$m:$s';
   }
 
-  void _goHome() {
-    Navigator.of(context).pushAndRemoveUntil(
+  void _goNext() {
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => HomePage(name: widget.name, fromRegister: true),
+        builder: (_) => BiometricPage(name: widget.name),
       ),
-      (route) => false,
     );
   }
 
@@ -126,11 +125,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Verifikasi email berhasil! Selamat datang.'),
-          backgroundColor: AppColors.greenDark,
+          backgroundColor: AppColors.charcoal,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      _goHome();
+      _goNext();
     } else {
       _showVerificationDialog();
     }
@@ -142,7 +141,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       builder: (ctx) => AlertDialog(
         title: const Text('Kode Belum Terkonfirmasi'),
         content: const Text(
-          'Jika Anda mengklik tautan verifikasi di email, akun Anda mungkin sudah terverifikasi otomatis. Ingin langsung masuk sekarang?',
+          'Jika Anda mengklik tautan verifikasi di email, akun Anda mungkin sudah terverifikasi otomatis. Lanjutkan ke langkah pengaturan keamanan biometrik?',
         ),
         actions: [
           TextButton(
@@ -152,13 +151,13 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.orange,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textDark,
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              _goHome();
+              _goNext();
             },
-            child: const Text('Lanjut ke Beranda'),
+            child: const Text('Lanjut ke Langkah 3'),
           ),
         ],
       ),
@@ -304,7 +303,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 ),
                 const SizedBox(height: 20),
                 TextButton(
-                  onPressed: _goHome,
+                  onPressed: _goNext,
                   child: const Text(
                     'Lewati Verifikasi untuk Sekarang',
                     style: TextStyle(

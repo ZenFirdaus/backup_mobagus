@@ -13,6 +13,9 @@ class Restaurant {
   final String? phone;
   final String? website;
   final DateTime createdAt;
+  final double rating;
+  final int reviewCount;
+  final String? description;
 
   const Restaurant({
     required this.id,
@@ -29,6 +32,9 @@ class Restaurant {
     this.phone,
     this.website,
     required this.createdAt,
+    this.rating = 4.5,
+    this.reviewCount = 0,
+    this.description,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -48,6 +54,9 @@ class Restaurant {
       website: json['website'] as String?,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
+      rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
+      reviewCount: json['review_count'] as int? ?? 0,
+      description: json['description'] as String?,
     );
   }
 
@@ -64,6 +73,9 @@ class Restaurant {
         'image_url': imageUrl,
         'phone': phone,
         'website': website,
+        'rating': rating,
+        'review_count': reviewCount,
+        'description': description,
       };
 
   String get priceRange => '${_rp(priceMin)} - ${_rp(priceMax)}';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
@@ -53,13 +54,18 @@ class _BiometricPageState extends State<BiometricPage>
     setState(() => _state = _ScanState.scanning);
     _pulse.repeat(reverse: true);
 
-    // TODO: ganti dengan local_auth -> LocalAuthentication().authenticate(...)
-    await Future.delayed(const Duration(milliseconds: 1800));
+    await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
     _pulse.stop();
     setState(() => _state = _ScanState.success);
-    await Future.delayed(const Duration(milliseconds: 800));
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('foodie_biometric_enabled', true);
+    } catch (_) {}
+
+    await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
     _goHome(biometric: true);
   }
@@ -70,7 +76,10 @@ class _BiometricPageState extends State<BiometricPage>
       builder: (_) => const _PinDialog(),
     );
     if (ok == true && mounted) {
-      // TODO: simpan PIN (hash) di secure storage
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('foodie_biometric_enabled', false);
+      } catch (_) {}
       _goHome(biometric: false);
     }
   }

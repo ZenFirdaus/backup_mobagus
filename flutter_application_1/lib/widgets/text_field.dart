@@ -43,7 +43,7 @@ class AppTextField extends StatefulWidget {
 class _AppTextFieldState extends State<AppTextField> {
   bool _hidden = true;
 
-  OutlineInputBorder _border(Color c, [double w = 1.2]) => OutlineInputBorder(
+  OutlineInputBorder _border(Color c, [double w = 1.0]) => OutlineInputBorder(
     borderRadius: BorderRadius.circular(14),
     borderSide: BorderSide(color: c, width: w),
   );
@@ -84,7 +84,7 @@ class _AppTextFieldState extends State<AppTextField> {
               child: Text(
                 widget.label,
                 style: const TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textDark,
                 ),
@@ -94,14 +94,14 @@ class _AppTextFieldState extends State<AppTextField> {
               Text(
                 widget.trailingLabel!,
                 style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.red,
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 7),
         TextFormField(
           controller: widget.controller,
           obscureText: widget.isPassword && _hidden,
@@ -111,7 +111,7 @@ class _AppTextFieldState extends State<AppTextField> {
           onChanged: widget.onChanged,
           inputFormatters: widget.inputFormatters,
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 13.5,
             fontWeight: FontWeight.w600,
             color: AppColors.textDark,
           ),
@@ -122,20 +122,20 @@ class _AppTextFieldState extends State<AppTextField> {
               fontWeight: FontWeight.w500,
               color: AppColors.tint(AppColors.textMuted, 0.65),
             ),
-            prefixIcon: Icon(widget.icon, size: 19, color: AppColors.textMuted),
+            prefixIcon: Icon(widget.icon, size: 20, color: AppColors.textMuted),
             suffixIcon: _suffix(),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
-              vertical: 15,
-              horizontal: 12,
+              vertical: 14,
+              horizontal: 14,
             ),
             border: _border(AppColors.line),
             enabledBorder: _border(AppColors.line),
-            focusedBorder: _border(AppColors.orange, 1.8),
+            focusedBorder: _border(AppColors.orange, 1.5),
             errorBorder: _border(AppColors.red),
-            focusedErrorBorder: _border(AppColors.red, 1.8),
-            errorStyle: const TextStyle(fontSize: 10.5, color: AppColors.red),
+            focusedErrorBorder: _border(AppColors.red, 1.5),
+            errorStyle: const TextStyle(fontSize: 11, color: AppColors.red),
           ),
         ),
         if (widget.helper != null)

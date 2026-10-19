@@ -9,6 +9,7 @@ import '../pages/detail_page.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
+import 'common_widgets.dart';
 
 /// Membuka bottom sheet "Shake to Decide".
 Future<void> showDecideSheet(BuildContext context) {
@@ -92,17 +93,17 @@ class _DecideSheetState extends State<_DecideSheet>
         20 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFFFFF8EA),
+        color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 40,
+            width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.greenDark, 0.25),
+              color: AppColors.line,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -111,7 +112,7 @@ class _DecideSheetState extends State<_DecideSheet>
           const SizedBox(height: 6),
           const Text(
             'Goyangkan HP-mu atau tekan tombol di bawah.',
-            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
           ),
           const SizedBox(height: 22),
 
@@ -123,15 +124,15 @@ class _DecideSheetState extends State<_DecideSheet>
               child: child,
             ),
             child: Container(
-              width: 96,
-              height: 96,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
-                color: AppColors.tint(AppColors.orange, 0.25),
+                color: AppColors.orange.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.casino,
-                size: 48,
+                Icons.casino_rounded,
+                size: 44,
                 color: AppColors.orange,
               ),
             ),
@@ -166,43 +167,66 @@ class _DecideSheetState extends State<_DecideSheet>
                       decoration: BoxDecoration(
                         color: AppColors.greenDark,
                         borderRadius: BorderRadius.circular(18),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x15000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
                           const Text(
                             'HARI INI MAKAN DI',
                             style: TextStyle(
-                              fontSize: 9.5,
-                              letterSpacing: 0.8,
+                              fontSize: 10,
+                              letterSpacing: 1.0,
                               fontWeight: FontWeight.w700,
                               color: AppColors.orange,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
+                          FoodImage(
+                            imageUrl: _result!.imageUrl,
+                            width: 64,
+                            height: 64,
+                            borderRadius: BorderRadius.circular(16),
+                            icon: Icons.restaurant_rounded,
+                          ),
+                          const SizedBox(height: 8),
                           Text(
                             _result!.name,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.yellow,
+                            style: TextStyle(
+                              fontFamily: AppFonts.display,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${_result!.address.split(',').first} - ${_result!.province}',
                             style: TextStyle(
-                              fontSize: 11.5,
-                              color: AppColors.tint(AppColors.yellow, 0.75),
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.8),
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _result!.priceRange,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.yellow,
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _result!.priceRange,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],
@@ -226,8 +250,8 @@ class _DecideSheetState extends State<_DecideSheet>
                 _result == null ? 'Acak Sekarang' : 'Acak Lagi',
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
                 ),
               ),
             ),

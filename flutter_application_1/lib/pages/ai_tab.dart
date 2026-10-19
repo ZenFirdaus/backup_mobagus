@@ -5,6 +5,7 @@ import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/common_widgets.dart';
 import 'detail_page.dart';
 
 class _Msg {
@@ -169,8 +170,12 @@ class _AiTabState extends State<AiTab> {
   }
 
   Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: AppColors.line.withValues(alpha: 0.8), width: 1)),
+      ),
       child: Row(
         children: [
           Container(
@@ -181,9 +186,9 @@ class _AiTabState extends State<AiTab> {
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
-              Icons.auto_awesome,
-              size: 22,
-              color: AppColors.yellow,
+              Icons.auto_awesome_rounded,
+              size: 20,
+              color: Colors.white,
             ),
           ),
           const SizedBox(width: 12),
@@ -191,9 +196,9 @@ class _AiTabState extends State<AiTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('FOODIE AI', style: AppText.display(20)),
+                Text('FOODIE AI', style: AppText.display(18)),
                 const Text(
-                  'LLM Gastronomi DIY & Jawa Tengah',
+                  'Asisten Gastronomi DIY & Jawa Tengah',
                   style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                 ),
               ],
@@ -203,7 +208,7 @@ class _AiTabState extends State<AiTab> {
             tooltip: 'Percakapan baru',
             onPressed: () =>
                 setState(() => _messages.removeRange(1, _messages.length)),
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.greenDark),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textDark),
           ),
         ],
       ),
@@ -220,9 +225,9 @@ class _AiTabState extends State<AiTab> {
           alignment: user ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 5),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.78,
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
             ),
             decoration: BoxDecoration(
               color: user ? AppColors.greenDark : Colors.white,
@@ -234,15 +239,21 @@ class _AiTabState extends State<AiTab> {
               ),
               border: user
                   ? null
-                  : Border.all(
-                      color: AppColors.tint(AppColors.greenDark, 0.12)),
+                  : Border.all(color: AppColors.line, width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: Text(
               m.text,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 13,
                 height: 1.5,
-                color: user ? AppColors.yellow : AppColors.textDark,
+                color: user ? Colors.white : AppColors.textDark,
               ),
             ),
           ),
@@ -271,28 +282,25 @@ class _AiTabState extends State<AiTab> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
-          boxShadow: [
+          border: Border.all(color: AppColors.line, width: 1),
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.tint(AppColors.orange, 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              color: Color(0x05000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.tint(AppColors.yellow, 0.5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.restaurant,
-                  size: 22, color: AppColors.greenDark),
+            FoodImage(
+              imageUrl: r.imageUrl,
+              width: 48,
+              height: 48,
+              borderRadius: BorderRadius.circular(12),
+              icon: Icons.restaurant_rounded,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,7 +308,8 @@ class _AiTabState extends State<AiTab> {
                   Text(
                     r.category.toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 8.5,
+                      fontSize: 9,
+                      letterSpacing: 0.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textMuted,
                     ),
@@ -309,8 +318,8 @@ class _AiTabState extends State<AiTab> {
                   Text(
                     r.name,
                     style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textDark,
                     ),
                   ),
@@ -318,7 +327,7 @@ class _AiTabState extends State<AiTab> {
                   Text(
                     r.priceRange,
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: AppColors.greenDark,
                     ),
@@ -326,7 +335,7 @@ class _AiTabState extends State<AiTab> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: AppColors.greenDark),
+            const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textMuted),
           ],
         ),
       ),
@@ -342,8 +351,7 @@ class _AiTabState extends State<AiTab> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border:
-              Border.all(color: AppColors.tint(AppColors.greenDark, 0.12)),
+          border: Border.all(color: AppColors.line, width: 1),
         ),
         child: const SizedBox(
           width: 16,
@@ -368,19 +376,26 @@ class _AiTabState extends State<AiTab> {
         itemBuilder: (_, i) => GestureDetector(
           onTap: () => _send(_suggestions[i]),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.yellow, 0.4),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
+              border: Border.all(color: AppColors.line, width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
             ),
             child: Text(
               _suggestions[i],
               style: const TextStyle(
                 fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.greenDark,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
               ),
             ),
           ),
@@ -390,20 +405,22 @@ class _AiTabState extends State<AiTab> {
   }
 
   Widget _inputBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.line.withValues(alpha: 0.8), width: 1)),
+      ),
       child: Row(
         children: [
           Expanded(
             child: Container(
               height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.tint(AppColors.greenDark, 0.15),
-                ),
+                color: AppColors.surfaceSubtle,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.line, width: 1),
               ),
               child: TextField(
                 controller: _controller,

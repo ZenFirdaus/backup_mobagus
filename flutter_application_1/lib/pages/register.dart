@@ -117,34 +117,42 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.greenDark,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'FOODIE',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                            color: AppColors.yellow,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        InkWell(
+                          onTap: () => Navigator.of(context).maybePop(),
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.line, width: 1),
+                            ),
+                            child: const Icon(Icons.arrow_back_rounded, size: 18),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.greenDark,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'FOODIE',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 24),
                   Text('Buat Akun Baru', style: AppText.display(26)),
                   const SizedBox(height: 6),
