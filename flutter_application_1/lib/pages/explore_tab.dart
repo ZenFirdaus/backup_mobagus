@@ -1,132 +1,110 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../models/food.dart';
 import '../models/restaurant.dart';
+import '../utils/format.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
-import '../widgets/common_widgets.dart';
-import 'detail_page.dart';
-import 'notifications_page.dart';
 
-enum _Sort { terdekat, rating, termurah }
+enum _Sort { nama, rating, termurah }
 
+/// Tab "Explore": data dari Supabase (fallback seed jika kosong/offline).
 class ExploreTab extends StatefulWidget {
   final String name;
-  final String? initialCategory;
-  final String? initialSearch;
-  final bool initialBudget;
-  const ExploreTab({
-    super.key,
-    this.name = '',
-    this.initialCategory,
-    this.initialSearch,
-    this.initialBudget = false,
-  });
+  const ExploreTab({super.key, this.name = ''});
 
   @override
   State<ExploreTab> createState() => _ExploreTabState();
 }
 
 class _ExploreTabState extends State<ExploreTab> {
+  final _svc = SupabaseService.instance;
   final _search = TextEditingController();
-  bool _budgetOn = false;
-  bool _openNowOn = false;
-  String? _selectedCategory;
-  _Sort _sort = _Sort.terdekat;
-  final Set<String> _favoriteIds = {};
+  Timer? _debounce;
 
-  List<Restaurant> _restaurants = [];
+  List<Restaurant> _items = [];
+  List<String> _categories = [];
+  Set<String> _favs = {};
+  String? _category;
+  bool _budgetOn = false;
+  bool _mapView = false;
   bool _loading = true;
-  String? _error;
+  _Sort _sort = _Sort.nama;
+
+  static const _sortLabels = {
+    _Sort.nama: 'Nama A-Z',
+    _Sort.rating: 'Rating',
+    _Sort.termurah: 'Termurah',
+  };
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
-      _selectedCategory = widget.initialCategory;
-    }
-    if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
-      _search.text = widget.initialSearch!;
-    }
-    if (widget.initialBudget) {
-      _budgetOn = true;
-    }
     _load();
+    _svc.getCategories().then((c) {
+      if (mounted) setState(() => _categories = c);
+    });
+    _svc.getFavoriteIds().then((f) {
+      if (mounted) setState(() => _favs = f.toSet());
+    });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final sortBy = _sort == _Sort.termurah ? 'termurah' : null;
-      final results = await Future.wait([
-        SupabaseService.instance.getRestaurants(
-          search: _search.text.trim().isEmpty ? null : _search.text.trim(),
-          maxPrice: _budgetOn ? 25000 : null,
-          category: _selectedCategory,
-          sortBy: sortBy,
-        ),
-        SupabaseService.instance.getFavoriteIds(),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _restaurants = results[0] as List<Restaurant>;
-        _favoriteIds
-          ..clear()
-          ..addAll(results[1] as List<String>);
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Gagal memuat data. Periksa koneksi Anda.';
-        _loading = false;
-      });
+    setState(() => _loading = true);
+    final res = await _svc.getRestaurants(
+      search: _search.text.trim(),
+      maxPrice: _budgetOn ? 25000 : null,
+      category: _category,
+      sortBy: _sort == _Sort.termurah ? 'termurah' : null,
+    );
+    final list = List<Restaurant>.of(res);
+    if (_sort == _Sort.rating) {
+      list.sort((a, b) => b.rating.compareTo(a.rating));
     }
+    if (!mounted) return;
+    setState(() {
+      _items = list;
+      _loading = false;
+    });
   }
 
-  int get _activeFilters =>
-      (_budgetOn ? 1 : 0) +
-      (_openNowOn ? 1 : 0) +
-      (_selectedCategory != null ? 1 : 0);
+  void _onSearchChanged(String _) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 450), _load);
+  }
+
+  void _onSearchSubmitted(String q) {
+    if (q.trim().isNotEmpty) _svc.saveSearch(q.trim());
+    _load();
+  }
+
+  Future<void> _toggleFav(String id) async {
+    setState(() => _favs.contains(id) ? _favs.remove(id) : _favs.add(id));
+    await _svc.toggleFavorite(id);
+    final real = await _svc.getFavoriteIds();
+    if (mounted) setState(() => _favs = real.toSet());
+  }
 
   void _reset() {
-    setState(() {
-      _budgetOn = false;
-      _openNowOn = false;
-      _selectedCategory = null;
-      _search.clear();
-      _sort = _Sort.terdekat;
-    });
+    _search.clear();
+    _budgetOn = false;
+    _category = null;
+    _sort = _Sort.nama;
     _load();
   }
 
-  void _onSearchSubmit(String query) {
-    if (query.trim().isNotEmpty) {
-      SupabaseService.instance.saveSearch(query.trim());
-    }
-    _load();
-  }
-
-  Future<void> _toggleFav(Restaurant r) async {
-    setState(() {
-      if (!_favoriteIds.add(r.id)) {
-        _favoriteIds.remove(r.id);
-      }
-    });
-    try {
-      await SupabaseService.instance.toggleFavorite(r.id);
-    } catch (_) {}
-  }
+  int get _activeFilters => (_budgetOn ? 1 : 0) + (_category != null ? 1 : 0);
 
   @override
   Widget build(BuildContext context) {
@@ -153,27 +131,22 @@ class _ExploreTabState extends State<ExploreTab> {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 60),
                   child: Center(
-                    child:
-                        CircularProgressIndicator(color: AppColors.orange),
+                    child: CircularProgressIndicator(color: AppColors.orange),
                   ),
                 )
-              else if (_error != null)
-                _errorState()
-              else if (_restaurants.isEmpty)
+              else if (_mapView)
+                _mapPlaceholder()
+              else if (_items.isEmpty)
                 _emptyState()
               else
-                ..._restaurants.map(
-                  (p) => Padding(
+                ..._items.map(
+                  (r) => Padding(
                     padding: const EdgeInsets.only(bottom: 14),
                     child: _PlaceCard(
-                      place: p,
-                      favorite: _favoriteIds.contains(p.id),
-                      onFavorite: () => _toggleFav(p),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => DetailPage(restaurant: p),
-                        ),
-                      ),
+                      r: r,
+                      favorite: _favs.contains(r.id),
+                      onFavorite: () => _toggleFav(r.id),
+                      onDetail: () => _showDetail(r),
                     ),
                   ),
                 ),
@@ -186,9 +159,18 @@ class _ExploreTabState extends State<ExploreTab> {
     );
   }
 
+  void _showDetail(Restaurant r) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DetailSheet(r: r),
+    );
+  }
+
+  // ---------- Header ----------
   Widget _header() {
-    final initial =
-        widget.name.isNotEmpty ? widget.name[0].toUpperCase() : 'F';
+    final initial = widget.name.isNotEmpty ? widget.name[0].toUpperCase() : 'F';
     return Row(
       children: [
         CircleAvatar(
@@ -233,85 +215,50 @@ class _ExploreTabState extends State<ExploreTab> {
             ],
           ),
         ),
-        GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const NotificationsPage()),
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.line),
           ),
-          child: _roundIcon(Icons.notifications_none_rounded, dot: true),
+          child: const Icon(
+            Icons.notifications_none_rounded,
+            size: 20,
+            color: AppColors.greenDark,
+          ),
         ),
       ],
     );
   }
 
-  Widget _roundIcon(IconData icon, {bool dot = false}) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.line, width: 1),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(icon, size: 20, color: AppColors.textDark),
-          if (dot)
-            Positioned(
-              top: 9,
-              right: 10,
-              child: Container(
-                width: 7,
-                height: 7,
-                decoration: const BoxDecoration(
-                  color: AppColors.red,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
+  // ---------- Search ----------
   Widget _searchRow() {
     return Row(
       children: [
         Expanded(
           child: Container(
             height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.line, width: 1),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x05000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
+              border: Border.all(color: AppColors.line),
             ),
             child: Row(
               children: [
-                const Icon(
-                    Icons.search_rounded, size: 20, color: AppColors.textMuted),
+                const Icon(Icons.search, size: 20, color: AppColors.greenDark),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _search,
-                    onSubmitted: _onSearchSubmit,
-                    style: const TextStyle(fontSize: 13.5, color: AppColors.textDark),
+                    onChanged: _onSearchChanged,
+                    onSubmitted: _onSearchSubmitted,
+                    textInputAction: TextInputAction.search,
+                    style: const TextStyle(fontSize: 13),
                     decoration: const InputDecoration(
-                      hintText: 'Cari kuliner, warung, soto, gudeg...',
+                      hintText: 'Cari kuliner, warung, ...',
                       hintStyle: TextStyle(
                         fontSize: 13,
                         color: AppColors.textMuted,
@@ -321,31 +268,30 @@ class _ExploreTabState extends State<ExploreTab> {
                     ),
                   ),
                 ),
+                const Icon(
+                  Icons.auto_awesome,
+                  size: 18,
+                  color: AppColors.orange,
+                ),
               ],
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Stack(
           clipBehavior: Clip.none,
           children: [
-            GestureDetector(
-              onTap: () {
-                setState(() => _budgetOn = !_budgetOn);
-                _load();
-              },
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.greenDark,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.tune_rounded,
-                  size: 21,
-                  color: Colors.white,
-                ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.greenDark,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.tune_rounded,
+                size: 21,
+                color: AppColors.yellow,
               ),
             ),
             if (_activeFilters > 0)
@@ -360,33 +306,81 @@ class _ExploreTabState extends State<ExploreTab> {
                     color: AppColors.orange,
                     shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    '$_activeFilters',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                  child: Center(
+                    child: Text(
+                      '$_activeFilters',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
           ],
         ),
+        const SizedBox(width: 8),
+        Container(
+          height: 48,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(
+            children: [
+              _toggleBtn(
+                Icons.view_agenda_outlined,
+                !_mapView,
+                () => setState(() => _mapView = false),
+              ),
+              _toggleBtn(
+                Icons.map_outlined,
+                _mapView,
+                () => setState(() => _mapView = true),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
+  Widget _toggleBtn(IconData icon, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 34,
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.tint(AppColors.orange, 0.25)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 19,
+          color: active ? AppColors.red : AppColors.greenDark,
+        ),
+      ),
+    );
+  }
+
+  // ---------- Info & filter ----------
   Widget _coverageInfo() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.line, width: 1),
+        color: AppColors.tint(AppColors.yellow, 0.35),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
       ),
       child: const Row(
         children: [
-          Icon(Icons.verified_outlined, size: 16, color: AppColors.green),
+          Icon(Icons.verified_outlined, size: 16, color: AppColors.greenDark),
           SizedBox(width: 8),
           Expanded(
             child: Text.rich(
@@ -399,8 +393,8 @@ class _ExploreTabState extends State<ExploreTab> {
                   TextSpan(
                     text: 'DIY & Jawa Tengah',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.greenDark,
                     ),
                   ),
                 ],
@@ -408,6 +402,7 @@ class _ExploreTabState extends State<ExploreTab> {
               style: TextStyle(fontSize: 11.5),
             ),
           ),
+          Icon(Icons.info_outline, size: 16, color: AppColors.textMuted),
         ],
       ),
     );
@@ -421,19 +416,19 @@ class _ExploreTabState extends State<ExploreTab> {
           GestureDetector(
             onTap: _reset,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.tint(AppColors.greenDark, 0.2),
-                ),
+                border: Border.all(color: AppColors.line),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.refresh_rounded,
-                      size: 14, color: AppColors.greenDark),
+                  Icon(
+                    Icons.refresh_rounded,
+                    size: 14,
+                    color: AppColors.greenDark,
+                  ),
                   SizedBox(width: 4),
                   Text(
                     'Reset',
@@ -447,24 +442,15 @@ class _ExploreTabState extends State<ExploreTab> {
               ),
             ),
           ),
-          if (_budgetOn) ...[
+          const SizedBox(width: 8),
+          _chip('Budget < Rp25rb', _budgetOn, () {
+            _budgetOn = !_budgetOn;
+            _load();
+          }),
+          for (final c in _categories) ...[
             const SizedBox(width: 8),
-            _activeChip('Budget < Rp25rb', () {
-              setState(() => _budgetOn = false);
-              _load();
-            }),
-          ],
-          if (_openNowOn) ...[
-            const SizedBox(width: 8),
-            _activeChip('Buka Sekarang', () {
-              setState(() => _openNowOn = false);
-              _load();
-            }),
-          ],
-          if (_selectedCategory != null) ...[
-            const SizedBox(width: 8),
-            _activeChip('Kategori: $_selectedCategory', () {
-              setState(() => _selectedCategory = null);
+            _chip(c, _category == c, () {
+              _category = _category == c ? null : c;
               _load();
             }),
           ],
@@ -473,40 +459,39 @@ class _ExploreTabState extends State<ExploreTab> {
     );
   }
 
-  Widget _activeChip(String label, VoidCallback onClose) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-      decoration: BoxDecoration(
-        color: AppColors.greenDark,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.yellow,
+  Widget _chip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? AppColors.greenDark : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: active ? AppColors.greenDark : AppColors.line,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: active ? AppColors.yellow : AppColors.greenDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: onClose,
-            child:
-                const Icon(Icons.close, size: 14, color: AppColors.yellow),
-          ),
-        ],
+            if (active) ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.close, size: 14, color: AppColors.yellow),
+            ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _resultBar() {
-    const labels = {
-      _Sort.terdekat: 'Terdekat',
-      _Sort.rating: 'Rating',
-      _Sort.termurah: 'Termurah',
-    };
     return Row(
       children: [
         Expanded(
@@ -518,7 +503,7 @@ class _ExploreTabState extends State<ExploreTab> {
                   style: TextStyle(color: AppColors.textMuted),
                 ),
                 TextSpan(
-                  text: '${_restaurants.length} Tempat Kuliner',
+                  text: '${_items.length} Tempat Kuliner',
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     color: AppColors.greenDark,
@@ -531,22 +516,18 @@ class _ExploreTabState extends State<ExploreTab> {
         ),
         PopupMenuButton<_Sort>(
           onSelected: (s) {
-            setState(() => _sort = s);
+            _sort = s;
             _load();
           },
           itemBuilder: (_) => _Sort.values
-              .map((s) =>
-                  PopupMenuItem(value: s, child: Text(labels[s]!)))
+              .map((s) => PopupMenuItem(value: s, child: Text(_sortLabels[s]!)))
               .toList(),
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: AppColors.tint(AppColors.greenDark, 0.2),
-              ),
+              border: Border.all(color: AppColors.line),
             ),
             child: Row(
               children: [
@@ -559,7 +540,7 @@ class _ExploreTabState extends State<ExploreTab> {
                   ),
                 ),
                 Text(
-                  labels[_sort]!,
+                  _sortLabels[_sort]!,
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -579,32 +560,20 @@ class _ExploreTabState extends State<ExploreTab> {
     );
   }
 
-  Widget _errorState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
+  Widget _mapPlaceholder() {
+    return Container(
+      height: 320,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.tint(AppColors.greenDark, 0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off, size: 40, color: AppColors.textMuted),
+          const Icon(Icons.map_outlined, size: 40, color: AppColors.greenDark),
           const SizedBox(height: 8),
-          Text('Terjadi Kesalahan', style: AppText.display(16)),
-          const SizedBox(height: 4),
-          Text(
-            _error!,
-            style:
-                const TextStyle(fontSize: 12, color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: _load,
-            child: const Text(
-              'Coba Lagi',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.red,
-              ),
-            ),
-          ),
+          Text('Tampilan peta segera hadir', style: AppText.display(15)),
         ],
       ),
     );
@@ -685,33 +654,38 @@ class _ExploreTabState extends State<ExploreTab> {
   }
 }
 
+// =================== Kartu tempat ===================
 class _PlaceCard extends StatelessWidget {
-  final Restaurant place;
+  final Restaurant r;
   final bool favorite;
   final VoidCallback onFavorite;
-  final VoidCallback onTap;
+  final VoidCallback onDetail;
 
   const _PlaceCard({
-    required this.place,
+    required this.r,
     required this.favorite,
     required this.onFavorite,
-    required this.onTap,
+    required this.onDetail,
   });
 
   @override
   Widget build(BuildContext context) {
+    final rating = r.rating;
+    final price = r.priceMax > r.priceMin
+        ? r.priceRange
+        : 'Mulai ${formatRp(r.priceMin)}';
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: onDetail,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.line.withValues(alpha: 0.7), width: 1),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x06000000),
+              color: AppColors.greenDark.withValues(alpha: 0.08),
               blurRadius: 14,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 5),
             ),
           ],
         ),
@@ -725,17 +699,63 @@ class _PlaceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    place.category.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 9.5,
-                      letterSpacing: 0.6,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMuted,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              r.category.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                letterSpacing: 0.6,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(r.name, style: AppText.display(16)),
+                          ],
+                        ),
+                      ),
+                      ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.tint(AppColors.yellow, 0.5),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 15,
+                                color: AppColors.orange,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.greenDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 3),
-                  Text(place.name, style: AppText.display(16)),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -746,66 +766,50 @@ class _PlaceCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        place.priceRange,
+                        price,
                         style: const TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                           color: AppColors.greenDark,
                         ),
                       ),
-                      const Spacer(),
-                      if (place.openingHours != null) ...[
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: AppColors.green,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          place.openingHours!,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Expanded(
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.tint(AppColors.yellow, 0.4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         child: Text(
-                          place.address,
+                          r.category,
                           style: const TextStyle(
-                            fontSize: 10.5,
-                            color: AppColors.textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.greenDark,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Row(
-                        children: [
-                          Text(
-                            'Detail',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.orange,
-                            ),
-                          ),
-                          SizedBox(width: 2),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 14,
-                            color: AppColors.orange,
-                          ),
-                        ],
+                      const Spacer(),
+                      const Text(
+                        'Detail',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.greenDark,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.arrow_forward,
+                        size: 14,
+                        color: AppColors.greenDark,
                       ),
                     ],
                   ),
@@ -819,15 +823,16 @@ class _PlaceCard extends StatelessWidget {
   }
 
   Widget _image() {
+    final url = (r.imageUrl?.isEmpty ?? true) ? null : r.imageUrl;
     return SizedBox(
       height: 150,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (place.imageUrl != null && place.imageUrl!.isNotEmpty)
+          if (url != null)
             Image.network(
-              place.imageUrl!,
+              url,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => _fallback(),
             )
@@ -864,14 +869,25 @@ class _PlaceCard extends StatelessWidget {
           ),
           Positioned(
             left: 10,
+            right: 10,
             bottom: 8,
-            child: Text(
-              '${place.address.split(',').first} - ${place.province}',
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
+            child: Row(
+              children: [
+                const Icon(Icons.place, size: 12, color: Colors.white),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text(
+                    r.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -880,12 +896,127 @@ class _PlaceCard extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return const FoodImage(
-      height: 150,
-      width: double.infinity,
-      icon: Icons.ramen_dining,
-      borderRadius: BorderRadius.zero,
-      colors: [AppColors.orange, AppColors.greenDark],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.tint(AppColors.orange, 0.55), AppColors.greenDark],
+        ),
+      ),
+      child: const Icon(Icons.ramen_dining, size: 48, color: AppColors.yellow),
+    );
+  }
+}
+
+// =================== Detail (menu dari tabel foods) ===================
+class _DetailSheet extends StatelessWidget {
+  final Restaurant r;
+  const _DetailSheet({required this.r});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.9,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (_, controller) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(r.name, style: AppText.display(22)),
+            const SizedBox(height: 4),
+            Text(
+              r.address,
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 18),
+            Text('Menu', style: AppText.display(16)),
+            const SizedBox(height: 8),
+            FutureBuilder<List<Food>>(
+              future: SupabaseService.instance.getFoods(r.id),
+              builder: (_, snap) {
+                if (snap.connectionState != ConnectionState.done) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.orange),
+                    ),
+                  );
+                }
+                final foods = snap.data ?? [];
+                if (foods.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'Menu belum tersedia.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  );
+                }
+                return Column(
+                  children: foods.map((f) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.line),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              f.name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.greenDark,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            f.priceLabel,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -15,6 +15,10 @@ void main() {
     await tester.pumpWidget(const FoodieApp());
 
     expect(find.text('FOODIE'), findsOneWidget);
-    expect(find.text('Mulai Petualangan Kuliner'), findsOneWidget);
+    expect(find.text('DIY & JAWA TENGAH'), findsOneWidget);
+
+    // Pompa melewati timer 3 detik di IntroPage supaya tidak ada
+    // pending timer saat test selesai.
+    await tester.pumpAndSettle(const Duration(seconds: 4));
   });
 }

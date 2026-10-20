@@ -51,7 +51,7 @@ class _HomePageState extends State<HomePage> {
       body: IndexedStack(
         index: _index,
         children: [
-          HomeTab(name: widget.name),
+          HomeTab(name: widget.name, onSeeAll: () => _select(1)),
           ExploreTab(name: widget.name),
           const SizedBox.shrink(), // slot "Decide" (dibuka sebagai sheet)
           const AiTab(),
@@ -92,111 +92,56 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.line.withValues(alpha: 0.9),
-            width: 1,
-          ),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 16,
-            offset: Offset(0, -4),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: AppColors.greenDark,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
           child: Row(
             children: List.generate(items.length, (i) {
               final item = items[i];
               final active = i == index;
-              final isDecide = i == 2;
-
-              if (isDecide) {
-                return Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onSelect(i),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: AppColors.orange,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.orange.withValues(alpha: 0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.casino_rounded,
-                            size: 20,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        const Text(
-                          'Decide',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
               return Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => onSelect(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          active ? item.activeIcon : item.icon,
-                          size: 22,
-                          color: active ? AppColors.greenDark : AppColors.textMuted,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        active ? item.activeIcon : item.icon,
+                        size: 22,
+                        color: active
+                            ? AppColors.orange
+                            : AppColors.tint(AppColors.yellow, 0.7),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: active
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          color: active
+                              ? AppColors.orange
+                              : AppColors.tint(AppColors.yellow, 0.7),
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                            color: active ? AppColors.greenDark : AppColors.textMuted,
-                          ),
+                      ),
+                      const SizedBox(height: 3),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        width: active ? 5 : 0,
+                        height: active ? 5 : 0,
+                        decoration: const BoxDecoration(
+                          color: AppColors.orange,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(height: 3),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          width: active ? 16 : 0,
-                          height: 2.5,
-                          decoration: BoxDecoration(
-                            color: AppColors.greenDark,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               );

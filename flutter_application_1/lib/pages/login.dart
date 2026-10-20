@@ -48,7 +48,8 @@ class _LoginPageState extends State<LoginPage> {
       );
       if (!mounted) return;
       setState(() => _loading = false);
-      final name = res.user?.userMetadata?['name'] as String? ??
+      final name =
+          res.user?.userMetadata?['name'] as String? ??
           _email.text.trim().split('@').first;
       _goHome(name);
     } on AuthException catch (e) {
@@ -86,9 +87,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _toRegister() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const RegisterPage()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const RegisterPage()));
   }
 
   void _showForgotPasswordDialog() {
@@ -105,7 +106,11 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             const Text(
               'Masukkan email akun Anda untuk menerima tautan pemulihan kata sandi dari Supabase Auth.',
-              style: TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.4),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textMuted,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -153,7 +158,9 @@ class _LoginPageState extends State<LoginPage> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Tautan pemulihan kata sandi dikirim ke $mail'),
+                      content: Text(
+                        'Tautan pemulihan kata sandi dikirim ke $mail',
+                      ),
                       backgroundColor: AppColors.green,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -163,7 +170,9 @@ class _LoginPageState extends State<LoginPage> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Gagal mengirim email reset: ${e.toString()}'),
+                      content: Text(
+                        'Gagal mengirim email reset: ${e.toString()}',
+                      ),
                       backgroundColor: AppColors.red,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -196,7 +205,9 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.greenDark,
                           borderRadius: BorderRadius.circular(10),
@@ -213,7 +224,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
@@ -222,8 +235,11 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.location_on,
-                                size: 12, color: AppColors.red),
+                            Icon(
+                              Icons.location_on,
+                              size: 12,
+                              color: AppColors.red,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'DIY & Jateng',
@@ -243,10 +259,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 6),
                   const Text(
                     'Jelajahi warisan kuliner autentik Nusantara.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textMuted,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
                   ),
                   const SizedBox(height: 24),
                   AppTextField(

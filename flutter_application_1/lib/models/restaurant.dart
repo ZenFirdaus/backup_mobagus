@@ -52,7 +52,8 @@ class Restaurant {
       imageUrl: json['image_url'] as String?,
       phone: json['phone'] as String?,
       website: json['website'] as String?,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
       rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
       reviewCount: json['review_count'] as int? ?? 0,
@@ -61,22 +62,22 @@ class Restaurant {
   }
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'category': category,
-        'address': address,
-        'province': province,
-        'lat': lat,
-        'lng': lng,
-        'price_min': priceMin,
-        'price_max': priceMax,
-        'opening_hours': openingHours,
-        'image_url': imageUrl,
-        'phone': phone,
-        'website': website,
-        'rating': rating,
-        'review_count': reviewCount,
-        'description': description,
-      };
+    'name': name,
+    'category': category,
+    'address': address,
+    'province': province,
+    'lat': lat,
+    'lng': lng,
+    'price_min': priceMin,
+    'price_max': priceMax,
+    'opening_hours': openingHours,
+    'image_url': imageUrl,
+    'phone': phone,
+    'website': website,
+    'rating': rating,
+    'review_count': reviewCount,
+    'description': description,
+  };
 
   String get priceRange => '${_rp(priceMin)} - ${_rp(priceMax)}';
 
