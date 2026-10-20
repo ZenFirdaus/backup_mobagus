@@ -1,0 +1,324 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../props/app_colors.dart';
+import '../widgets/common_widgets.dart';
+import 'biometric.dart';
+import 'home.dart';
+import 'login.dart';
+import 'register.dart';
+
+/// Halaman onboarding: hero image + 4 tombol (Register, Login, Biometric, Tamu).
+class OnboardingPage extends StatelessWidget {
+  const OnboardingPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: screenH - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  // ── Hero image (tinggi dinamis / terikat batas) ──
+                  SizedBox(
+                    height: (screenH * 0.42).clamp(240.0, 360.0),
+                    width: double.infinity,
+                    child: _HeroSection(),
+                  ),
+                  // ── Button section ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Logo FOODIE — tulisan saja, tanpa badge DIY
+                        _FoodieLogo(),
+                        const SizedBox(height: 14),
+                        _registerBtn(context),
+                        const SizedBox(height: 10),
+                        _loginBtn(context),
+                        const SizedBox(height: 10),
+                        _biometricBtn(context),
+                        const SizedBox(height: 10),
+                        _guestBtn(context),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Dengan melanjutkan, Anda menyetujui Ketentuan Layanan FOODIE.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _registerBtn(BuildContext context) => SizedBox(
+        height: 50,
+        child: ElevatedButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const RegisterPage()),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.paprika,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Daftar Akun',
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(Icons.arrow_forward_rounded, size: 18),
+            ],
+          ),
+        ),
+      );
+
+  Widget _loginBtn(BuildContext context) => SizedBox(
+        height: 48,
+        child: ElevatedButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.charcoal,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Text(
+            'Masuk ke Akun',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+
+  Widget _biometricBtn(BuildContext context) => SizedBox(
+        height: 44,
+        child: OutlinedButton(
+          onPressed: () async {
+            // Cek apakah ada sesi biometric tersimpan
+            final prefs = await SharedPreferences.getInstance();
+            final bioEnabled = prefs.getBool('foodie_biometric_enabled') ?? false;
+            final savedName = prefs.getString('foodie_bio_name') ?? '';
+            if (bioEnabled && savedName.isNotEmpty && context.mounted) {
+              // Langsung ke biometric page untuk verifikasi
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) => BiometricPage(name: savedName),
+                ),
+                (route) => false,
+              );
+            } else if (context.mounted) {
+              // Belum ada sesi, arahkan ke login dulu
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Silakan login terlebih dahulu untuk mengaktifkan biometrik.',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppColors.orange,
+                ),
+              );
+            }
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.greenDark,
+            backgroundColor: Colors.transparent,
+            side: const BorderSide(color: AppColors.greenDark, width: 1.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.fingerprint, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Masuk dengan Biometrik',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _guestBtn(BuildContext context) => SizedBox(
+        height: 42,
+        child: OutlinedButton(
+          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomePage(name: 'Tamu')),
+            (route) => false,
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.textMuted,
+            backgroundColor: Colors.transparent,
+            side: const BorderSide(color: AppColors.line, width: 1.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Text(
+            'Jelajahi Sebagai Tamu',
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+}
+
+/// Logo FOODIE — hanya teks, tanpa badge DIY
+class _FoodieLogo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: AppColors.paprika,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: Text(
+              'F',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          'FOODIE',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+            color: AppColors.charcoal,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Foto makanan full-bleed
+        const FoodImage(
+          imageUrl:
+              'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=900&q=85',
+          width: double.infinity,
+          height: double.infinity,
+          icon: Icons.restaurant_rounded,
+          colors: [AppColors.paprika, AppColors.charcoal],
+        ),
+        // Gradient overlay bawah
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 160,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppColors.background.withValues(alpha: 0.98),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Caption di atas gambar
+        Positioned(
+          left: 20,
+          right: 20,
+          bottom: 24,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.paprika,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'KULINER AUTENTIK MATARAMAN',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Jelajahi Rasa\nWarisan Nusantara.',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.15,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
