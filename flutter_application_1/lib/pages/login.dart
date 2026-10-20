@@ -5,6 +5,7 @@ import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../utils/validators.dart';
 import '../widgets/buttons.dart';
+import '../widgets/foodie_logo.dart';
 import '../widgets/text_field.dart';
 import 'home.dart';
 import 'register.dart';
@@ -203,25 +204,25 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.greenDark,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'FOODIE',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                      FoodieHeaderLogo(),
+                      
+                      // Container(
+                      //   padding: const EdgeInsets.symmetric(
+                      //       horizontal: 10, vertical: 6),
+                      //   decoration: BoxDecoration(
+                      //     color: AppColors.greenDark,
+                      //     borderRadius: BorderRadius.circular(10),
+                      //   ),
+                      //   child: const Text(
+                      //     'FOODIE',
+                      //     style: TextStyle(
+                      //       fontSize: 12,
+                      //       fontWeight: FontWeight.w800,
+                      //       letterSpacing: 1.2,
+                      //       color: Colors.white,
+                      //     ),
+                      //   ),
+                      // ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -232,25 +233,22 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: AppColors.line),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 12,
-                              color: AppColors.red,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'DIY & Jateng',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                          ],
-                        ),
+                        // child: const Row(
+                        //   mainAxisSize: MainAxisSize.min,
+                        //   children: [
+                        //     Icon(Icons.location_on,
+                        //         size: 12, color: AppColors.red),
+                        //     SizedBox(width: 4),
+                        //     Text(
+                        //       'DIY & Jateng',
+                        //       style: TextStyle(
+                        //         fontSize: 10,
+                        //         fontWeight: FontWeight.w700,
+                        //         color: AppColors.textDark,
+                        //       ),
+                        //     ),
+                        //   ],
+                        // ),
                       ),
                     ],
                   ),

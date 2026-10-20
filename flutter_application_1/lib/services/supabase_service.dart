@@ -168,17 +168,24 @@ class SupabaseService {
     );
   }
 
-  Future<void> upsertProfile({required String displayName}) async {
+  Future<void> upsertProfile({
+    required String displayName,
+    String? avatarUrl,
+  }) async {
     final uid = userId;
     if (uid == null) {
       guestName = displayName;
       return;
     }
     try {
-      await _client.from('profiles').upsert({
+      final payload = <String, dynamic>{
         'id': uid,
         'display_name': displayName,
-      }, onConflict: 'id');
+      };
+      if (avatarUrl != null) {
+        payload['avatar_url'] = avatarUrl;
+      }
+      await _client.from('profiles').upsert(payload, onConflict: 'id');
     } catch (_) {}
   }
 
@@ -496,6 +503,20 @@ class SupabaseService {
     } catch (_) {}
   }
 
+  Future<void> removeSearchItem(String query) async {
+    _localSearchHistory.removeWhere((item) => item['query'] == query);
+    _persistHistory();
+    final uid = userId;
+    if (uid == null) return;
+    try {
+      await _client
+          .from('search_history')
+          .delete()
+          .eq('user_id', uid)
+          .eq('query', query);
+    } catch (_) {}
+  }
+
   Future<void> clearSearchHistory() async {
     _localSearchHistory.clear();
     _persistHistory();
@@ -504,6 +525,33 @@ class SupabaseService {
     try {
       await _client.from('search_history').delete().eq('user_id', uid);
     } catch (_) {}
+  }
+
+  // ─── USER REVIEWS (ulasan milik user ini) ───
+
+  Future<List<Review>> getUserReviews() async {
+    final uid = userId;
+    // Gabungkan ulasan lokal milik user ini
+    final local = _localReviews
+        .where((r) => r.userId == (uid ?? 'guest'))
+        .toList();
+
+    if (uid != null) {
+      try {
+        final res = await _client
+            .from('reviews')
+            .select('*, restaurants(name)')
+            .eq('user_id', uid)
+            .order('created_at', ascending: false)
+            .limit(30);
+        final remote =
+            (res as List).map((e) => Review.fromJson(e)).toList();
+        final all = [...local, ...remote];
+        final seen = <String>{};
+        return all.where((r) => seen.add(r.id)).toList();
+      } catch (_) {}
+    }
+    return local;
   }
 
   // ─── GAME SCORES ───

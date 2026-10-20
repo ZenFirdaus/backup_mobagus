@@ -11,10 +11,10 @@ import '../widgets/decide.dart';
 class HomeTab extends StatefulWidget {
   final String name;
 
-  /// Pindah ke tab Explore (dipakai search bar, kategori, "Lihat semua").
+  /// Pindah ke tab Explore (dipakai kategori, "Lihat semua").
   final VoidCallback? onSeeAll;
 
-  /// Buka detail restoran. Kalau null, jatuh ke [onSeeAll].
+  /// Buka detail restoran langsung dari Home.
   final void Function(Restaurant)? onOpenRestaurant;
 
   const HomeTab({
@@ -109,9 +109,7 @@ class _HomeTabState extends State<HomeTab> {
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
             children: [
               _header(first),
-              const SizedBox(height: 18),
-              _searchBar(),
-              const SizedBox(height: 18),
+              const SizedBox(height: 22),
               _shakeCard(),
               const SizedBox(height: 26),
               if (_categories.isNotEmpty) ...[
@@ -225,61 +223,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // ---------- Search (tap -> Explore) ----------
-  Widget _searchBar() {
-    return GestureDetector(
-      onTap: widget.onSeeAll,
-      child: Container(
-        height: 54,
-        padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.line),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.search_rounded,
-              size: 22,
-              color: AppColors.charcoal,
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Cari gudeg, bakpia, bakmi jawa...',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(
-                color: AppColors.charcoal,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'DIY & Jateng',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ---------- Search BAR DIHAPUS dari Home — hanya ada di Explore ----------
 
   // ---------- Curated Shake ----------
   Widget _shakeCard() {
@@ -436,6 +380,7 @@ class _HomeTabState extends State<HomeTab> {
         itemBuilder: (_, i) {
           final c = _categories[i];
           return GestureDetector(
+            // Tap kategori → buka Explore langsung
             onTap: widget.onSeeAll,
             child: SizedBox(
               width: 68,
@@ -499,11 +444,12 @@ class _HomeTabState extends State<HomeTab> {
     return Column(
       children: [
         SizedBox(
-          // keluar dari padding kiri-kanan ListView agar carousel terasa penuh
           height: 232,
           child: PageView.builder(
             controller: _pageCtrl,
             padEnds: false,
+            // Gunakan physics khusus agar tidak konflik dengan ListView vertikal
+            physics: const PageScrollPhysics(),
             itemCount: _picks.length,
             onPageChanged: (i) => setState(() => _page = i),
             itemBuilder: (_, i) => Padding(

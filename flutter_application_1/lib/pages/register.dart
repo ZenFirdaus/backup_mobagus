@@ -5,6 +5,7 @@ import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../utils/validators.dart';
 import '../widgets/buttons.dart';
+import '../widgets/foodie_logo.dart';
 import '../widgets/text_field.dart';
 import 'login.dart';
 import 'verify_email.dart';
@@ -134,23 +135,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             child: const Icon(Icons.arrow_back_rounded, size: 18),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.greenDark,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'FOODIE',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                        const FoodieHeaderLogo(),
                       ],
                     ),
                   const SizedBox(height: 24),

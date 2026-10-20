@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../props/app_colors.dart';
+import '../widgets/foodie_logo.dart';
 import 'onboarding.dart';
 
-/// Splash screen FOODIE — tampil 3 detik, lalu otomatis ke Onboarding.
-/// Logo teks minimalis di atas background oranye FOODIE.
+/// Splash screen FOODIE — tampil 3 detik, fade ke Onboarding.
+/// Menggunakan logo teks putih di atas background oranye paprika.
 class IntroPage extends StatefulWidget {
   const IntroPage({super.key});
 
@@ -16,7 +17,7 @@ class _IntroPageState extends State<IntroPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 900),
+    duration: const Duration(milliseconds: 700),
   );
   late final Animation<double> _fade = CurvedAnimation(
     parent: _ctrl,
@@ -27,7 +28,6 @@ class _IntroPageState extends State<IntroPage>
   void initState() {
     super.initState();
     _ctrl.forward();
-    // Navigate to onboarding once after 3 seconds, no double-nav
     Future.delayed(const Duration(seconds: 3), _toOnboarding);
   }
 
@@ -36,7 +36,7 @@ class _IntroPageState extends State<IntroPage>
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, _, _) => const OnboardingPage(),
-        transitionDuration: const Duration(milliseconds: 400),
+        transitionDuration: const Duration(milliseconds: 450),
         transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
       ),
@@ -59,73 +59,25 @@ class _IntroPageState extends State<IntroPage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ── Logo Mark ──
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text(
-                    'F',
-                    style: TextStyle(
-                      fontSize: 46,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.paprika,
-                      letterSpacing: -2,
-                    ),
-                  ),
-                ),
+              const Spacer(flex: 3),
+              // Logo teks putih dari assets
+              FoodieLogoWidget(
+                variant: FoodieLogoVariant.textWhite,
+                width: 350,
               ),
-              const SizedBox(height: 22),
-              // ── Wordmark ──
-              const Text(
-                'FOODIE',
-                style: TextStyle(
-                  fontSize: 38,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: 6,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'DIY & JAWA TENGAH',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2.5,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 48),
-              // ── Loading indicator ──
+              const Spacer(flex: 3),
+              // Loading indicator tipis di bawah
               SizedBox(
-                width: 24,
-                height: 24,
+                width: 20,
+                height: 20,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor:
-                      AlwaysStoppedAnimation(Colors.white.withValues(alpha: 0.7)),
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(
+                    Colors.white.withValues(alpha: 0.55),
+                  ),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

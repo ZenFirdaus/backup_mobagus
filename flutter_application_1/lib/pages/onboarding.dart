@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../props/app_colors.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/foodie_logo.dart';
 import 'home.dart';
 import 'login.dart';
 import 'register.dart';
@@ -17,12 +18,12 @@ class OnboardingPage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Hero image (70% layar) ──
+            // ── Hero image (60% layar) ──
             Expanded(
-              flex: 7,
-              child: _HeroSection(),
+              flex: 6,
+              child: const _HeroSection(),
             ),
-            // ── Button section (30% layar) ──
+            // ── Button section (40% layar) ──
             Expanded(
               flex: 5,
               child: Padding(
@@ -30,8 +31,14 @@ class OnboardingPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _FoodieLogo(),
-                    const SizedBox(height: 16),
+                    // // Logo teks oranye dari assets
+                    // Center(
+                    //   child: FoodieLogoWidget(
+                    //     variant: FoodieLogoVariant.textOrange,
+                    //     width: 50,
+                    //   ),
+                    // ),
+                    const SizedBox(height: 20),
                     _registerBtn(context),
                     const SizedBox(height: 10),
                     _loginBtn(context),
@@ -75,10 +82,7 @@ class OnboardingPage extends StatelessWidget {
             children: [
               Text(
                 'Daftar Akun Baru',
-                style: TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
               ),
               SizedBox(width: 8),
               Icon(Icons.arrow_forward_rounded, size: 18),
@@ -103,10 +107,7 @@ class OnboardingPage extends StatelessWidget {
           ),
           child: const Text(
             'Masuk ke Akun Anda',
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
         ),
       );
@@ -134,63 +135,9 @@ class OnboardingPage extends StatelessWidget {
       );
 }
 
-/// Logo FOODIE yang dapat digunakan ulang di seluruh halaman.
-class _FoodieLogo extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: AppColors.paprika,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Center(
-            child: Text(
-              'F',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        const Text(
-          'FOODIE',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-            color: AppColors.charcoal,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.saffron,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Text(
-            'DIY',
-            style: TextStyle(
-              fontSize: 8.5,
-              fontWeight: FontWeight.w900,
-              color: AppColors.charcoal,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _HeroSection extends StatelessWidget {
+  const _HeroSection();
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -205,12 +152,40 @@ class _HeroSection extends StatelessWidget {
           icon: Icons.restaurant_rounded,
           colors: [AppColors.paprika, AppColors.charcoal],
         ),
+        // Gradient overlay atas — tempat logo teks putih
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          height: 100,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.55),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Logo teks putih di pojok kiri atas gambar
+        Positioned(
+          top: 16,
+          left: 20,
+          child: FoodieLogoWidget(
+            variant: FoodieLogoVariant.textWhite,
+            height: 28,
+          ),
+        ),
         // Gradient overlay bawah
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          height: 160,
+          height: 140,
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -228,7 +203,7 @@ class _HeroSection extends StatelessWidget {
         Positioned(
           left: 20,
           right: 20,
-          bottom: 28,
+          bottom: 24,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -253,7 +228,7 @@ class _HeroSection extends StatelessWidget {
               const Text(
                 'Jelajahi Rasa\nWarisan Nusantara.',
                 style: TextStyle(
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   height: 1.15,
@@ -265,7 +240,7 @@ class _HeroSection extends StatelessWidget {
                 'DIY & Jawa Tengah · 400+ Warung Terverifikasi',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.paprika,
+                  color: AppColors.cream,
                 ),
               ),
             ],

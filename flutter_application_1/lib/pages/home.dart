@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../props/app_colors.dart';
 import '../widgets/decide.dart';
 import 'ai_tab.dart';
+import 'detail_page.dart';
 import 'explore_tab.dart';
 import 'home_tab.dart';
 import 'profile_tab.dart';
@@ -51,7 +52,13 @@ class _HomePageState extends State<HomePage> {
       body: IndexedStack(
         index: _index,
         children: [
-          HomeTab(name: widget.name, onSeeAll: () => _select(1)),
+          HomeTab(
+            name: widget.name,
+            onSeeAll: () => _select(1),
+            onOpenRestaurant: (r) => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)),
+            ),
+          ),
           ExploreTab(name: widget.name),
           const SizedBox.shrink(), // slot "Decide" (dibuka sebagai sheet)
           const AiTab(),

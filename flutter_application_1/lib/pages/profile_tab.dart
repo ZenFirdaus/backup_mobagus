@@ -3,12 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/profile.dart';
+import '../models/review.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
 import 'achievements_page.dart';
 import 'converter_page.dart';
+import 'detail_page.dart';
 import 'favorites_page.dart';
 import 'game_page.dart';
 import 'intro.dart';
@@ -29,18 +31,34 @@ class ProfileTab extends StatefulWidget {
   State<ProfileTab> createState() => _ProfileTabState();
 }
 
-class _ProfileTabState extends State<ProfileTab> {
+class _ProfileTabState extends State<ProfileTab>
+    with SingleTickerProviderStateMixin {
   late bool _biometric = widget.biometricOn;
   bool _notif = true;
   Profile? _profile;
   Map<String, int> _stats = {'favorites': 0, 'checkins': 0, 'reviews': 0};
   bool _loading = true;
 
+  // Tab controller untuk RIWAYAT
+  late final TabController _histTab = TabController(length: 2, vsync: this);
+
+  // Data history pencarian & ulasan
+  List<Map<String, dynamic>> _searchHistory = [];
+  List<Review> _myReviews = [];
+  bool _histLoading = true;
+
   @override
   void initState() {
     super.initState();
     _loadPrefs();
     _load();
+    _loadHistory();
+  }
+
+  @override
+  void dispose() {
+    _histTab.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPrefs() async {
@@ -48,7 +66,8 @@ class _ProfileTabState extends State<ProfileTab> {
       final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
       setState(() {
-        _biometric = prefs.getBool('foodie_biometric_enabled') ?? widget.biometricOn;
+        _biometric =
+            prefs.getBool('foodie_biometric_enabled') ?? widget.biometricOn;
         _notif = prefs.getBool('foodie_notifications_enabled') ?? true;
       });
     } catch (_) {}
@@ -70,6 +89,20 @@ class _ProfileTabState extends State<ProfileTab> {
     } catch (_) {}
   }
 
+  Future<void> _loadHistory() async {
+    final svc = SupabaseService.instance;
+    final results = await Future.wait([
+      svc.getSearchHistory(),
+      svc.getUserReviews(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _searchHistory = results[0] as List<Map<String, dynamic>>;
+      _myReviews = results[1] as List<Review>;
+      _histLoading = false;
+    });
+  }
+
   void _showCoverageDialog() {
     showDialog(
       context: context,
@@ -89,7 +122,8 @@ class _ProfileTabState extends State<ProfileTab> {
           children: [
             const Text(
               'FOODIE mengkurasi warisan kuliner secara eksklusif pada wilayah:',
-              style: TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.4),
+              style: TextStyle(
+                  fontSize: 12.5, color: AppColors.textMuted, height: 1.4),
             ),
             const SizedBox(height: 12),
             Container(
@@ -104,7 +138,10 @@ class _ProfileTabState extends State<ProfileTab> {
                 children: [
                   Text(
                     '1. Daerah Istimewa Yogyakarta (DIY)',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark),
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -114,7 +151,10 @@ class _ProfileTabState extends State<ProfileTab> {
                   SizedBox(height: 8),
                   Text(
                     '2. Provinsi Jawa Tengah',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark),
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -140,29 +180,216 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
+  // ─── EDIT PROFILE SHEET ───
+
   void _showEditProfile() {
-    final ctrl = TextEditingController(text: _profile?.displayName ?? widget.name);
-    showDialog(
+    final nameCtrl = TextEditingController(
+      text: _profile?.displayName ?? widget.name,
+    );
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Ubah Nama Profil', style: AppText.display(18)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          style: const TextStyle(fontSize: 13, color: AppColors.textDark),
-          decoration: InputDecoration(
-            labelText: 'Nama Lengkap Kurator',
-            filled: true,
-            fillColor: AppColors.surfaceSubtle,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.line),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // handle bar
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text('Edit Profil', style: AppText.display(20)),
+                const SizedBox(height: 20),
+
+                // ── Avatar area ──
+                Center(
+                  child: GestureDetector(
+                    onTap: () async {
+                      // Tunjukkan pilihan: URL foto atau hapus foto
+                      await _editAvatarDialog(setSheet);
+                    },
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: AppColors.orange,
+                          backgroundImage: _profile?.avatarUrl != null &&
+                                  _profile!.avatarUrl!.isNotEmpty
+                              ? NetworkImage(_profile!.avatarUrl!)
+                              : null,
+                          child: (_profile?.avatarUrl == null ||
+                                  _profile!.avatarUrl!.isEmpty)
+                              ? Text(
+                                  (nameCtrl.text.isNotEmpty
+                                          ? nameCtrl.text
+                                          : 'F')[0]
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: AppColors.charcoal,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded,
+                                size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Center(
+                  child: Text(
+                    'Ketuk untuk ubah foto profil',
+                    style:
+                        TextStyle(fontSize: 11, color: AppColors.textMuted),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Nama ──
+                const Text(
+                  'Nama Lengkap',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: nameCtrl,
+                  autofocus: false,
+                  style: const TextStyle(
+                      fontSize: 14, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    hintText: 'Nama kurator Anda',
+                    filled: true,
+                    fillColor: AppColors.surfaceSubtle,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.line),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.line),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                          color: AppColors.orange, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // ── Tombol simpan ──
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.charcoal,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final newName = nameCtrl.text.trim();
+                      if (newName.isEmpty) return;
+                      Navigator.pop(ctx);
+                      await SupabaseService.instance
+                          .upsertProfile(displayName: newName);
+                      _load();
+                    },
+                    child: const Text(
+                      'Simpan Perubahan',
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _editAvatarDialog(StateSetter setSheet) async {
+    final urlCtrl = TextEditingController(text: _profile?.avatarUrl ?? '');
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Foto Profil', style: AppText.display(18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Masukkan URL foto profil Anda (JPG/PNG):',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlCtrl,
+              autofocus: true,
+              style: const TextStyle(fontSize: 12),
+              decoration: InputDecoration(
+                hintText: 'https://...',
+                filled: true,
+                fillColor: AppColors.surfaceSubtle,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text('Hapus Foto',
+                style: TextStyle(color: AppColors.red)),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Batal'),
@@ -172,19 +399,21 @@ class _ProfileTabState extends State<ProfileTab> {
               backgroundColor: AppColors.charcoal,
               foregroundColor: Colors.white,
             ),
-            onPressed: () async {
-              final newName = ctrl.text.trim();
-              if (newName.isNotEmpty) {
-                Navigator.pop(ctx);
-                await SupabaseService.instance.upsertProfile(displayName: newName);
-                _load();
-              }
-            },
+            onPressed: () => Navigator.pop(ctx, urlCtrl.text.trim()),
             child: const Text('Simpan'),
           ),
         ],
       ),
     );
+
+    if (result != null && mounted) {
+      await SupabaseService.instance.upsertProfile(
+        displayName: _profile?.displayName ?? widget.name,
+        avatarUrl: result,
+      );
+      await _load();
+      setSheet(() {});
+    }
   }
 
   Future<void> _load() async {
@@ -210,7 +439,8 @@ class _ProfileTabState extends State<ProfileTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Keluar akun?'),
-        content: const Text('Kamu perlu login lagi untuk masuk ke FOODIE.'),
+        content:
+            const Text('Kamu perlu login lagi untuk masuk ke FOODIE.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -218,7 +448,8 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Keluar', style: TextStyle(color: AppColors.red)),
+            child:
+                const Text('Keluar', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -239,7 +470,17 @@ class _ProfileTabState extends State<ProfileTab> {
     final sent = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Saran & Kesan'),
+        backgroundColor: Colors.white,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.rate_review_outlined,
+                color: AppColors.orange, size: 22),
+            const SizedBox(width: 8),
+            const Text('Saran & Kesan'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -247,7 +488,7 @@ class _ProfileTabState extends State<ProfileTab> {
               'Berikan penilaian dan saran Anda untuk mata kuliah ini.',
               style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             ValueListenableBuilder<int>(
               valueListenable: ratingCtrl,
               builder: (_, val, _) => Row(
@@ -256,21 +497,30 @@ class _ProfileTabState extends State<ProfileTab> {
                   return GestureDetector(
                     onTap: () => ratingCtrl.value = i + 1,
                     child: Icon(
-                      i < val ? Icons.star_rounded : Icons.star_outline_rounded,
-                      size: 32,
+                      i < val
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      size: 36,
                       color: AppColors.orange,
                     ),
                   );
                 }),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextField(
               controller: msgCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Tulis saran & kesan...',
-                border: OutlineInputBorder(),
+              maxLines: 4,
+              style:
+                  const TextStyle(fontSize: 13, color: AppColors.textDark),
+              decoration: InputDecoration(
+                hintText: 'Tulis saran & kesan untuk mata kuliah...',
+                filled: true,
+                fillColor: AppColors.surfaceSubtle,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.line),
+                ),
               ),
             ),
           ],
@@ -280,7 +530,11 @@ class _ProfileTabState extends State<ProfileTab> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Batal'),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.charcoal,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Kirim'),
           ),
@@ -297,7 +551,7 @@ class _ProfileTabState extends State<ProfileTab> {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             const SnackBar(
-              content: Text('Terima kasih atas masukan Anda!'),
+              content: Text('Terima kasih atas masukan Anda! ✨'),
               backgroundColor: AppColors.greenDark,
               behavior: SnackBarBehavior.floating,
             ),
@@ -324,10 +578,14 @@ class _ProfileTabState extends State<ProfileTab> {
         bottom: false,
         child: _loading
             ? const Center(
-                child: CircularProgressIndicator(color: AppColors.orange))
+                child:
+                    CircularProgressIndicator(color: AppColors.orange))
             : RefreshIndicator(
                 color: AppColors.orange,
-                onRefresh: _load,
+                onRefresh: () async {
+                  await _load();
+                  await _loadHistory();
+                },
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   children: [
@@ -343,6 +601,13 @@ class _ProfileTabState extends State<ProfileTab> {
                     const SizedBox(height: 14),
                     _quizBanner(),
                     const SizedBox(height: 20),
+
+                    // ── Riwayat Aktivitas ──
+                    _sectionLabel('RIWAYAT AKTIVITAS'),
+                    const SizedBox(height: 8),
+                    _historySection(),
+                    const SizedBox(height: 20),
+
                     _sectionLabel('AKTIVITAS KULINER'),
                     const SizedBox(height: 8),
                     _group([
@@ -426,13 +691,243 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
+  // ─── HISTORY SECTION ───
+
+  Widget _historySection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.line, width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x04000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Tab bar
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(color: AppColors.line, width: 1)),
+            ),
+            child: TabBar(
+              controller: _histTab,
+              labelColor: AppColors.charcoal,
+              unselectedLabelColor: AppColors.textMuted,
+              indicatorColor: AppColors.orange,
+              indicatorWeight: 2.5,
+              labelStyle: const TextStyle(
+                  fontSize: 12.5, fontWeight: FontWeight.w700),
+              unselectedLabelStyle: const TextStyle(
+                  fontSize: 12.5, fontWeight: FontWeight.w600),
+              tabs: const [
+                Tab(text: 'Pencarian'),
+                Tab(text: 'Ulasan Saya'),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 240,
+            child: _histLoading
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(color: AppColors.orange))
+                : TabBarView(
+                    controller: _histTab,
+                    children: [
+                      _searchHistoryTab(),
+                      _reviewsTab(),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchHistoryTab() {
+    if (_searchHistory.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 32, color: AppColors.line),
+            SizedBox(height: 8),
+            Text(
+              'Belum ada riwayat pencarian',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(
+      children: [
+        // header hapus semua
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${_searchHistory.length} pencarian',
+                style: const TextStyle(
+                    fontSize: 11, color: AppColors.textMuted),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  await SupabaseService.instance.clearSearchHistory();
+                  setState(() => _searchHistory = []);
+                },
+                child: const Text(
+                  'Hapus semua',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.red,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            itemCount: _searchHistory.length,
+            itemBuilder: (_, i) {
+              final item = _searchHistory[i];
+              final q = item['query'] as String? ?? '';
+              return ListTile(
+                dense: true,
+                leading: const Icon(Icons.history_rounded,
+                    size: 18, color: AppColors.textMuted),
+                title: Text(
+                  q,
+                  style: const TextStyle(
+                      fontSize: 13, color: AppColors.textDark),
+                ),
+                trailing: GestureDetector(
+                  onTap: () async {
+                    await SupabaseService.instance.removeSearchItem(q);
+                    setState(() =>
+                        _searchHistory.removeWhere((e) => e['query'] == q));
+                  },
+                  child: const Icon(Icons.close_rounded,
+                      size: 16, color: AppColors.textMuted),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _reviewsTab() {
+    if (_myReviews.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.rate_review_outlined,
+                size: 32, color: AppColors.line),
+            SizedBox(height: 8),
+            Text(
+              'Belum ada ulasan',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Kunjungi restoran dan tulis ulasan pertamamu!',
+              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      itemCount: _myReviews.length,
+      separatorBuilder: (_, _) => Divider(
+        height: 1,
+        indent: 52,
+        color: AppColors.line.withValues(alpha: 0.5),
+      ),
+      itemBuilder: (_, i) {
+        final rev = _myReviews[i];
+        return ListTile(
+          dense: true,
+          leading: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.orange.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.restaurant_rounded,
+                size: 18, color: AppColors.orange),
+          ),
+          title: Text(
+            rev.restaurantName ?? rev.restaurantId,
+            style: const TextStyle(
+                fontSize: 12.5, fontWeight: FontWeight.w700),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: List.generate(
+                  5,
+                  (j) => Icon(
+                    j < rev.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 12,
+                    color: AppColors.orange,
+                  ),
+                ),
+              ),
+              Text(
+                rev.comment,
+                style:
+                    const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          onTap: () async {
+            final resto = await SupabaseService.instance
+                .getRestaurant(rev.restaurantId);
+            if (resto != null && mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => DetailPage(restaurant: resto)),
+              );
+            }
+          },
+        );
+      },
+    );
+  }
+
   Widget _accountCard(String name, String email) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.greenDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
+        border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12), width: 1),
         boxShadow: const [
           BoxShadow(
             color: Color(0x10000000),
@@ -443,16 +938,45 @@ class _ProfileTabState extends State<ProfileTab> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppColors.orange,
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : 'F',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
+          // Avatar — bisa foto atau inisial
+          GestureDetector(
+            onTap: _showEditProfile,
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: AppColors.orange,
+                  backgroundImage:
+                      _profile?.avatarUrl != null &&
+                              _profile!.avatarUrl!.isNotEmpty
+                          ? NetworkImage(_profile!.avatarUrl!)
+                          : null,
+                  child: (_profile?.avatarUrl == null ||
+                          _profile!.avatarUrl!.isEmpty)
+                      ? Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'F',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        )
+                      : null,
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.edit_rounded,
+                        size: 10, color: Colors.white),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 14),
@@ -472,12 +996,31 @@ class _ProfileTabState extends State<ProfileTab> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.white),
-                      tooltip: 'Ubah Nama',
-                      onPressed: _showEditProfile,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    GestureDetector(
+                      onTap: _showEditProfile,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit_outlined,
+                                size: 12, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'Edit',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -495,7 +1038,8 @@ class _ProfileTabState extends State<ProfileTab> {
                 ],
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -529,16 +1073,13 @@ class _ProfileTabState extends State<ProfileTab> {
       ),
       child: const Row(
         children: [
-          Icon(Icons.celebration_outlined, size: 20, color: AppColors.orange),
+          Icon(Icons.celebration_outlined,
+              size: 20, color: AppColors.orange),
           SizedBox(width: 12),
           Expanded(
             child: Text(
               'Akun berhasil dibuat! Lengkapi profilmu agar rekomendasi makin pas.',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.45,
-                color: AppColors.textDark,
-              ),
+              style: TextStyle(fontSize: 12, height: 1.45, color: AppColors.textDark),
             ),
           ),
         ],
@@ -571,10 +1112,9 @@ class _ProfileTabState extends State<ProfileTab> {
           border: Border.all(color: AppColors.line, width: 1),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x05000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
+                color: Color(0x05000000),
+                blurRadius: 8,
+                offset: Offset(0, 2)),
           ],
         ),
         child: Row(
@@ -597,15 +1137,15 @@ class _ProfileTabState extends State<ProfileTab> {
                   Text(
                     'Tebak Kuliner Jogja',
                     style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark),
                   ),
                   SizedBox(height: 2),
                   Text(
                     'Mainkan tantangan kuis kuliner harian',
-                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    style:
+                        TextStyle(fontSize: 11, color: AppColors.textMuted),
                   ),
                 ],
               ),
@@ -627,10 +1167,9 @@ class _ProfileTabState extends State<ProfileTab> {
           border: Border.all(color: AppColors.line, width: 1),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x04000000),
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            ),
+                color: Color(0x04000000),
+                blurRadius: 6,
+                offset: Offset(0, 2)),
           ],
         ),
         child: Column(
@@ -640,10 +1179,9 @@ class _ProfileTabState extends State<ProfileTab> {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-              ),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted),
             ),
           ],
         ),
@@ -671,10 +1209,7 @@ class _ProfileTabState extends State<ProfileTab> {
         border: Border.all(color: AppColors.line, width: 1),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x04000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+              color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -700,7 +1235,8 @@ class _ProfileTabState extends State<ProfileTab> {
       decoration: BoxDecoration(
         color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.line.withValues(alpha: 0.8), width: 0.8),
+        border: Border.all(
+            color: AppColors.line.withValues(alpha: 0.8), width: 0.8),
       ),
       child: Icon(icon, size: 18, color: AppColors.greenDark),
     );
@@ -714,22 +1250,18 @@ class _ProfileTabState extends State<ProfileTab> {
       title: Text(
         title,
         style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: AppColors.greenDark,
-        ),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.greenDark),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (trailing != null)
-            Text(
-              trailing,
-              style:
-                  const TextStyle(fontSize: 11, color: AppColors.textMuted),
-            ),
-          const Icon(Icons.chevron_right,
-              size: 18, color: AppColors.textMuted),
+            Text(trailing,
+                style: const TextStyle(
+                    fontSize: 11, color: AppColors.textMuted)),
+          const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
         ],
       ),
       onTap: onTap ?? () {},
@@ -748,10 +1280,9 @@ class _ProfileTabState extends State<ProfileTab> {
       title: Text(
         title,
         style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: AppColors.greenDark,
-        ),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.greenDark),
       ),
       trailing: Switch(
         value: value,
@@ -782,10 +1313,9 @@ class _ProfileTabState extends State<ProfileTab> {
             Text(
               isGuest ? 'Keluar Mode Tamu' : 'Keluar Akun',
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.red,
-              ),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.red),
             ),
           ],
         ),
