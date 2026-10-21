@@ -186,6 +186,7 @@ class _ProfileTabState extends State<ProfileTab>
     final nameCtrl = TextEditingController(
       text: _profile?.displayName ?? widget.name,
     );
+    String? tempAvatarUrl = _profile?.avatarUrl;
 
     showModalBottomSheet(
       context: context,
@@ -226,19 +227,21 @@ class _ProfileTabState extends State<ProfileTab>
                   child: GestureDetector(
                     onTap: () async {
                       // Tunjukkan pilihan: URL foto atau hapus foto
-                      await _editAvatarDialog(setSheet);
+                      await _editAvatarDialog(setSheet, (url) {
+                        tempAvatarUrl = url;
+                      });
                     },
                     child: Stack(
                       children: [
                         CircleAvatar(
                           radius: 40,
                           backgroundColor: AppColors.orange,
-                          backgroundImage: _profile?.avatarUrl != null &&
-                                  _profile!.avatarUrl!.isNotEmpty
-                              ? NetworkImage(_profile!.avatarUrl!)
+                          backgroundImage: tempAvatarUrl != null &&
+                                  tempAvatarUrl!.isNotEmpty
+                              ? NetworkImage(tempAvatarUrl!)
                               : null,
-                          child: (_profile?.avatarUrl == null ||
-                                  _profile!.avatarUrl!.isEmpty)
+                          child: (tempAvatarUrl == null ||
+                                  tempAvatarUrl!.isEmpty)
                               ? Text(
                                   (nameCtrl.text.isNotEmpty
                                           ? nameCtrl.text
@@ -333,9 +336,22 @@ class _ProfileTabState extends State<ProfileTab>
                       final newName = nameCtrl.text.trim();
                       if (newName.isEmpty) return;
                       Navigator.pop(ctx);
-                      await SupabaseService.instance
-                          .upsertProfile(displayName: newName);
-                      _load();
+                      await SupabaseService.instance.upsertProfile(
+                        displayName: newName,
+                        avatarUrl: tempAvatarUrl,
+                      );
+                      await _load();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('Profil berhasil diperbarui ✨'),
+                              backgroundColor: AppColors.greenDark,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                      }
                     },
                     child: const Text(
                       'Simpan Perubahan',
@@ -352,7 +368,10 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
-  Future<void> _editAvatarDialog(StateSetter setSheet) async {
+  Future<void> _editAvatarDialog(
+    StateSetter setSheet,
+    void Function(String?) onUrlChanged,
+  ) async {
     final urlCtrl = TextEditingController(text: _profile?.avatarUrl ?? '');
     final result = await showDialog<String?>(
       context: context,
@@ -407,6 +426,7 @@ class _ProfileTabState extends State<ProfileTab>
     );
 
     if (result != null && mounted) {
+      onUrlChanged(result.isEmpty ? null : result);
       await SupabaseService.instance.upsertProfile(
         displayName: _profile?.displayName ?? widget.name,
         avatarUrl: result,
@@ -541,21 +561,40 @@ class _ProfileTabState extends State<ProfileTab>
         ],
       ),
     );
-    if (sent == true && msgCtrl.text.trim().isNotEmpty) {
-      await SupabaseService.instance.submitFeedback(
-        rating: ratingCtrl.value,
-        message: msgCtrl.text.trim(),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Terima kasih atas masukan Anda! ✨'),
-              backgroundColor: AppColors.greenDark,
-              behavior: SnackBarBehavior.floating,
-            ),
+    if (sent == true) {
+      final msg = msgCtrl.text.trim();
+      if (msg.isNotEmpty) {
+        try {
+          await SupabaseService.instance.submitFeedback(
+            rating: ratingCtrl.value,
+            message: msg,
           );
+        } catch (_) {
+          // Gagal kirim ke server, tapi tetap tampilkan konfirmasi
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('Terima kasih atas masukan Anda! ✨'),
+                backgroundColor: AppColors.greenDark,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('Mohon tulis saran atau kesan terlebih dahulu.'),
+                backgroundColor: AppColors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+        }
       }
     }
     ratingCtrl.dispose();
@@ -1294,7 +1333,6 @@ class _ProfileTabState extends State<ProfileTab>
   }
 
   Widget _logoutButton() {
-    final isGuest = Supabase.instance.client.auth.currentUser == null;
     return GestureDetector(
       onTap: _logout,
       child: Container(
@@ -1305,14 +1343,14 @@ class _ProfileTabState extends State<ProfileTab>
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.tint(AppColors.red, 0.4)),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.logout_rounded, size: 18, color: AppColors.red),
-            const SizedBox(width: 8),
+            Icon(Icons.logout_rounded, size: 18, color: AppColors.red),
+            SizedBox(width: 8),
             Text(
-              isGuest ? 'Keluar Mode Tamu' : 'Keluar Akun',
-              style: const TextStyle(
+              'Keluar Akun',
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: AppColors.red),

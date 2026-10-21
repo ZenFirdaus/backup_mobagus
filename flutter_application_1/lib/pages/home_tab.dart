@@ -11,8 +11,11 @@ import '../widgets/decide.dart';
 class HomeTab extends StatefulWidget {
   final String name;
 
-  /// Pindah ke tab Explore (dipakai kategori, "Lihat semua").
+  /// Pindah ke tab Explore (dipakai "Lihat semua").
   final VoidCallback? onSeeAll;
+
+  /// Tap kategori → pindah ke Explore dengan filter kategori.
+  final void Function(String category)? onCategorySelected;
 
   /// Buka detail restoran langsung dari Home.
   final void Function(Restaurant)? onOpenRestaurant;
@@ -21,6 +24,7 @@ class HomeTab extends StatefulWidget {
     super.key,
     required this.name,
     this.onSeeAll,
+    this.onCategorySelected,
     this.onOpenRestaurant,
   });
 
@@ -380,8 +384,14 @@ class _HomeTabState extends State<HomeTab> {
         itemBuilder: (_, i) {
           final c = _categories[i];
           return GestureDetector(
-            // Tap kategori → buka Explore langsung
-            onTap: widget.onSeeAll,
+            // Tap kategori → filter di Explore
+            onTap: () {
+              if (widget.onCategorySelected != null) {
+                widget.onCategorySelected!(c);
+              } else {
+                widget.onSeeAll?.call();
+              }
+            },
             child: SizedBox(
               width: 68,
               child: Column(
@@ -448,8 +458,8 @@ class _HomeTabState extends State<HomeTab> {
           child: PageView.builder(
             controller: _pageCtrl,
             padEnds: false,
-            // Gunakan physics khusus agar tidak konflik dengan ListView vertikal
-            physics: const PageScrollPhysics(),
+            // Swipe horizontal tidak konflik dengan ListView vertikal
+            physics: const BouncingScrollPhysics(),
             itemCount: _picks.length,
             onPageChanged: (i) => setState(() => _page = i),
             itemBuilder: (_, i) => Padding(

@@ -326,12 +326,7 @@ class _LoginPageState extends State<LoginPage> {
                     loading: _loading,
                     onPressed: _submit,
                   ),
-                  const SizedBox(height: 14),
-                  SoftButton(
-                    label: 'Masuk Mode Tamu',
-                    icon: Icons.person_outline_rounded,
-                    onPressed: () => _goHome('Tamu'),
-                  ),
+
                   const SizedBox(height: 24),
                   Center(
                     child: Row(

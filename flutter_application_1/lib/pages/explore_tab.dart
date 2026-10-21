@@ -15,7 +15,9 @@ enum _Sort { nama, rating, termurah }
 /// Tab "Explore": data dari Supabase (fallback seed jika kosong/offline).
 class ExploreTab extends StatefulWidget {
   final String name;
-  const ExploreTab({super.key, this.name = ''});
+  /// Kategori awal yang dipilih (dari Home).
+  final String? initialCategory;
+  const ExploreTab({super.key, this.name = '', this.initialCategory});
 
   @override
   State<ExploreTab> createState() => _ExploreTabState();
@@ -44,6 +46,10 @@ class _ExploreTabState extends State<ExploreTab> {
   @override
   void initState() {
     super.initState();
+    // Terapkan filter kategori awal dari Home jika ada
+    if (widget.initialCategory != null) {
+      _category = widget.initialCategory;
+    }
     _load();
     _svc.getCategories().then((c) {
       if (mounted) setState(() => _categories = c);
@@ -51,6 +57,17 @@ class _ExploreTabState extends State<ExploreTab> {
     _svc.getFavoriteIds().then((f) {
       if (mounted) setState(() => _favs = f.toSet());
     });
+  }
+
+  @override
+  void didUpdateWidget(ExploreTab old) {
+    super.didUpdateWidget(old);
+    // Jika kategori berubah dari parent (Home), terapkan dan reload
+    if (widget.initialCategory != old.initialCategory &&
+        widget.initialCategory != null) {
+      setState(() => _category = widget.initialCategory);
+      _load();
+    }
   }
 
   @override

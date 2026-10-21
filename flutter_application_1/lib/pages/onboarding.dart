@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import '../props/app_colors.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/foodie_logo.dart';
-import 'home.dart';
 import 'login.dart';
 import 'register.dart';
 
-/// Halaman onboarding: gambar makanan + 3 tombol (Register, Login, Tamu).
+/// Halaman onboarding: gambar makanan + 2 tombol (Register, Login).
 class OnboardingPage extends StatelessWidget {
   const OnboardingPage({super.key});
 
@@ -42,8 +41,6 @@ class OnboardingPage extends StatelessWidget {
                     _registerBtn(context),
                     const SizedBox(height: 10),
                     _loginBtn(context),
-                    const SizedBox(height: 10),
-                    _guestBtn(context),
                     const Spacer(),
                     const Text(
                       'Dengan melanjutkan, Anda menyetujui Ketentuan Layanan FOODIE.',
@@ -112,27 +109,7 @@ class OnboardingPage extends StatelessWidget {
         ),
       );
 
-  Widget _guestBtn(BuildContext context) => SizedBox(
-        height: 46,
-        child: OutlinedButton(
-          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const HomePage(name: 'Tamu')),
-            (route) => false,
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.charcoal,
-            backgroundColor: Colors.transparent,
-            side: const BorderSide(color: AppColors.line, width: 1.2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child: const Text(
-            'Jelajahi Sebagai Tamu',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-        ),
-      );
+
 }
 
 class _HeroSection extends StatelessWidget {

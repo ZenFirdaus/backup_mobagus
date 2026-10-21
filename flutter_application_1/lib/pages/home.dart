@@ -28,6 +28,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _index = 0;
+  String? _exploreCategory; // kategori yang di-filter dari home
 
   static const _items = [
     _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
@@ -46,6 +47,13 @@ class _HomePageState extends State<HomePage> {
     setState(() => _index = i);
   }
 
+  void _selectCategoryExplore(String category) {
+    setState(() {
+      _exploreCategory = category;
+      _index = 1; // pindah ke tab Explore
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,12 +63,16 @@ class _HomePageState extends State<HomePage> {
           HomeTab(
             name: widget.name,
             onSeeAll: () => _select(1),
+            onCategorySelected: _selectCategoryExplore,
             onOpenRestaurant: (r) => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)),
             ),
           ),
-          ExploreTab(name: widget.name),
-          const SizedBox.shrink(), // slot "Decide" (dibuka sebagai sheet)
+          ExploreTab(
+            name: widget.name,
+            initialCategory: _exploreCategory,
+          ),
+          const SizedBox.shrink(),   // slot "Decide" (dibuka sebagai sheet)
           const AiTab(),
           ProfileTab(
             name: widget.name,
