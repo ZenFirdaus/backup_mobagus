@@ -5,6 +5,9 @@ import 'pages/intro.dart';
 import 'props/app_colors.dart';
 import 'props/app_text.dart';
 
+import 'services/hive_service.dart';
+import 'services/notification_service.dart';
+
 /// ALUR APLIKASI FOODIE
 ///
 ///  IntroPage ──► OnboardingPage ─┬─► RegisterPage ─► VerifyEmailPage ─► BiometricPage ─► HomePage
@@ -16,6 +19,13 @@ import 'props/app_text.dart';
 ///  - "Nanti Saja" di BiometricPage langsung ke HomePage.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi basis data lokal Hive NoSQL (terpisah dari Supabase)
+  await HiveService.instance.init();
+
+  // Inisialisasi layanan notifikasi lokal sistem
+  await NotificationService.instance.init();
+
   await Supabase.initialize(
     url: 'https://pasbipbzosiifdkqlxtl.supabase.co',
     publishableKey: 'sb_publishable_DWyoa4A5cOH8vISaS375yA_oOvPybT1',

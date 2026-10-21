@@ -9,6 +9,8 @@ import '../models/review.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
+import '../services/hive_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
 import 'achievements_page.dart';
 import 'converter_page.dart';
@@ -39,6 +41,10 @@ class _ProfileTabState extends State<ProfileTab>
     with SingleTickerProviderStateMixin {
   late bool _biometric = widget.biometricOn;
   bool _notif = true;
+  bool _mealIsSet = false;
+  int _mealHour = 12;
+  int _mealMinute = 0;
+  String _mealLabel = 'Makan Siang';
   Profile? _profile;
   Map<String, int> _stats = {'favorites': 0, 'checkins': 0, 'reviews': 0};
   bool _loading = true;
@@ -113,12 +119,18 @@ class _ProfileTabState extends State<ProfileTab>
   Future<void> _loadPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _biometric =
+          prefs.getBool('foodie_biometric_enabled') ?? widget.biometricOn;
+      _notif = HiveService.instance.isNotificationsEnabled();
+
+      final mealPref = HiveService.instance.getMealReminderPreference();
+      _mealIsSet = mealPref['isSet'] as bool? ?? false;
+      _mealHour = mealPref['hour'] as int? ?? 12;
+      _mealMinute = mealPref['minute'] as int? ?? 0;
+      _mealLabel = mealPref['label'] as String? ?? 'Makan Siang';
+
       if (!mounted) return;
-      setState(() {
-        _biometric =
-            prefs.getBool('foodie_biometric_enabled') ?? widget.biometricOn;
-        _notif = prefs.getBool('foodie_notifications_enabled') ?? true;
-      });
+      setState(() {});
     } catch (_) {}
   }
 
@@ -147,9 +159,167 @@ class _ProfileTabState extends State<ProfileTab>
   Future<void> _toggleNotif(bool val) async {
     setState(() => _notif = val);
     try {
+      await HiveService.instance.setNotificationsEnabled(val);
+      await HiveService.instance.saveMealReminderPreference(
+        enabled: val && _mealIsSet,
+        isSet: _mealIsSet,
+        hour: _mealHour,
+        minute: _mealMinute,
+        label: _mealLabel,
+      );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('foodie_notifications_enabled', val);
+
+      if (val && _mealIsSet) {
+        await NotificationService.instance.requestPermissions();
+        await NotificationService.instance.scheduleDailyMealReminder(
+          hour: _mealHour,
+          minute: _mealMinute,
+          label: _mealLabel,
+        );
+      } else {
+        await NotificationService.instance.cancelAll();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              val
+                  ? (_mealIsSet
+                      ? 'Notifikasi aktif (Jadwal: $_mealLabel $_mealHour:${_mealMinute.toString().padLeft(2, '0')} WIB)'
+                      : 'Notifikasi aktif')
+                  : 'Semua notifikasi dinonaktifkan',
+            ),
+            backgroundColor: val ? AppColors.greenDark : AppColors.charcoal,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (_) {}
+  }
+
+  Future<void> _showMealReminderPicker() async {
+    if (!_notif) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aktifkan notifikasi terlebih dahulu untuk mengatur jadwal makan',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (_mealIsSet) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Pengingat Makan Harian', style: AppText.display(16)),
+          content: Text(
+            'Saat ini diatur untuk $_mealLabel pukul ${_mealHour.toString().padLeft(2, '0')}:${_mealMinute.toString().padLeft(2, '0')} WIB.',
+            style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'delete'),
+              child: const Text('Hapus Pengingat',
+                  style: TextStyle(color: AppColors.red)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.greenDark,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pop(ctx, 'edit'),
+              child: const Text('Ubah Jam'),
+            ),
+          ],
+        ),
+      );
+
+      if (action == 'delete') {
+        setState(() {
+          _mealIsSet = false;
+        });
+        await HiveService.instance.removeMealReminderPreference();
+        await NotificationService.instance.cancelNotification(9999);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pengingat makan harian dihapus'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      } else if (action != 'edit') {
+        return;
+      }
+    }
+
+    if (!mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: _mealHour, minute: _mealMinute),
+      helpText: 'PILIH JAM PENGINGAT MAKAN',
+    );
+
+    if (pickedTime == null) return;
+
+    String newLabel = 'Makan Siang';
+    if (pickedTime.hour >= 5 && pickedTime.hour < 11) {
+      newLabel = 'Sarapan Pagi';
+    } else if (pickedTime.hour >= 11 && pickedTime.hour < 16) {
+      newLabel = 'Makan Siang';
+    } else if (pickedTime.hour >= 16 && pickedTime.hour < 21) {
+      newLabel = 'Santap Malam Gudeg';
+    } else {
+      newLabel = 'Kuliner Dini Hari Jogja';
+    }
+
+    setState(() {
+      _mealIsSet = true;
+      _mealHour = pickedTime.hour;
+      _mealMinute = pickedTime.minute;
+      _mealLabel = newLabel;
+    });
+
+    await HiveService.instance.saveMealReminderPreference(
+      enabled: _notif,
+      isSet: true,
+      hour: pickedTime.hour,
+      minute: pickedTime.minute,
+      label: newLabel,
+    );
+
+    if (_notif) {
+      await NotificationService.instance.scheduleDailyMealReminder(
+        hour: pickedTime.hour,
+        minute: pickedTime.minute,
+        label: newLabel,
+      );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Pengingat berhasil diatur: $newLabel pukul ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')} WIB ⏰',
+          ),
+          backgroundColor: AppColors.greenDark,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _loadHistory() async {
@@ -961,6 +1131,16 @@ class _ProfileTabState extends State<ProfileTab>
                         'Notifikasi',
                         _notif,
                         _toggleNotif,
+                      ),
+                      _tile(
+                        _notif ? Icons.alarm_rounded : Icons.alarm_off_rounded,
+                        'Jadwal Pengingat Makan',
+                        trailing: _notif
+                            ? (_mealIsSet
+                                ? '${_mealHour.toString().padLeft(2, '0')}:${_mealMinute.toString().padLeft(2, '0')} WIB'
+                                : 'Belum Diatur >')
+                            : 'Notifikasi Nonaktif',
+                        onTap: _showMealReminderPicker,
                       ),
                       _tile(Icons.map_outlined, 'Cakupan Wilayah',
                           trailing: 'DIY & Jateng',

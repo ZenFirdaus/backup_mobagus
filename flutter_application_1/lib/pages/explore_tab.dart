@@ -8,8 +8,10 @@ import '../utils/format.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
+import '../services/hive_service.dart';
 import '../widgets/auth_widgets.dart';
 import 'detail_page.dart';
+import 'notifications_page.dart';
 
 enum _Sort { terdekat, nama, rating, termurah }
 
@@ -283,19 +285,50 @@ class _ExploreTabState extends State<ExploreTab> {
             ],
           ),
         ),
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.line),
-          ),
-          child: const Icon(
-            Icons.notifications_none_rounded,
-            size: 20,
-            color: AppColors.greenDark,
-          ),
+        ValueListenableBuilder(
+          valueListenable: HiveService.instance.settingsListenable,
+          builder: (_, _, _) {
+            final bool hasBadge =
+                HiveService.instance.getActiveRemindersCount() > 0;
+            return GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsPage()),
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 20,
+                      color: AppColors.greenDark,
+                    ),
+                  ),
+                  if (hasBadge)
+                    Positioned(
+                      top: 1,
+                      right: 1,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: AppColors.orange,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );

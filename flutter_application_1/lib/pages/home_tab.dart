@@ -10,7 +10,9 @@ import '../models/restaurant.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
+import '../services/hive_service.dart';
 import '../widgets/decide.dart';
+import 'notifications_page.dart';
 
 /// Tab "Home": sapaan, Curated Shake, GPS widget, kategori, dan Rekomendasi Terdekat (LBS).
 class HomeTab extends StatefulWidget {
@@ -370,19 +372,52 @@ class _HomeTabState extends State<HomeTab> {
         const SizedBox(width: 10),
         Column(
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.line),
-              ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                size: 22,
-                color: AppColors.charcoal,
-              ),
+            ValueListenableBuilder(
+              valueListenable: HiveService.instance.settingsListenable,
+              builder: (_, _, _) {
+                final bool hasBadge =
+                    HiveService.instance.getActiveRemindersCount() > 0;
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationsPage()),
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_none_rounded,
+                          size: 22,
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                      if (hasBadge)
+                        Positioned(
+                          top: 2,
+                          right: 2,
+                          child: Container(
+                            width: 11,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: AppColors.orange,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: Colors.white, width: 1.5),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 8),
             Container(

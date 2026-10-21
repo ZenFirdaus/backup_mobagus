@@ -8,6 +8,8 @@ import '../models/review.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
+import '../services/hive_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/buttons.dart';
 
@@ -23,6 +25,7 @@ class DetailPage extends StatefulWidget {
 class _DetailPageState extends State<DetailPage> {
   late Restaurant _r;
   bool _isFavorite = false;
+  bool _hasReminder = false;
   late double _currentRating;
   late int _currentReviewCount;
 
@@ -44,9 +47,18 @@ class _DetailPageState extends State<DetailPage> {
     _currentRating = _r.rating;
     _currentReviewCount = _r.reviewCount;
     _checkFavorite();
+    _checkReminder();
     _loadFoods();
     _loadReviews();
     _subscribeRealtime();
+  }
+
+  void _checkReminder() {
+    final reminders = HiveService.instance.getAllVisitReminders();
+    final has = reminders.any(
+      (r) => r['restoId'] == _r.id && r['isCompleted'] != true,
+    );
+    if (mounted) setState(() => _hasReminder = has);
   }
 
   void _subscribeRealtime() {
@@ -283,6 +295,349 @@ class _DetailPageState extends State<DetailPage> {
         content: Text('Tautan ${_r.name} disalin ke papan klip!'),
         backgroundColor: AppColors.greenDark,
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _showScheduleReminderDialog() async {
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 19, minute: 0);
+    final noteCtrl = TextEditingController();
+
+    // Cek apakah sudah ada jadwal tersimpan untuk resto ini di Hive
+    final existingReminders = HiveService.instance.getAllVisitReminders();
+    final existingIndex = existingReminders.indexWhere(
+      (r) => r['restoId'] == _r.id && r['isCompleted'] != true,
+    );
+    final Map<String, dynamic>? existing =
+        existingIndex != -1 ? existingReminders[existingIndex] : null;
+
+    if (existing != null) {
+      final parsed = DateTime.tryParse(existing['scheduledAt']?.toString() ?? '');
+      if (parsed != null) {
+        selectedDate = parsed;
+        selectedTime = TimeOfDay(hour: parsed.hour, minute: parsed.minute);
+      }
+      noteCtrl.text = existing['note']?.toString() ?? '';
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final dateStr =
+              '${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}';
+          final timeStr =
+              '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')} WIB';
+
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.tint(AppColors.orange, 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.alarm_add_rounded,
+                        color: AppColors.orange,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Jadwal Kunjungan Kuliner',
+                              style: AppText.display(17)),
+                          Text(
+                            _r.name,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Tentukan Tanggal & Jam Santap:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 90)),
+                          );
+                          if (picked != null) {
+                            setModalState(() => selectedDate = picked);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.line),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today_rounded,
+                                  size: 16, color: AppColors.greenDark),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  dateStr,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final picked = await showTimePicker(
+                            context: ctx,
+                            initialTime: selectedTime,
+                          );
+                          if (picked != null) {
+                            setModalState(() => selectedTime = picked);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.line),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time_rounded,
+                                  size: 16, color: AppColors.greenDark),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  timeStr,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  style:
+                      const TextStyle(fontSize: 12.5, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    hintText: 'Catatan (misal: Santap bersama keluarga)...',
+                    hintStyle: const TextStyle(
+                        fontSize: 12, color: AppColors.textMuted),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.line),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.line),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    if (existing != null) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.red,
+                            side: const BorderSide(color: AppColors.red),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final idStr = existing['id'].toString();
+                            final intId = int.tryParse(idStr) ??
+                                (_r.id.hashCode.abs() % 100000);
+                            await HiveService.instance
+                                .deleteVisitReminder(idStr);
+                            await NotificationService.instance
+                                .cancelNotification(intId);
+                            _checkReminder();
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Jadwal pengingat dibatalkan'),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text(
+                            'Batalkan',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.greenDark,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(Icons.check_circle_outline_rounded,
+                            size: 18),
+                        label: Text(
+                          existing != null
+                              ? 'Perbarui Jadwal'
+                              : 'Pasang Pengingat',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        onPressed: () async {
+                          final scheduledAt = DateTime(
+                            selectedDate.year,
+                            selectedDate.month,
+                            selectedDate.day,
+                            selectedTime.hour,
+                            selectedTime.minute,
+                          );
+
+                          if (scheduledAt.isBefore(DateTime.now())) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Pilih tanggal dan jam di masa depan'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+
+                          final notifId = _r.id.hashCode.abs() % 100000;
+                          final idStr = notifId.toString();
+
+                          await HiveService.instance.saveVisitReminder(
+                            id: idStr,
+                            restoId: _r.id,
+                            restoName: _r.name,
+                            restoAddress: _r.address,
+                            scheduledAt: scheduledAt,
+                            note: noteCtrl.text.trim(),
+                          );
+
+                          await NotificationService.instance
+                              .scheduleVisitReminder(
+                            id: notifId,
+                            restoName: _r.name,
+                            scheduledDate: scheduledAt,
+                            note: noteCtrl.text.trim(),
+                          );
+
+                          _checkReminder();
+                          if (ctx.mounted) Navigator.pop(ctx);
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Pengingat berhasil diatur: ${_r.name} pada $dateStr $timeStr! 🔔',
+                                ),
+                                backgroundColor: AppColors.greenDark,
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -624,6 +979,12 @@ class _DetailPageState extends State<DetailPage> {
           _isFavorite ? 'Tersimpan' : 'Simpan',
           _toggleFavorite,
           color: _isFavorite ? AppColors.orange : AppColors.greenDark,
+        ),
+        _actionButton(
+          _hasReminder ? Icons.alarm_on_rounded : Icons.add_alarm_rounded,
+          _hasReminder ? 'Terjadwal' : 'Ingatkan',
+          _showScheduleReminderDialog,
+          color: _hasReminder ? AppColors.orange : AppColors.greenDark,
         ),
         _actionButton(
           Icons.rate_review_outlined,

@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../models/seed_data.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../services/hive_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
-import 'achievements_page.dart';
-import 'checkin_page.dart';
-import 'converter_page.dart';
-import 'game_page.dart';
 
-enum _NotifType { meal, geofence, game, achievement, currency }
+enum _NotifType { visitReminder, meal }
 
 class _NotifItem {
   final String id;
@@ -43,7 +40,7 @@ class NotificationsPage extends StatefulWidget {
 
 class _NotificationsPageState extends State<NotificationsPage> {
   int _selectedFilter = 0;
-  late List<_NotifItem> _items;
+  List<_NotifItem> _items = [];
 
   @override
   void initState() {
@@ -52,70 +49,73 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   void _initNotifications() {
-    _items = [
-      _NotifItem(
-        id: 'n1',
-        icon: Icons.restaurant_menu_rounded,
-        title: 'Waktunya Santap Malam Gudeg',
-        body: 'Sentra Lesehan Wijilan & Malioboro sedang ramai. Nikmati gudeg basah hangat malam ini.',
-        time: '19:04 WIB',
-        type: _NotifType.meal,
-        actionLabel: 'Cek Jadwal Makan',
-        onAction: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ConverterPage()),
+    final List<_NotifItem> list = [];
+
+    // 1. Ambil jadwal rencana kunjungan kuliner yang dibuat oleh user
+    final visitReminders = HiveService.instance.getAllVisitReminders();
+    for (final r in visitReminders) {
+      final dt = DateTime.tryParse(r['scheduledAt']?.toString() ?? '') ??
+          DateTime.now();
+      final dateFormatted =
+          '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} pukul ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} WIB';
+      final idStr = r['id'].toString();
+      final intId = int.tryParse(idStr) ?? 0;
+      final note = r['note']?.toString() ?? '';
+
+      list.add(
+        _NotifItem(
+          id: idStr,
+          icon: Icons.alarm_rounded,
+          title: 'Rencana Santap: ${r['restoName']}',
+          body:
+              'Dijadwalkan pada $dateFormatted.${note.isNotEmpty ? "\nCatatan: $note" : ""}',
+          time: dateFormatted,
+          type: _NotifType.visitReminder,
+          actionLabel: 'Batalkan Jadwal',
+          onAction: () async {
+            await HiveService.instance.deleteVisitReminder(idStr);
+            await NotificationService.instance.cancelNotification(intId);
+            _initNotifications();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Jadwal kunjungan kuliner dibatalkan'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
         ),
-      ),
-      _NotifItem(
-        id: 'n2',
-        icon: Icons.my_location_rounded,
-        title: 'Kamu Dekat Gudeg Yu Djum!',
-        body: 'Radar GPS mendeteksi kamu berada dalam radius 50m. Lakukan check-in fisik untuk klaim poin.',
-        time: '18:30 WIB',
-        type: _NotifType.geofence,
-        actionLabel: 'Check-in Sekarang',
-        onAction: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => CheckinPage(restaurant: kDefaultRestaurants.first),
-          ),
+      );
+    }
+
+    // 2. Info jadwal pengingat jam makan harian (hanya jika notifikasi diaktifkan di profil)
+    final bool isNotifEnabled = HiveService.instance.isNotificationsEnabled();
+    final mealPref = HiveService.instance.getMealReminderPreference();
+    if (isNotifEnabled &&
+        mealPref['enabled'] == true &&
+        mealPref['isSet'] == true) {
+      final hour = (mealPref['hour'] as int? ?? 12).toString().padLeft(2, '0');
+      final minute =
+          (mealPref['minute'] as int? ?? 0).toString().padLeft(2, '0');
+      final label = mealPref['label'] as String? ?? 'Makan Siang';
+
+      list.add(
+        _NotifItem(
+          id: 'meal_pref_active',
+          icon: Icons.schedule_rounded,
+          title: 'Pengingat Harian $label',
+          body:
+              'Alarm lokal aktif setiap hari pukul $hour:$minute WIB untuk memberikan inspirasi kuliner Jogja.',
+          time: 'Setiap Hari • $hour:$minute WIB',
+          type: _NotifType.meal,
         ),
-      ),
-      _NotifItem(
-        id: 'n3',
-        icon: Icons.sports_esports_rounded,
-        title: 'Tantangan Harian Tersedia',
-        body: 'Uji pengetahuan kuliner Mataraman di Tebak Kuliner Jogja dan dapatkan hingga +100 poin.',
-        time: '12:00 WIB',
-        type: _NotifType.game,
-        actionLabel: 'Main Sekarang',
-        onAction: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const GamePage()),
-        ),
-      ),
-      _NotifItem(
-        id: 'n4',
-        icon: Icons.emoji_events_rounded,
-        title: 'Poin Bonus Selamat Datang',
-        body: 'Akun Anda telah menerima bonus sambutan +100 Foodie Points sebagai kurator baru.',
-        time: '10:15 WIB',
-        type: _NotifType.achievement,
-        actionLabel: 'Lihat Trofi',
-        onAction: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AchievementsPage()),
-        ),
-      ),
-      _NotifItem(
-        id: 'n5',
-        icon: Icons.currency_exchange_rounded,
-        title: 'Pembaruan Kurs Valas Wisatawan',
-        body: 'Simulasi acuan kurs kuliner diperbarui: 1 USD ~ Rp15.923, 1 MYR ~ Rp3.614.',
-        time: '08:00 WIB',
-        type: _NotifType.currency,
-        actionLabel: 'Konverter Kurs',
-        onAction: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ConverterPage()),
-        ),
-      ),
-    ];
+      );
+    }
+
+    setState(() {
+      _items = list;
+    });
   }
 
   void _markAllAsRead() {
@@ -136,15 +136,35 @@ class _NotificationsPageState extends State<NotificationsPage> {
   List<_NotifItem> get _filteredItems {
     switch (_selectedFilter) {
       case 1:
-        return _items.where((i) => i.type == _NotifType.meal).toList();
+        return _items.where((i) => i.type == _NotifType.visitReminder).toList();
       case 2:
-        return _items.where((i) => i.type == _NotifType.geofence).toList();
+        return _items.where((i) => i.type == _NotifType.meal).toList();
       default:
         return _items;
     }
   }
 
   int get _unreadCount => _items.where((i) => !i.isRead).length;
+
+  Future<void> _testInstantNotification() async {
+    await NotificationService.instance.requestPermissions();
+    await NotificationService.instance.showInstantNotification(
+      id: 7777,
+      title: 'Halo dari FOODIE (Mataraman Edition)! 🍲',
+      body:
+          'Sistem notifikasi pengingat kuliner berhasil diuji coba dengan lancar!',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notifikasi telah dikirim ke bilah status HP Anda! 🔔'),
+          backgroundColor: AppColors.greenDark,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,12 +175,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
         child: Column(
           children: [
             _header(),
+            _demoTestCard(),
             _filterChips(),
             Expanded(
               child: list.isEmpty
                   ? _emptyView()
                   : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                       itemCount: list.length,
                       itemBuilder: (_, i) => _card(list[i]),
                     ),
@@ -173,7 +194,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Widget _header() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Row(
         children: [
           GestureDetector(
@@ -195,37 +216,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Text('Notifikasi', style: AppText.display(18)),
-                    if (_unreadCount > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.orange,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '$_unreadCount Baru',
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
+                Text('Notifikasi', style: AppText.display(18)),
+                if (_unreadCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.orange,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$_unreadCount Baru',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                       ),
-                    ],
-                  ],
-                ),
-                const Text(
-                  'Kabar kuliner & pengingat rasa',
-                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-                ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -255,10 +267,82 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
+  /// Banner Uji Coba untuk Demonstrasi
+  Widget _demoTestCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.3)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.tint(AppColors.greenDark, 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.notifications_active_rounded,
+              color: AppColors.greenDark,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Uji Coba Notifikasi',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                Text(
+                  'Kirim tes notifikasi ke bilah status HP',
+                  style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.greenDark,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: _testInstantNotification,
+            child: const Text(
+              'Tes Sekarang',
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _filterChips() {
-    const filters = ['Semua', 'Waktu Makan', 'Geofence GPS'];
+    const filters = ['Semua', 'Jadwal Kunjungan', 'Pengingat Makan'];
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: List.generate(filters.length, (i) {
           final active = _selectedFilter == i;
@@ -279,7 +363,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 child: Text(
                   filters[i],
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: active ? Colors.white : AppColors.textMuted,
                   ),
@@ -293,19 +377,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget _card(_NotifItem item) {
-    Color iconColor;
-    switch (item.type) {
-      case _NotifType.meal:
-        iconColor = AppColors.orange;
-      case _NotifType.geofence:
-        iconColor = AppColors.greenDark;
-      case _NotifType.game:
-        iconColor = AppColors.red;
-      case _NotifType.achievement:
-        iconColor = AppColors.orange;
-      case _NotifType.currency:
-        iconColor = AppColors.greenDark;
-    }
+    final Color iconColor = item.type == _NotifType.visitReminder
+        ? AppColors.orange
+        : AppColors.greenDark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -314,10 +388,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: item.isRead
-              ? AppColors.line
-              : AppColors.tint(AppColors.orange, 0.4),
-          width: item.isRead ? 1 : 1.5,
+          color: item.type == _NotifType.visitReminder
+              ? AppColors.tint(AppColors.orange, 0.4)
+              : (item.isRead ? AppColors.line : AppColors.tint(AppColors.greenDark, 0.4)),
+          width: item.type == _NotifType.visitReminder ? 1.5 : 1,
         ),
       ),
       child: Column(
@@ -392,17 +466,24 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.tint(AppColors.yellow, 0.5),
+                    color: item.type == _NotifType.visitReminder
+                        ? AppColors.tint(AppColors.red, 0.1)
+                        : AppColors.tint(AppColors.yellow, 0.5),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppColors.tint(AppColors.orange, 0.3)),
+                      color: item.type == _NotifType.visitReminder
+                          ? AppColors.tint(AppColors.red, 0.3)
+                          : AppColors.tint(AppColors.orange, 0.3),
+                    ),
                   ),
                   child: Text(
                     item.actionLabel!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.greenDark,
+                      color: item.type == _NotifType.visitReminder
+                          ? AppColors.red
+                          : AppColors.greenDark,
                     ),
                   ),
                 ),
@@ -423,7 +504,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               size: 44, color: AppColors.textMuted),
           SizedBox(height: 10),
           Text(
-            'Tidak ada notifikasi',
+            'Belum ada jadwal atau notifikasi',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -432,8 +513,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
           SizedBox(height: 4),
           Text(
-            'Semua pemberitahuan rasa Anda sudah terbaca.',
-            style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+            'Pasang jadwal kunjungan di halaman detail kuliner\natau atur jam makan di profil.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.4),
           ),
         ],
       ),
