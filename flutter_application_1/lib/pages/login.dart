@@ -509,7 +509,7 @@ class _LoginPageState extends State<LoginPage> {
               keyboardType: TextInputType.emailAddress,
               style: const TextStyle(fontSize: 13, color: AppColors.textDark),
               decoration: InputDecoration(
-                hintText: 'nama@email.com',
+                hintText: 'nama@gmail.com',
                 prefixIcon: const Icon(Icons.mail_outline_rounded, size: 18),
                 filled: true,
                 fillColor: AppColors.surfaceSubtle,
@@ -652,7 +652,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 24),
                   AppTextField(
                     label: 'Email',
-                    hint: 'nama@email.com',
+                    hint: 'nama@gmail.com',
                     icon: Icons.mail_outline_rounded,
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,

@@ -157,7 +157,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 12),
                   AppTextField(
                     label: 'Email',
-                    hint: 'nama@email.com',
+                    hint: 'nama@gmail.com',
                     icon: Icons.mail_outline_rounded,
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
