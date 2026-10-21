@@ -54,8 +54,9 @@ class _HomeTabState extends State<HomeTab> {
   String _address = 'Mencari lokasi...';
   bool _locLoading = true;
 
-  // !! GANTI DENGAN GOOGLE GEOCODING API KEY ANDA !!
-  static const _geocodingApiKey = 'YOUR_GOOGLE_GEOCODING_API_KEY';
+  // Nominatim (OpenStreetMap) — gratis, tanpa API key
+  // Wajib kirim User-Agent sesuai policy Nominatim
+  static const _nominatimUserAgent = 'MoBagus-App/1.0 (flutter_application_1)';
 
   @override
   void initState() {
@@ -123,34 +124,49 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
+  /// Reverse geocoding pakai Nominatim (OpenStreetMap) — gratis, no API key.
   Future<void> _reverseGeocode(double lat, double lng) async {
     try {
-      // Jika tidak punya API key, pakai nama koordinat saja
-      if (_geocodingApiKey == 'YOUR_GOOGLE_GEOCODING_API_KEY') {
-        if (mounted) {
-          setState(() => _address = '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}');
-        }
-        return;
-      }
       final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json'
-        '?latlng=$lat,$lng&key=$_geocodingApiKey&language=id',
+        'https://nominatim.openstreetmap.org/reverse'
+        '?lat=$lat&lon=$lng&format=json',
       );
-      final res = await http.get(url).timeout(const Duration(seconds: 8));
+      final res = await http.get(url, headers: {
+        // Wajib sesuai policy Nominatim: https://operations.osmfoundation.org/policies/nominatim/
+        'User-Agent': _nominatimUserAgent,
+        'Accept-Language': 'id', // respons dalam Bahasa Indonesia
+      }).timeout(const Duration(seconds: 8));
+
       if (res.statusCode == 200) {
         final json = jsonDecode(res.body) as Map<String, dynamic>;
-        final results = json['results'] as List?;
-        if (results != null && results.isNotEmpty) {
-          // Ambil formatted_address dari result pertama
-          final formatted = results[0]['formatted_address'] as String? ?? '';
-          // Potong agar tidak terlalu panjang
-          final parts = formatted.split(',');
-          final short = parts.take(3).join(',').trim();
-          if (mounted) setState(() => _address = short.isNotEmpty ? short : formatted);
+        final addr = json['address'] as Map<String, dynamic>?;
+
+        if (addr != null) {
+          // Susun alamat pendek: jalan + kelurahan/desa + kota
+          final parts = <String>[
+            addr['road'] ?? addr['pedestrian'] ?? addr['neighbourhood'] ?? '',
+            addr['suburb'] ?? addr['village'] ?? addr['hamlet'] ?? '',
+            addr['city'] ?? addr['town'] ?? addr['county'] ?? '',
+          ].where((s) => s.isNotEmpty).toList();
+
+          final short = parts.take(2).join(', ');
+          if (mounted && short.isNotEmpty) {
+            setState(() => _address = short);
+            return;
+          }
+        }
+
+        // Fallback ke display_name jika address field kosong
+        final displayName = json['display_name'] as String?;
+        if (displayName != null && displayName.isNotEmpty && mounted) {
+          final short = displayName.split(',').take(2).join(',').trim();
+          setState(() => _address = short.isNotEmpty ? short : displayName);
           return;
         }
       }
     } catch (_) {}
+
+    // Fallback terakhir: tampilkan koordinat
     if (mounted) {
       setState(() => _address = '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}');
     }
