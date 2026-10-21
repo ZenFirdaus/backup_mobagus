@@ -964,12 +964,12 @@ final kDefaultReviews = <String, List<Review>>{
 };
 
 final kDefaultCategories = <String>[
+  'Restoran',
+  'Cafe',
+  'Fast Food',
+  'Food Court',
   'Gudeg',
   'Soto',
-  'Kuliner Tradisional',
   'Bakmi Jawa',
   'Angkringan',
-  'Kuliner Pedas',
-  'Sate',
-  'Minuman & Jajanan',
 ];

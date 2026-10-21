@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -10,14 +11,30 @@ import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
 import 'detail_page.dart';
 
-enum _Sort { nama, rating, termurah }
+enum _Sort { terdekat, nama, rating, termurah }
+
+/// Format label kategori agar rapi (misal fast_food -> Fast Food)
+String _formatCategoryLabel(String c) {
+  final lower = c.trim().toLowerCase();
+  if (lower == 'fast_food') return 'Fast Food';
+  if (lower == 'food_court') return 'Food Court';
+  if (lower == 'cafe') return 'Cafe';
+  if (lower == 'restoran') return 'Restoran';
+  return c.replaceAll('_', ' ').split(' ').map((w) {
+    if (w.isEmpty) return '';
+    return w[0].toUpperCase() + w.substring(1);
+  }).join(' ');
+}
 
 /// Tab "Explore": data dari Supabase (fallback seed jika kosong/offline).
 class ExploreTab extends StatefulWidget {
   final String name;
   /// Kategori awal yang dipilih (dari Home).
   final String? initialCategory;
-  const ExploreTab({super.key, this.name = '', this.initialCategory});
+  /// Koordinat user untuk sort terdekat (dikirim dari HomePage).
+  final double? userLat;
+  final double? userLng;
+  const ExploreTab({super.key, this.name = '', this.initialCategory, this.userLat, this.userLng});
 
   @override
   State<ExploreTab> createState() => _ExploreTabState();
@@ -35,9 +52,10 @@ class _ExploreTabState extends State<ExploreTab> {
   bool _budgetOn = false;
   bool _mapView = false;
   bool _loading = true;
-  _Sort _sort = _Sort.nama;
+  _Sort _sort = _Sort.terdekat; // default: terdekat dari lokasi user
 
   static const _sortLabels = {
+    _Sort.terdekat: 'Terdekat',
     _Sort.nama: 'Nama A-Z',
     _Sort.rating: 'Rating',
     _Sort.termurah: 'Termurah',
@@ -67,10 +85,20 @@ class _ExploreTabState extends State<ExploreTab> {
   @override
   void didUpdateWidget(ExploreTab old) {
     super.didUpdateWidget(old);
+    bool shouldReload = false;
     // Jika kategori berubah dari parent (Home), terapkan dan reload
     if (widget.initialCategory != old.initialCategory &&
         widget.initialCategory != null) {
-      setState(() => _category = widget.initialCategory);
+      _category = widget.initialCategory;
+      shouldReload = true;
+    }
+    // Jika koordinat GPS baru saja diterima dari HomeTab
+    if ((widget.userLat != old.userLat || widget.userLng != old.userLng) &&
+        widget.userLat != null &&
+        widget.userLng != null) {
+      shouldReload = true;
+    }
+    if (shouldReload) {
       _load();
     }
   }
@@ -94,12 +122,36 @@ class _ExploreTabState extends State<ExploreTab> {
     final list = List<Restaurant>.of(res);
     if (_sort == _Sort.rating) {
       list.sort((a, b) => b.rating.compareTo(a.rating));
+    } else if (_sort == _Sort.terdekat) {
+      final lat = widget.userLat;
+      final lng = widget.userLng;
+      if (lat != null && lng != null) {
+        list.sort((a, b) {
+          final dA = _distanceM(lat, lng, a.lat, a.lng);
+          final dB = _distanceM(lat, lng, b.lat, b.lng);
+          return dA.compareTo(dB);
+        });
+      }
+      // Jika lokasi belum tersedia, biarkan urutan default (nama A-Z)
     }
     if (!mounted) return;
     setState(() {
       _items = list;
       _loading = false;
     });
+  }
+
+  // ── Haversine: jarak dalam meter antara 2 koordinat ──
+  double _distanceM(double lat1, double lng1, double lat2, double lng2) {
+    const r = 6371000.0;
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLng = (lng2 - lng1) * math.pi / 180;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) *
+            math.cos(lat2 * math.pi / 180) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
   }
 
   void _onSearchChanged(String _) {
@@ -123,7 +175,7 @@ class _ExploreTabState extends State<ExploreTab> {
     _search.clear();
     _budgetOn = false;
     _category = null;
-    _sort = _Sort.nama;
+    _sort = _Sort.terdekat; // kembali ke default terdekat
     _load();
   }
 
@@ -168,6 +220,9 @@ class _ExploreTabState extends State<ExploreTab> {
                     child: _PlaceCard(
                       r: r,
                       favorite: _favs.contains(r.id),
+                      distanceM: (widget.userLat != null && widget.userLng != null)
+                          ? _distanceM(widget.userLat!, widget.userLng!, r.lat, r.lng)
+                          : null,
                       onFavorite: () => _toggleFav(r.id),
                       onDetail: () => _showDetail(r),
                     ),
@@ -429,7 +484,7 @@ class _ExploreTabState extends State<ExploreTab> {
           }),
           for (final c in _categories) ...[
             const SizedBox(width: 8),
-            _chip(c, _category == c, () {
+            _chip(_formatCategoryLabel(c), _category == c, () {
               _category = _category == c ? null : c;
               _load();
             }),
@@ -638,12 +693,14 @@ class _ExploreTabState extends State<ExploreTab> {
 class _PlaceCard extends StatelessWidget {
   final Restaurant r;
   final bool favorite;
+  final double? distanceM;
   final VoidCallback onFavorite;
   final VoidCallback onDetail;
 
   const _PlaceCard({
     required this.r,
     required this.favorite,
+    this.distanceM,
     required this.onFavorite,
     required this.onDetail,
   });
@@ -687,7 +744,7 @@ class _PlaceCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              r.category.toUpperCase(),
+                              _formatCategoryLabel(r.category).toUpperCase(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -768,7 +825,7 @@ class _PlaceCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          r.category,
+                          _formatCategoryLabel(r.category),
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -776,6 +833,40 @@ class _PlaceCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (distanceM != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.tint(AppColors.orange, 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.near_me_rounded,
+                                size: 11,
+                                color: AppColors.orange,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                distanceM! >= 1000
+                                    ? '${(distanceM! / 1000).toStringAsFixed(1)} km'
+                                    : '${distanceM!.round()} m',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       const Text(
                         'Detail',

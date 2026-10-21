@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,12 +21,14 @@ class ProfileTab extends StatefulWidget {
   final String name;
   final bool fromRegister;
   final bool biometricOn;
+  final void Function(String url)? onAvatarChanged;
 
   const ProfileTab({
     super.key,
     required this.name,
     this.fromRegister = false,
     this.biometricOn = false,
+    this.onAvatarChanged,
   });
 
   @override
@@ -295,27 +296,48 @@ class _ProfileTabState extends State<ProfileTab>
                     },
                     child: Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: AppColors.orange,
-                          backgroundImage: tempAvatarUrl != null &&
-                                  tempAvatarUrl!.isNotEmpty
-                              ? NetworkImage(tempAvatarUrl!)
-                              : null,
-                          child: (tempAvatarUrl == null ||
-                                  tempAvatarUrl!.isEmpty)
-                              ? Text(
-                                  (nameCtrl.text.isNotEmpty
-                                          ? nameCtrl.text
-                                          : 'F')[0]
-                                      .toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: const BoxDecoration(
+                            color: AppColors.orange,
+                            shape: BoxShape.circle,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: (tempAvatarUrl != null &&
+                                  tempAvatarUrl!.isNotEmpty)
+                              ? Image.network(
+                                  tempAvatarUrl!,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, stack) => Center(
+                                    child: Text(
+                                      (nameCtrl.text.isNotEmpty
+                                              ? nameCtrl.text
+                                              : 'F')[0]
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
                                 )
-                              : null,
+                              : Center(
+                                  child: Text(
+                                    (nameCtrl.text.isNotEmpty
+                                            ? nameCtrl.text
+                                            : 'F')[0]
+                                        .toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
                         ),
                         Positioned(
                           bottom: 0,
@@ -398,6 +420,20 @@ class _ProfileTabState extends State<ProfileTab>
                       final newName = nameCtrl.text.trim();
                       if (newName.isEmpty) return;
                       Navigator.pop(ctx);
+
+                      if (tempAvatarUrl != null && tempAvatarUrl!.isNotEmpty) {
+                        widget.onAvatarChanged?.call(tempAvatarUrl!);
+                        setState(() {
+                          _profile = Profile(
+                            id: _profile?.id ?? SupabaseService.instance.userId ?? 'curator_user',
+                            displayName: newName,
+                            avatarUrl: tempAvatarUrl,
+                            points: _profile?.points ?? 100,
+                            createdAt: _profile?.createdAt ?? DateTime.now(),
+                          );
+                        });
+                      }
+
                       await SupabaseService.instance.upsertProfile(
                         displayName: newName,
                         avatarUrl: tempAvatarUrl,
@@ -488,6 +524,21 @@ class _ProfileTabState extends State<ProfileTab>
       return;
     }
 
+    // Pastikan user sudah login
+    final uid = SupabaseService.instance.userId;
+    if (uid == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Silakan login terlebih dahulu untuk mengunggah foto profil ✨'),
+            backgroundColor: AppColors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
     // Ambil gambar dari galeri atau kamera
     final picker = ImagePicker();
     XFile? picked;
@@ -497,11 +548,16 @@ class _ProfileTabState extends State<ProfileTab>
         imageQuality: 80,
         maxWidth: 800,
       );
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
+        final isWebCamera = action == 'camera';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tidak bisa membuka galeri/kamera'),
+          SnackBar(
+            content: Text(
+              isWebCamera
+                  ? 'Kamera tidak didukung di browser ini. Silakan gunakan opsi "Pilih dari Galeri" untuk memilih file dari komputer.'
+                  : 'Tidak bisa membuka galeri/file: ${e.toString().split(':').first}',
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -534,28 +590,34 @@ class _ProfileTabState extends State<ProfileTab>
 
     String? uploadedUrl;
     try {
-      final uid = SupabaseService.instance.userId;
-      if (uid != null) {
-        final bytes = await File(picked.path).readAsBytes();
-        final ext = picked.name.split('.').last.toLowerCase();
-        final filePath = 'avatars/$uid/profile.$ext';
-        final supabase = Supabase.instance.client;
-
-        // Upload ke Supabase Storage bucket 'avatars'
-        await supabase.storage.from('avatars').uploadBinary(
-          filePath,
-          bytes,
-          fileOptions: FileOptions(
-            contentType: 'image/$ext',
-            upsert: true,
-          ),
-        );
-
-        // Ambil public URL
-        uploadedUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
-        // Tambah timestamp agar tidak ter-cache browser
-        uploadedUrl = '$uploadedUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      // Baca byte secara cross-platform (kompatibel Web/Chrome dan Mobile)
+      final bytes = await picked.readAsBytes();
+      String ext = 'jpg';
+      if (picked.name.contains('.')) {
+        ext = picked.name.split('.').last.toLowerCase();
       }
+      final mimeType = (ext == 'png')
+          ? 'image/png'
+          : (ext == 'webp')
+              ? 'image/webp'
+              : 'image/jpeg';
+      final filePath = '$uid/profile.$ext';
+      final supabase = Supabase.instance.client;
+
+      // Upload ke Supabase Storage bucket 'avatars'
+      await supabase.storage.from('avatars').uploadBinary(
+        filePath,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: mimeType,
+          upsert: true,
+        ),
+      );
+
+      // Ambil public URL
+      uploadedUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
+      // Tambah timestamp agar tidak ter-cache browser
+      uploadedUrl = '$uploadedUrl?t=${DateTime.now().millisecondsSinceEpoch}';
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -574,9 +636,19 @@ class _ProfileTabState extends State<ProfileTab>
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-    if (uploadedUrl != null) {
-      onUrlChanged(uploadedUrl);
-      await SupabaseService.instance.upsertProfile(
+    onUrlChanged(uploadedUrl);
+    widget.onAvatarChanged?.call(uploadedUrl);
+    setState(() {
+      _profile = Profile(
+        id: _profile?.id ?? uid,
+        displayName: _profile?.displayName ?? widget.name,
+        avatarUrl: uploadedUrl,
+        points: _profile?.points ?? 100,
+        createdAt: _profile?.createdAt ?? DateTime.now(),
+      );
+    });
+
+    await SupabaseService.instance.upsertProfile(
         displayName: _profile?.displayName ?? widget.name,
         avatarUrl: uploadedUrl,
       );
@@ -591,7 +663,6 @@ class _ProfileTabState extends State<ProfileTab>
           ),
         );
       }
-    }
   }
 
   Widget _actionTile(
@@ -1181,25 +1252,42 @@ class _ProfileTabState extends State<ProfileTab>
             onTap: _showEditProfile,
             child: Stack(
               children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: AppColors.orange,
-                  backgroundImage:
-                      _profile?.avatarUrl != null &&
-                              _profile!.avatarUrl!.isNotEmpty
-                          ? NetworkImage(_profile!.avatarUrl!)
-                          : null,
-                  child: (_profile?.avatarUrl == null ||
-                          _profile!.avatarUrl!.isEmpty)
-                      ? Text(
-                          name.isNotEmpty ? name[0].toUpperCase() : 'F',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: const BoxDecoration(
+                    color: AppColors.orange,
+                    shape: BoxShape.circle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: (_profile?.avatarUrl != null &&
+                          _profile!.avatarUrl!.isNotEmpty)
+                      ? Image.network(
+                          _profile!.avatarUrl!,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, stack) => Center(
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : 'F',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         )
-                      : null,
+                      : Center(
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : 'F',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                 ),
                 Positioned(
                   bottom: 0,

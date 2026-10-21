@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -199,6 +200,14 @@ class SupabaseService {
 
   Future<Profile?> getProfile() async {
     final uid = userId;
+    String? localAvatar;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      localAvatar = uid != null ? prefs.getString('foodie_avatar_$uid') : null;
+    } catch (_) {}
+
+    final metaAvatar = currentUser?.userMetadata?['avatar_url'] as String?;
+
     if (uid != null) {
       try {
         final res = await _client
@@ -208,21 +217,31 @@ class SupabaseService {
             .maybeSingle();
         if (res != null) {
           final p = Profile.fromJson(res);
+          final effectiveAvatar = (p.avatarUrl != null && p.avatarUrl!.isNotEmpty)
+              ? p.avatarUrl
+              : (localAvatar != null && localAvatar.isNotEmpty)
+                  ? localAvatar
+                  : metaAvatar;
           return Profile(
             id: p.id,
-            displayName: p.displayName,
-            avatarUrl: p.avatarUrl,
+            displayName: p.displayName.isNotEmpty
+                ? p.displayName
+                : (currentUser?.userMetadata?['name'] as String? ?? curatorName),
+            avatarUrl: effectiveAvatar,
             points: p.points + _localBonusPoints,
             createdAt: p.createdAt,
           );
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Supabase getProfile error: $e');
+      }
     }
 
     final name = currentUser?.userMetadata?['name'] as String? ?? curatorName;
     return Profile(
       id: uid ?? 'curator_user',
       displayName: name,
+      avatarUrl: localAvatar ?? metaAvatar,
       points: 100 + _localBonusPoints + (_localCheckins.length * 50),
       createdAt: DateTime.now(),
     );
@@ -237,6 +256,27 @@ class SupabaseService {
       guestName = displayName;
       return;
     }
+
+    // 1. Simpan di SharedPreferences lokal
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('foodie_avatar_$uid', avatarUrl);
+      } catch (_) {}
+    }
+
+    // 2. Simpan di Supabase Auth user metadata (selalu bisa tanpa syarat tabel Postgres)
+    try {
+      final data = <String, dynamic>{'name': displayName};
+      if (avatarUrl != null && avatarUrl.isNotEmpty) {
+        data['avatar_url'] = avatarUrl;
+      }
+      await _client.auth.updateUser(UserAttributes(data: data));
+    } catch (e) {
+      debugPrint('Supabase auth.updateUser error: $e');
+    }
+
+    // 3. Simpan di tabel public.profiles di Supabase
     try {
       final payload = <String, dynamic>{
         'id': uid,
@@ -246,7 +286,19 @@ class SupabaseService {
         payload['avatar_url'] = avatarUrl;
       }
       await _client.from('profiles').upsert(payload, onConflict: 'id');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Supabase profiles.upsert with avatar_url error: $e');
+      // Jika kolom avatar_url belum dibuat di tabel profiles,
+      // tetap simpan display_name
+      try {
+        await _client.from('profiles').upsert({
+          'id': uid,
+          'display_name': displayName,
+        }, onConflict: 'id');
+      } catch (_) {}
+    }
+
+    _profileChangedController.add(null);
   }
 
   // ─── RESTAURANTS ───
@@ -319,10 +371,34 @@ class SupabaseService {
 
   Future<List<String>> getCategories() async {
     try {
-      final res = await _client.from('categories').select('name');
-      final list = (res as List).map((e) => e['name'] as String).toList();
-      if (list.isNotEmpty) return list;
+      // 1. Coba ambil dari tabel categories
+      final res = await _client.from('categories').select();
+      if (res.isNotEmpty) {
+        final list = res.map((m) {
+          return (m['name'] ?? m['slug'] ?? m['category'] ?? '').toString();
+        }).where((s) => s.isNotEmpty).toList();
+        if (list.isNotEmpty) return list;
+      }
     } catch (_) {}
+
+    try {
+      // 2. Ambil kategori unik langsung dari data restaurants yang ada di Supabase
+      final res = await _client.from('restaurants').select('category');
+      if (res.isNotEmpty) {
+        final set = <String>{};
+        for (final row in res) {
+          final cat = (row['category'] as String?)?.trim();
+          if (cat != null && cat.isNotEmpty) {
+            set.add(cat);
+          }
+        }
+        if (set.isNotEmpty) {
+          final sorted = set.toList()..sort();
+          return sorted;
+        }
+      }
+    } catch (_) {}
+
     return kDefaultCategories;
   }
 

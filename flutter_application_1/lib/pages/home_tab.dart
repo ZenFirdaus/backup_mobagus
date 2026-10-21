@@ -25,12 +25,16 @@ class HomeTab extends StatefulWidget {
   /// Buka detail restoran langsung dari Home.
   final void Function(Restaurant)? onOpenRestaurant;
 
+  /// Dipanggil saat koordinat GPS berhasil didapat → dipakai Explore untuk sort terdekat.
+  final void Function(double lat, double lng)? onLocationFetched;
+
   const HomeTab({
     super.key,
     required this.name,
     this.onSeeAll,
     this.onCategorySelected,
     this.onOpenRestaurant,
+    this.onLocationFetched,
   });
 
   @override
@@ -114,7 +118,10 @@ class _HomeTabState extends State<HomeTab> {
         _locLoading = false;
       });
 
-      // Panggil Google Geocoding API untuk dapat nama alamat
+      // Kirim koordinat ke parent (HomePage) agar ExploreTab bisa sort terdekat
+      widget.onLocationFetched?.call(pos.latitude, pos.longitude);
+
+      // Reverse geocode untuk nama alamat
       await _reverseGeocode(pos.latitude, pos.longitude);
 
       // Setelah dapat lokasi, re-sort picks berdasarkan jarak
@@ -225,20 +232,34 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   IconData _iconFor(String c) {
-    final s = c.toLowerCase();
-    if (s.contains('fast')) return Icons.fastfood_rounded;
-    if (s.contains('cafe') || s.contains('kafe') || s.contains('kopi')) {
+    // Normalisasi: lowercase + ganti underscore/tanda hubung → spasi
+    final s = c.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    // fast_food / fast food / cepat saji
+    if (s.contains('fast food') || s.contains('fastfood') || s.contains('fast') || s.contains('cepat')) {
+      return Icons.fastfood_rounded;
+    }
+    // food_court / food court / sentra kuliner
+    if (s.contains('food court') || s.contains('foodcourt') || s.contains('court') || s.contains('sentra')) {
+      return Icons.storefront_rounded;
+    }
+    // cafe / kafe / coffee / kopi / minuman
+    if (s.contains('cafe') || s.contains('kafe') || s.contains('coffee') ||
+        s.contains('kopi') || s.contains('minuman')) {
       return Icons.local_cafe_rounded;
     }
-    if (s.contains('court')) return Icons.storefront_rounded;
-    if (s.contains('resto')) return Icons.restaurant_rounded;
-    if (s.contains('bakery') || s.contains('roti')) {
+    // restoran / restaurant / warung / rumah makan
+    if (s.contains('resto') || s.contains('restaurant') || s.contains('warung') ||
+        s.contains('rumah makan')) {
+      return Icons.restaurant_rounded;
+    }
+    // bakery / roti / bakpia
+    if (s.contains('bakery') || s.contains('roti') || s.contains('bakpia')) {
       return Icons.bakery_dining_rounded;
     }
-    if (s.contains('jajan') || s.contains('dessert')) {
+    // dessert / jajan / es / jus
+    if (s.contains('jajan') || s.contains('dessert') || s.contains('jus') || s.contains(' es ')) {
       return Icons.icecream_rounded;
     }
-    if (s.contains('lain')) return Icons.apps_rounded;
     return Icons.ramen_dining_rounded;
   }
 
@@ -246,6 +267,19 @@ class _HomeTabState extends State<HomeTab> {
   String _formatDistance(double meters) {
     if (meters < 1000) return '${meters.toStringAsFixed(0)} m';
     return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  /// Format label kategori agar rapi (misal fast_food -> Fast Food)
+  String _formatCategoryLabel(String c) {
+    final lower = c.trim().toLowerCase();
+    if (lower == 'fast_food') return 'Fast Food';
+    if (lower == 'food_court') return 'Food Court';
+    if (lower == 'cafe') return 'Cafe';
+    if (lower == 'restoran') return 'Restoran';
+    return c.replaceAll('_', ' ').split(' ').map((w) {
+      if (w.isEmpty) return '';
+      return w[0].toUpperCase() + w.substring(1);
+    }).join(' ');
   }
 
   @override
@@ -657,7 +691,7 @@ class _HomeTabState extends State<HomeTab> {
                   ),
                   const SizedBox(height: 7),
                   Text(
-                    c,
+                    _formatCategoryLabel(c),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
