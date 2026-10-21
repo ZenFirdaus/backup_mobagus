@@ -738,7 +738,7 @@ class _ProfileTabState extends State<ProfileTab>
       ),
     );
     if (ok == true && mounted) {
-      await Supabase.instance.client.auth.signOut();
+      await SupabaseService.instance.signOut();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const IntroPage()),

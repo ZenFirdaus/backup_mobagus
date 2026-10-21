@@ -27,7 +27,7 @@ class Review {
       userId: json['user_id'] as String? ?? '',
       restaurantId: json['restaurant_id'].toString(),
       rating: json['rating'] as int? ?? 0,
-      comment: json['comment'] as String? ?? '',
+      comment: json['comment'] as String? ?? json['content'] as String? ?? '',
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
       userName: json['user_name'] as String? ?? profile?['display_name'] as String?,

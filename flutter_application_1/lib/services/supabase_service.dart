@@ -14,14 +14,17 @@ import '../models/seed_data.dart';
 
 class SupabaseService {
   SupabaseService._() {
-    _initStorage();
+    initStorage();
     _initRealtime();
+    _initAuthListener();
   }
   static final instance = SupabaseService._();
 
   SupabaseClient get _client => Supabase.instance.client;
   User? get currentUser => _client.auth.currentUser;
-  String? get userId => currentUser?.id;
+  String? _demoUserId;
+  void setDemoUser(String? id) => _demoUserId = id;
+  String? get userId => currentUser?.id ?? _demoUserId;
   String curatorName = 'Dimas Dananjaya';
   String get guestName => curatorName;
   set guestName(String val) => curatorName = val;
@@ -52,9 +55,44 @@ class SupabaseService {
 
   RealtimeChannel? _reviewsChannel;
   RealtimeChannel? _favoritesChannel;
+  StreamSubscription<AuthState>? _authSub;
+
+  void _initAuthListener() {
+    try {
+      _authSub?.cancel();
+      _authSub = _client.auth.onAuthStateChange.listen((data) async {
+        final event = data.event;
+        if (event == AuthChangeEvent.signedIn ||
+            event == AuthChangeEvent.tokenRefreshed ||
+            event == AuthChangeEvent.userUpdated) {
+          await initStorage(force: true);
+          _initRealtime();
+          try {
+            await getUserReviews();
+            await getFavoriteIds();
+          } catch (_) {}
+          _favoritesController.add(Set<String>.from(_localFavorites));
+          _profileChangedController.add(null);
+        } else if (event == AuthChangeEvent.signedOut) {
+          _localFavorites.clear();
+          _localCheckins.clear();
+          _localReviews.clear();
+          _localSearchHistory.clear();
+          _localBonusPoints = 0;
+          _demoUserId = null;
+          _initialized = false;
+          _reviewsChannel?.unsubscribe();
+          _favoritesChannel?.unsubscribe();
+          _reviewsChannel = null;
+          _favoritesChannel = null;
+        }
+      });
+    } catch (_) {}
+  }
 
   void _initRealtime() {
     try {
+      _reviewsChannel?.unsubscribe();
       _reviewsChannel = _client
           .channel('public:reviews')
           .onPostgresChanges(
@@ -70,6 +108,7 @@ class SupabaseService {
           )
           .subscribe();
 
+      _favoritesChannel?.unsubscribe();
       _favoritesChannel = _client
           .channel('public:favorites')
           .onPostgresChanges(
@@ -86,11 +125,16 @@ class SupabaseService {
     } catch (_) {}
   }
 
-  Future<void> _initStorage() async {
-    if (_initialized) return;
+  Future<void> initStorage({bool force = false}) async {
+    if (_initialized && !force) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final uid = userId ?? 'guest';
+
+      _localFavorites.clear();
+      _localSearchHistory.clear();
+      _localCheckins.clear();
+      _localReviews.clear();
 
       // Load favorites
       final favList = prefs.getStringList('foodie_fav_$uid');
@@ -104,7 +148,6 @@ class SupabaseService {
       // Load search history
       final historyRaw = prefs.getStringList('foodie_hist_$uid');
       if (historyRaw != null) {
-        _localSearchHistory.clear();
         for (final item in historyRaw) {
           try {
             _localSearchHistory.add(jsonDecode(item) as Map<String, dynamic>);
@@ -115,7 +158,6 @@ class SupabaseService {
       // Load checkins
       final checkinsRaw = prefs.getStringList('foodie_chk_$uid');
       if (checkinsRaw != null) {
-        _localCheckins.clear();
         for (final item in checkinsRaw) {
           try {
             _localCheckins.add(Checkin.fromJson(jsonDecode(item) as Map<String, dynamic>));
@@ -126,7 +168,6 @@ class SupabaseService {
       // Load reviews
       final reviewsRaw = prefs.getStringList('foodie_rev_$uid');
       if (reviewsRaw != null) {
-        _localReviews.clear();
         for (final item in reviewsRaw) {
           try {
             _localReviews.add(Review.fromJson(jsonDecode(item) as Map<String, dynamic>));
@@ -191,9 +232,12 @@ class SupabaseService {
     _localReviews.clear();
     _localSearchHistory.clear();
     _localBonusPoints = 0;
+    _demoUserId = null;
     curatorName = 'Dimas Dananjaya';
     _initialized = false;
-    await _client.auth.signOut();
+    try {
+      await _client.auth.signOut();
+    } catch (_) {}
   }
 
   // ─── PROFILES ───
@@ -420,8 +464,9 @@ class SupabaseService {
   // ─── FAVORITES ───
 
   Future<List<String>> getFavoriteIds() async {
+    if (!_initialized) await initStorage();
     final uid = userId;
-    if (uid != null) {
+    if (uid != null && uid != 'guest') {
       try {
         final res = await _client
             .from('favorites')
@@ -430,6 +475,7 @@ class SupabaseService {
         final list =
             (res as List).map((e) => e['restaurant_id'].toString()).toList();
         _localFavorites.addAll(list);
+        await _persistFavorites();
       } catch (_) {}
     }
     return _localFavorites.toList();
@@ -577,18 +623,39 @@ class SupabaseService {
     _profileChangedController.add(null);
 
     final uid = userId;
-    if (uid != null) {
+    if (uid != null && uid != 'guest') {
       try {
-        // client_uuid wajib diisi (unique constraint di DB)
-        // restaurant_id harus int karena tipe int8 di Supabase
         await _client.from('reviews').insert({
-          'client_uuid': uuid,  // UUID v4 valid untuk unique constraint
+          'client_uuid': uuid,
           'user_id': uid,
           'restaurant_id': int.tryParse(restaurantId) ?? restaurantId,
           'rating': rating,
           'comment': comment,
         });
-      } catch (_) {}
+      } catch (e1) {
+        try {
+          // Fallback bila kolom teks di Supabase adalah 'content'
+          await _client.from('reviews').insert({
+            'client_uuid': uuid,
+            'user_id': uid,
+            'restaurant_id': int.tryParse(restaurantId) ?? restaurantId,
+            'rating': rating,
+            'content': comment,
+          });
+        } catch (e2) {
+          try {
+            // Fallback bila kolom client_uuid tidak ada
+            await _client.from('reviews').insert({
+              'user_id': uid,
+              'restaurant_id': int.tryParse(restaurantId) ?? restaurantId,
+              'rating': rating,
+              'content': comment,
+            });
+          } catch (e3) {
+            debugPrint('Reviews insert to Supabase: $e3');
+          }
+        }
+      }
     }
 
     return rev;
@@ -611,15 +678,25 @@ class SupabaseService {
   }
 
   Future<List<Checkin>> getCheckins() async {
+    if (!_initialized) await initStorage();
     List<Checkin> remote = [];
     final uid = userId;
-    if (uid != null) {
+    if (uid != null && uid != 'guest') {
       try {
-        final res = await _client
-            .from('checkins')
-            .select('*, restaurants(name)')
-            .eq('user_id', uid)
-            .order('created_at', ascending: false);
+        dynamic res;
+        try {
+          res = await _client
+              .from('checkins')
+              .select('*, restaurants(name)')
+              .eq('user_id', uid)
+              .order('created_at', ascending: false);
+        } catch (_) {
+          res = await _client
+              .from('checkins')
+              .select('*')
+              .eq('user_id', uid)
+              .order('created_at', ascending: false);
+        }
         remote = (res as List).map((e) => Checkin.fromJson(e)).toList();
       } catch (_) {}
     }
@@ -653,7 +730,7 @@ class SupabaseService {
     _persistPoints();
 
     final uid = userId;
-    if (uid != null) {
+    if (uid != null && uid != 'guest') {
       try {
         await _client.from('checkins').insert({
           'user_id': uid,
@@ -671,8 +748,9 @@ class SupabaseService {
   // ─── SEARCH HISTORY ───
 
   Future<List<Map<String, dynamic>>> getSearchHistory() async {
+    if (!_initialized) await initStorage();
     final uid = userId;
-    if (uid != null) {
+    if (uid != null && uid != 'guest') {
       try {
         final res = await _client
             .from('search_history')
@@ -680,7 +758,16 @@ class SupabaseService {
             .eq('user_id', uid)
             .order('created_at', ascending: false)
             .limit(20);
-        return List<Map<String, dynamic>>.from(res);
+        final list = List<Map<String, dynamic>>.from(res);
+        for (final item in list) {
+          final q = item['query'] as String? ?? '';
+          if (q.isNotEmpty &&
+              !_localSearchHistory.any((l) => l['query'] == q)) {
+            _localSearchHistory.add(item);
+          }
+        }
+        await _persistHistory();
+        return list;
       } catch (_) {}
     }
     return _localSearchHistory;
@@ -696,7 +783,7 @@ class SupabaseService {
     _persistHistory();
 
     final uid = userId;
-    if (uid == null) return;
+    if (uid == null || uid == 'guest') return;
     try {
       await _client.from('search_history').insert({
         'user_id': uid,
@@ -709,7 +796,7 @@ class SupabaseService {
     _localSearchHistory.removeWhere((item) => item['query'] == query);
     _persistHistory();
     final uid = userId;
-    if (uid == null) return;
+    if (uid == null || uid == 'guest') return;
     try {
       await _client
           .from('search_history')
@@ -723,7 +810,7 @@ class SupabaseService {
     _localSearchHistory.clear();
     _persistHistory();
     final uid = userId;
-    if (uid == null) return;
+    if (uid == null || uid == 'guest') return;
     try {
       await _client.from('search_history').delete().eq('user_id', uid);
     } catch (_) {}
@@ -732,26 +819,71 @@ class SupabaseService {
   // ─── USER REVIEWS (ulasan milik user ini) ───
 
   Future<List<Review>> getUserReviews() async {
+    if (!_initialized) await initStorage();
     final uid = userId;
     // Gabungkan ulasan lokal milik user ini
     final local = _localReviews
         .where((r) => r.userId == (uid ?? 'guest'))
         .toList();
 
-    if (uid != null) {
+    if (uid != null && uid != 'guest') {
       try {
-        final res = await _client
-            .from('reviews')
-            .select('*, restaurants(name)')
-            .eq('user_id', uid)
-            .order('created_at', ascending: false)
-            .limit(30);
-        final remote =
-            (res as List).map((e) => Review.fromJson(e)).toList();
+        dynamic res;
+        try {
+          res = await _client
+              .from('reviews')
+              .select('*, restaurants(name)')
+              .eq('user_id', uid)
+              .order('created_at', ascending: false)
+              .limit(50);
+        } catch (_) {
+          res = await _client
+              .from('reviews')
+              .select('*')
+              .eq('user_id', uid)
+              .order('created_at', ascending: false)
+              .limit(50);
+        }
+
+        final remote = <Review>[];
+        for (final item in (res as List)) {
+          final map = Map<String, dynamic>.from(item as Map);
+          final rev = Review.fromJson(map);
+          if (rev.restaurantName == null || rev.restaurantName!.isEmpty) {
+            final resto = await getRestaurant(rev.restaurantId);
+            remote.add(Review(
+              id: rev.id,
+              userId: rev.userId,
+              restaurantId: rev.restaurantId,
+              rating: rev.rating,
+              comment: rev.comment,
+              createdAt: rev.createdAt,
+              userName: rev.userName,
+              restaurantName: resto?.name,
+            ));
+          } else {
+            remote.add(rev);
+          }
+        }
+
+        for (final r in remote) {
+          final exists = _localReviews.any((l) =>
+              l.id == r.id ||
+              (l.restaurantId == r.restaurantId &&
+                  l.userId == r.userId &&
+                  l.comment == r.comment));
+          if (!exists) {
+            _localReviews.add(r);
+          }
+        }
+        await _persistReviews();
+
         final all = [...local, ...remote];
         final seen = <String>{};
         return all.where((r) => seen.add(r.id)).toList();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('getUserReviews error: $e');
+      }
     }
     return local;
   }
@@ -819,12 +951,13 @@ class SupabaseService {
   // ─── STATS ───
 
   Future<Map<String, int>> getUserStats() async {
+    if (!_initialized) await initStorage();
     int favCount = _localFavorites.length;
     int checkinCount = _localCheckins.length;
     int reviewCount = _localReviews.length;
 
     final uid = userId;
-    if (uid != null) {
+    if (uid != null && uid != 'guest') {
       try {
         final favs = await _client
             .from('favorites')

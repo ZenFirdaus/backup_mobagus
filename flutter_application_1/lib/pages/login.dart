@@ -11,6 +11,7 @@ import '../widgets/foodie_logo.dart';
 import '../widgets/text_field.dart';
 import 'home.dart';
 import 'register.dart';
+import '../services/supabase_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -73,6 +74,7 @@ class _LoginPageState extends State<LoginPage> {
           res.user?.userMetadata?['name'] as String? ??
           _email.text.trim().split('@').first;
       await _saveUserSession(name, _email.text.trim(), pwd);
+      await SupabaseService.instance.initStorage(force: true);
 
       final prefs = await SharedPreferences.getInstance();
       final hasBiometric = prefs.getBool('foodie_biometric_enabled') ?? false;
@@ -101,6 +103,8 @@ class _LoginPageState extends State<LoginPage> {
         );
         final name = _email.text.trim().split('@').first;
         await _saveUserSession(name, _email.text.trim(), pwd);
+        SupabaseService.instance.setDemoUser(_email.text.trim());
+        await SupabaseService.instance.initStorage(force: true);
 
         final prefs = await SharedPreferences.getInstance();
         final hasBiometric = prefs.getBool('foodie_biometric_enabled') ?? false;
@@ -127,6 +131,8 @@ class _LoginPageState extends State<LoginPage> {
       final resolvedName =
           fallbackName.isEmpty ? 'Dimas Dananjaya' : fallbackName;
       await _saveUserSession(resolvedName, _email.text.trim(), pwd);
+      SupabaseService.instance.setDemoUser(_email.text.trim());
+      await SupabaseService.instance.initStorage(force: true);
 
       final prefs = await SharedPreferences.getInstance();
       final hasBiometric = prefs.getBool('foodie_biometric_enabled') ?? false;
@@ -190,6 +196,12 @@ class _LoginPageState extends State<LoginPage> {
               // Jika offline atau jaringan lambat, sesi lokal tetap aktif
             }
           }
+          if (SupabaseService.instance.userId == null &&
+              savedEmail != null &&
+              savedEmail.isNotEmpty) {
+            SupabaseService.instance.setDemoUser(savedEmail);
+          }
+          await SupabaseService.instance.initStorage(force: true);
 
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
