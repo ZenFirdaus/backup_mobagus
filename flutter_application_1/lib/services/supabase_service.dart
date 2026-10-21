@@ -418,13 +418,50 @@ class SupabaseService {
   Future<List<Review>> getReviews(String restaurantId) async {
     List<Review> remote = [];
     try {
+      // Ambil reviews tanpa join (karena foreign key profiles mungkin tidak ada)
       final res = await _client
           .from('reviews')
-          .select('*, profiles(display_name)')
-          .eq('restaurant_id', restaurantId)
+          .select('*')
+          .eq('restaurant_id', int.tryParse(restaurantId) ?? restaurantId)
           .order('created_at', ascending: false)
-          .limit(20);
-      remote = (res as List).map((e) => Review.fromJson(e)).toList();
+          .limit(50);
+
+      final rawList = res as List;
+
+      // Kumpulkan semua user_id unik dari reviews yang masuk
+      final userIds = rawList
+          .map((e) => e['user_id']?.toString())
+          .where((id) => id != null && id.isNotEmpty)
+          .toSet()
+          .cast<String>()
+          .toList();
+
+      // Ambil nama display dari tabel profiles secara terpisah
+      final Map<String, String> userNames = {};
+      if (userIds.isNotEmpty) {
+        try {
+          final profileRes = await _client
+              .from('profiles')
+              .select('id, display_name')
+              .inFilter('id', userIds);
+          for (final p in profileRes as List) {
+            final uid = p['id']?.toString() ?? '';
+            final name = p['display_name']?.toString();
+            if (uid.isNotEmpty && name != null && name.isNotEmpty) {
+              userNames[uid] = name;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Gabungkan nama ke setiap review
+      remote = rawList.map((e) {
+        final uid = e['user_id']?.toString() ?? '';
+        return Review.fromJson({
+          ...e,
+          'user_name': userNames[uid] ?? e['user_name'],
+        });
+      }).toList();
     } catch (_) {}
 
     final defaultList = kDefaultReviews[restaurantId] ?? [];
@@ -443,8 +480,9 @@ class SupabaseService {
   }) async {
     final name = currentUser?.userMetadata?['name'] as String? ?? guestName;
     final resto = await getRestaurant(restaurantId);
+    final uuid = _generateUuid();
     final rev = Review(
-      id: 'rev_local_${DateTime.now().millisecondsSinceEpoch}',
+      id: 'rev_local_$uuid',
       userId: userId ?? 'guest',
       restaurantId: restaurantId,
       rating: rating,
@@ -465,9 +503,12 @@ class SupabaseService {
     final uid = userId;
     if (uid != null) {
       try {
+        // client_uuid wajib diisi (unique constraint di DB)
+        // restaurant_id harus int karena tipe int8 di Supabase
         await _client.from('reviews').insert({
+          'client_uuid': uuid,  // UUID v4 valid untuk unique constraint
           'user_id': uid,
-          'restaurant_id': restaurantId,
+          'restaurant_id': int.tryParse(restaurantId) ?? restaurantId,
           'rating': rating,
           'comment': comment,
         });
@@ -478,6 +519,20 @@ class SupabaseService {
   }
 
   // ─── CHECKINS ───
+
+  /// Generate UUID v4 secara manual (tanpa package tambahan)
+  String _generateUuid() {
+    final rng = math.Random.secure();
+    final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+    String hex(int b) => b.toRadixString(16).padLeft(2, '0');
+    return '${hex(bytes[0])}${hex(bytes[1])}${hex(bytes[2])}${hex(bytes[3])}-'
+        '${hex(bytes[4])}${hex(bytes[5])}-'
+        '${hex(bytes[6])}${hex(bytes[7])}-'
+        '${hex(bytes[8])}${hex(bytes[9])}-'
+        '${hex(bytes[10])}${hex(bytes[11])}${hex(bytes[12])}${hex(bytes[13])}${hex(bytes[14])}${hex(bytes[15])}';
+  }
 
   Future<List<Checkin>> getCheckins() async {
     List<Checkin> remote = [];
