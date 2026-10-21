@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -432,68 +434,198 @@ class _ProfileTabState extends State<ProfileTab>
     StateSetter setSheet,
     void Function(String?) onUrlChanged,
   ) async {
-    final urlCtrl = TextEditingController(text: _profile?.avatarUrl ?? '');
-    final result = await showDialog<String?>(
+    // Tampilkan pilihan: Galeri, Kamera, atau Hapus Foto
+    final action = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Foto Profil', style: AppText.display(18)),
-        content: Column(
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Masukkan URL foto profil Anda (JPG/PNG):',
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: urlCtrl,
-              autofocus: true,
-              style: const TextStyle(fontSize: 12),
-              decoration: InputDecoration(
-                hintText: 'https://...',
-                filled: true,
-                fillColor: AppColors.surfaceSubtle,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+            Text('Ubah Foto Profil', style: AppText.display(18)),
+            const SizedBox(height: 20),
+            _actionTile(
+              ctx, Icons.photo_library_rounded,
+              'Pilih dari Galeri', AppColors.orange, 'gallery',
+            ),
+            const SizedBox(height: 10),
+            _actionTile(
+              ctx, Icons.camera_alt_rounded,
+              'Ambil Foto dari Kamera', AppColors.charcoal, 'camera',
+            ),
+            const SizedBox(height: 10),
+            _actionTile(
+              ctx, Icons.delete_outline_rounded,
+              'Hapus Foto Profil', AppColors.red, 'delete',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (action == null || !mounted) return;
+
+    if (action == 'delete') {
+      onUrlChanged(null);
+      await SupabaseService.instance.upsertProfile(
+        displayName: _profile?.displayName ?? widget.name,
+        avatarUrl: '',
+      );
+      await _load();
+      setSheet(() {});
+      return;
+    }
+
+    // Ambil gambar dari galeri atau kamera
+    final picker = ImagePicker();
+    XFile? picked;
+    try {
+      picked = await picker.pickImage(
+        source: action == 'camera' ? ImageSource.camera : ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 800,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak bisa membuka galeri/kamera'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (picked == null || !mounted) return;
+
+    // Tampilkan loading
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16, height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Mengunggah foto...'),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 10),
+        backgroundColor: AppColors.charcoal,
+      ),
+    );
+
+    String? uploadedUrl;
+    try {
+      final uid = SupabaseService.instance.userId;
+      if (uid != null) {
+        final bytes = await File(picked.path).readAsBytes();
+        final ext = picked.name.split('.').last.toLowerCase();
+        final filePath = 'avatars/$uid/profile.$ext';
+        final supabase = Supabase.instance.client;
+
+        // Upload ke Supabase Storage bucket 'avatars'
+        await supabase.storage.from('avatars').uploadBinary(
+          filePath,
+          bytes,
+          fileOptions: FileOptions(
+            contentType: 'image/$ext',
+            upsert: true,
+          ),
+        );
+
+        // Ambil public URL
+        uploadedUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
+        // Tambah timestamp agar tidak ter-cache browser
+        uploadedUrl = '$uploadedUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('Gagal upload: ${e.toString().split(':').first}'),
+              backgroundColor: AppColors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (uploadedUrl != null) {
+      onUrlChanged(uploadedUrl);
+      await SupabaseService.instance.upsertProfile(
+        displayName: _profile?.displayName ?? widget.name,
+        avatarUrl: uploadedUrl,
+      );
+      await _load();
+      setSheet(() {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto profil berhasil diperbarui ✨'),
+            backgroundColor: AppColors.greenDark,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _actionTile(
+    BuildContext ctx,
+    IconData icon,
+    String label,
+    Color color,
+    String value,
+  ) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(ctx, value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSubtle,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color == AppColors.red ? AppColors.red : AppColors.textDark,
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, ''),
-            child: const Text('Hapus Foto',
-                style: TextStyle(color: AppColors.red)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.charcoal,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, urlCtrl.text.trim()),
-            child: const Text('Simpan'),
-          ),
-        ],
       ),
     );
-
-    if (result != null && mounted) {
-      onUrlChanged(result.isEmpty ? null : result);
-      await SupabaseService.instance.upsertProfile(
-        displayName: _profile?.displayName ?? widget.name,
-        avatarUrl: result,
-      );
-      await _load();
-      setSheet(() {});
-    }
   }
 
   Future<void> _load() async {
