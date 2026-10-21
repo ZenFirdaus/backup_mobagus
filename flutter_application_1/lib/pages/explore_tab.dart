@@ -218,15 +218,8 @@ class _ExploreTabState extends State<ExploreTab> {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Text('Yogyakarta', style: AppText.display(17)),
+                  Text('DIY & Jawa Tengah', style: AppText.display(17)),
                   const SizedBox(width: 6),
-                  Text(
-                    '(DIY & Jateng)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.greenDark.withValues(alpha: 0.8),
-                    ),
-                  ),
                 ],
               ),
             ],
@@ -389,39 +382,6 @@ class _ExploreTabState extends State<ExploreTab> {
   // ---------- Info & filter ----------
   Widget _coverageInfo() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: AppColors.tint(AppColors.yellow, 0.35),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.verified_outlined, size: 16, color: AppColors.greenDark),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Cakupan Aktif: ',
-                    style: TextStyle(color: AppColors.textMuted),
-                  ),
-                  TextSpan(
-                    text: 'DIY & Jawa Tengah',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.greenDark,
-                    ),
-                  ),
-                ],
-              ),
-              style: TextStyle(fontSize: 11.5),
-            ),
-          ),
-          Icon(Icons.info_outline, size: 16, color: AppColors.textMuted),
-        ],
-      ),
     );
   }
 

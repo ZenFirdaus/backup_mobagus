@@ -158,22 +158,9 @@ class _HomeTabState extends State<HomeTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'SELAMAT DATANG DI YOGYAKARTA',
-                style: TextStyle(
-                  fontSize: 9.5,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
-              ),
               const SizedBox(height: 6),
-              Text('Sugeng Rawuh, $first 👋', style: AppText.display(26)),
+              Text('Sugeng Rawuh, $first', style: AppText.display(26)),
               const SizedBox(height: 4),
-              const Text(
-                'Lagi pengin makan apa hari ini?',
-                style: TextStyle(fontSize: 13, color: AppColors.green),
-              ),
             ],
           ),
         ),
@@ -282,19 +269,7 @@ class _HomeTabState extends State<HomeTab> {
                         horizontal: 9,
                         vertical: 4,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.orange.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'CURATED SHAKE',
-                        style: TextStyle(
-                          fontSize: 9,
-                          letterSpacing: 0.8,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.yellow,
-                        ),
-                      ),
+                      
                     ),
                     const SizedBox(height: 12),
                     Text(
