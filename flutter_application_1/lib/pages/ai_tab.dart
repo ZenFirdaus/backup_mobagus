@@ -403,7 +403,7 @@ class _RestaurantTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   IconData get _icon {
-    final c = '${restaurant.category}'.toLowerCase();
+    final c = restaurant.category.toLowerCase();
     if (c.contains('cafe') || c.contains('coffee')) {
       return Icons.local_cafe_rounded;
     }
@@ -451,7 +451,7 @@ class _RestaurantTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${restaurant.name}',
+                        restaurant.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

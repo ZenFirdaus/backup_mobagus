@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/profile.dart';
@@ -41,15 +42,18 @@ class _HomeTabState extends State<HomeTab> {
   List<String> _categories = [];
   bool _loading = true;
   int _page = 0;
+  StreamSubscription<void>? _profileSub;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _profileSub = _svc.onProfileChanged.listen((_) => _load());
   }
 
   @override
   void dispose() {
+    _profileSub?.cancel();
     _pageCtrl.dispose();
     super.dispose();
   }

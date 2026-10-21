@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,6 +14,7 @@ import '../models/seed_data.dart';
 class SupabaseService {
   SupabaseService._() {
     _initStorage();
+    _initRealtime();
   }
   static final instance = SupabaseService._();
 
@@ -28,6 +31,59 @@ class SupabaseService {
   final List<Map<String, dynamic>> _localSearchHistory = [];
   int _localBonusPoints = 0;
   bool _initialized = false;
+
+  // ─── REAL-TIME BROADCAST STREAMS ───
+  final StreamController<Set<String>> _favoritesController =
+      StreamController<Set<String>>.broadcast();
+  Stream<Set<String>> get favoritesStream => _favoritesController.stream;
+
+  final StreamController<Review> _reviewAddedController =
+      StreamController<Review>.broadcast();
+  Stream<Review> get onReviewAdded => _reviewAddedController.stream;
+
+  final StreamController<String> _reviewsChangedController =
+      StreamController<String>.broadcast();
+  Stream<String> get onReviewsChanged => _reviewsChangedController.stream;
+
+  final StreamController<void> _profileChangedController =
+      StreamController<void>.broadcast();
+  Stream<void> get onProfileChanged => _profileChangedController.stream;
+
+  RealtimeChannel? _reviewsChannel;
+  RealtimeChannel? _favoritesChannel;
+
+  void _initRealtime() {
+    try {
+      _reviewsChannel = _client
+          .channel('public:reviews')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'reviews',
+            callback: (payload) {
+              final newRec = payload.newRecord;
+              final restoId = newRec['restaurant_id']?.toString() ?? '';
+              _reviewsChangedController.add(restoId);
+              _profileChangedController.add(null);
+            },
+          )
+          .subscribe();
+
+      _favoritesChannel = _client
+          .channel('public:favorites')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'favorites',
+            callback: (payload) async {
+              await getFavoriteIds();
+              _favoritesController.add(Set<String>.from(_localFavorites));
+              _profileChangedController.add(null);
+            },
+          )
+          .subscribe();
+    } catch (_) {}
+  }
 
   Future<void> _initStorage() async {
     if (_initialized) return;
@@ -125,6 +181,10 @@ class SupabaseService {
   }
 
   Future<void> signOut() async {
+    _reviewsChannel?.unsubscribe();
+    _favoritesChannel?.unsubscribe();
+    _reviewsChannel = null;
+    _favoritesChannel = null;
     _localFavorites.clear();
     _localCheckins.clear();
     _localReviews.clear();
@@ -332,6 +392,8 @@ class SupabaseService {
       _localFavorites.add(restaurantId);
     }
     _persistFavorites();
+    _favoritesController.add(Set<String>.from(_localFavorites));
+    _profileChangedController.add(null);
 
     final uid = userId;
     if (uid == null) return;
@@ -374,12 +436,13 @@ class SupabaseService {
     return all.where((r) => seen.add(r.id)).toList();
   }
 
-  Future<void> addReview({
+  Future<Review> addReview({
     required String restaurantId,
     required int rating,
     required String comment,
   }) async {
     final name = currentUser?.userMetadata?['name'] as String? ?? guestName;
+    final resto = await getRestaurant(restaurantId);
     final rev = Review(
       id: 'rev_local_${DateTime.now().millisecondsSinceEpoch}',
       userId: userId ?? 'guest',
@@ -388,22 +451,30 @@ class SupabaseService {
       comment: comment,
       createdAt: DateTime.now(),
       userName: name,
+      restaurantName: resto?.name,
     );
     _localReviews.insert(0, rev);
     _localBonusPoints += 20;
     _persistReviews();
     _persistPoints();
 
+    _reviewAddedController.add(rev);
+    _reviewsChangedController.add(restaurantId);
+    _profileChangedController.add(null);
+
     final uid = userId;
-    if (uid == null) return;
-    try {
-      await _client.from('reviews').insert({
-        'user_id': uid,
-        'restaurant_id': restaurantId,
-        'rating': rating,
-        'comment': comment,
-      });
-    } catch (_) {}
+    if (uid != null) {
+      try {
+        await _client.from('reviews').insert({
+          'user_id': uid,
+          'restaurant_id': restaurantId,
+          'rating': rating,
+          'comment': comment,
+        });
+      } catch (_) {}
+    }
+
+    return rev;
   }
 
   // ─── CHECKINS ───
@@ -632,9 +703,9 @@ class SupabaseService {
             await _client.from('checkins').select('id').eq('user_id', uid);
         final revs =
             await _client.from('reviews').select('id').eq('user_id', uid);
-        favCount = (favs as List).length;
-        checkinCount = (checks as List).length;
-        reviewCount = (revs as List).length;
+        favCount = math.max(favCount, (favs as List).length);
+        checkinCount = math.max(checkinCount, (checks as List).length);
+        reviewCount = math.max(reviewCount, (revs as List).length);
       } catch (_) {}
     }
 

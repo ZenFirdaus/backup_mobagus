@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../props/app_colors.dart';
 
 /// Path konstanta logo FOODIE dari assets.
 class FoodieLogo {

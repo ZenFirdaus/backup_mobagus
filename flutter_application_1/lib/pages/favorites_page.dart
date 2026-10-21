@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/restaurant.dart';
@@ -25,12 +26,22 @@ class _FavoritesPageState extends State<FavoritesPage> {
   List<Map<String, dynamic>>? _history;
   bool _histLoading = true;
   String? _histError;
+  StreamSubscription<Set<String>>? _favSub;
 
   @override
   void initState() {
     super.initState();
     _loadFavorites();
     _loadHistory();
+    _favSub = SupabaseService.instance.favoritesStream.listen((_) {
+      if (mounted) _loadFavorites();
+    });
+  }
+
+  @override
+  void dispose() {
+    _favSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadFavorites() async {

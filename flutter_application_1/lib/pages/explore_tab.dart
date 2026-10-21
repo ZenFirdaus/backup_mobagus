@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../models/food.dart';
 import '../models/restaurant.dart';
 import '../utils/format.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
+import 'detail_page.dart';
 
 enum _Sort { nama, rating, termurah }
 
@@ -43,6 +43,8 @@ class _ExploreTabState extends State<ExploreTab> {
     _Sort.termurah: 'Termurah',
   };
 
+  StreamSubscription<Set<String>>? _favSub;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +57,9 @@ class _ExploreTabState extends State<ExploreTab> {
       if (mounted) setState(() => _categories = c);
     });
     _svc.getFavoriteIds().then((f) {
+      if (mounted) setState(() => _favs = f.toSet());
+    });
+    _favSub = _svc.favoritesStream.listen((f) {
       if (mounted) setState(() => _favs = f.toSet());
     });
   }
@@ -72,6 +77,7 @@ class _ExploreTabState extends State<ExploreTab> {
 
   @override
   void dispose() {
+    _favSub?.cancel();
     _debounce?.cancel();
     _search.dispose();
     super.dispose();
@@ -177,11 +183,8 @@ class _ExploreTabState extends State<ExploreTab> {
   }
 
   void _showDetail(Restaurant r) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _DetailSheet(r: r),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)),
     );
   }
 
@@ -886,114 +889,3 @@ class _PlaceCard extends StatelessWidget {
   }
 }
 
-// =================== Detail (menu dari tabel foods) ===================
-class _DetailSheet extends StatelessWidget {
-  final Restaurant r;
-  const _DetailSheet({required this.r});
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      maxChildSize: 0.9,
-      minChildSize: 0.4,
-      expand: false,
-      builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(r.name, style: AppText.display(22)),
-            const SizedBox(height: 4),
-            Text(
-              r.address,
-              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 18),
-            Text('Menu', style: AppText.display(16)),
-            const SizedBox(height: 8),
-            FutureBuilder<List<Food>>(
-              future: SupabaseService.instance.getFoods(r.id),
-              builder: (_, snap) {
-                if (snap.connectionState != ConnectionState.done) {
-                  return const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(
-                      child: CircularProgressIndicator(color: AppColors.orange),
-                    ),
-                  );
-                }
-                final foods = snap.data ?? [];
-                if (foods.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      'Menu belum tersedia.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  );
-                }
-                return Column(
-                  children: foods.map((f) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.line),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              f.name,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.greenDark,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            f.priceLabel,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

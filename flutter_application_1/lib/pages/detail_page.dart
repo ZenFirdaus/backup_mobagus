@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,6 +23,9 @@ class DetailPage extends StatefulWidget {
 class _DetailPageState extends State<DetailPage> {
   late Restaurant _r;
   bool _isFavorite = false;
+  late double _currentRating;
+  late int _currentReviewCount;
+
   List<Food> _foods = [];
   bool _foodsLoading = true;
   String? _foodsError;
@@ -29,13 +33,62 @@ class _DetailPageState extends State<DetailPage> {
   bool _reviewsLoading = true;
   String? _reviewsError;
 
+  StreamSubscription<Set<String>>? _favSub;
+  StreamSubscription<String>? _reviewSub;
+  StreamSubscription<Review>? _reviewAddedSub;
+
   @override
   void initState() {
     super.initState();
     _r = widget.restaurant;
+    _currentRating = _r.rating;
+    _currentReviewCount = _r.reviewCount;
     _checkFavorite();
     _loadFoods();
     _loadReviews();
+    _subscribeRealtime();
+  }
+
+  void _subscribeRealtime() {
+    _favSub = SupabaseService.instance.favoritesStream.listen((favs) {
+      if (!mounted) return;
+      setState(() => _isFavorite = favs.contains(_r.id));
+    });
+
+    _reviewSub = SupabaseService.instance.onReviewsChanged.listen((restoId) {
+      if (!mounted) return;
+      if (restoId == _r.id || restoId.isEmpty) {
+        _loadReviews();
+      }
+    });
+
+    _reviewAddedSub = SupabaseService.instance.onReviewAdded.listen((rev) {
+      if (!mounted) return;
+      if (rev.restaurantId == _r.id) {
+        setState(() {
+          if (!_reviews.any((r) => r.id == rev.id)) {
+            _reviews.insert(0, rev);
+          }
+          _updateRatingStats();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _favSub?.cancel();
+    _reviewSub?.cancel();
+    _reviewAddedSub?.cancel();
+    super.dispose();
+  }
+
+  void _updateRatingStats() {
+    if (_reviews.isNotEmpty) {
+      _currentReviewCount = _reviews.length;
+      final totalStars = _reviews.fold<int>(0, (sum, r) => sum + r.rating);
+      _currentRating = totalStars / _reviews.length;
+    }
   }
 
   Future<void> _checkFavorite() async {
@@ -80,7 +133,12 @@ class _DetailPageState extends State<DetailPage> {
     });
     try {
       final list = await SupabaseService.instance.getReviews(_r.id);
-      if (mounted) setState(() => _reviews = list);
+      if (mounted) {
+        setState(() {
+          _reviews = list;
+          _updateRatingStats();
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _reviewsError = e.toString());
     } finally {
@@ -189,13 +247,18 @@ class _DetailPageState extends State<DetailPage> {
               onPressed: () async {
                 if (commentCtrl.text.trim().isEmpty) return;
                 Navigator.pop(ctx);
-                await SupabaseService.instance.addReview(
+                final rev = await SupabaseService.instance.addReview(
                   restaurantId: _r.id,
                   rating: rating,
                   comment: commentCtrl.text.trim(),
                 );
-                _loadReviews();
                 if (mounted) {
+                  setState(() {
+                    if (!_reviews.any((r) => r.id == rev.id)) {
+                      _reviews.insert(0, rev);
+                    }
+                    _updateRatingStats();
+                  });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content:
@@ -366,7 +429,7 @@ class _DetailPageState extends State<DetailPage> {
                         size: 14, color: AppColors.yellow),
                     const SizedBox(width: 3),
                     Text(
-                      _r.rating.toStringAsFixed(1),
+                      _currentRating.toStringAsFixed(1),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -374,7 +437,9 @@ class _DetailPageState extends State<DetailPage> {
                       ),
                     ),
                     Text(
-                      '  (${_r.reviewCount} ulasan)',
+                      _currentReviewCount > 0
+                          ? '  ($_currentReviewCount ulasan)'
+                          : '  (Baru)',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.white.withValues(alpha: 0.8),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -47,16 +48,61 @@ class _ProfileTabState extends State<ProfileTab>
   List<Review> _myReviews = [];
   bool _histLoading = true;
 
+  StreamSubscription<void>? _profileSub;
+  StreamSubscription<Review>? _reviewAddedSub;
+  StreamSubscription<Set<String>>? _favSub;
+
   @override
   void initState() {
     super.initState();
     _loadPrefs();
     _load();
     _loadHistory();
+    _subscribeRealtime();
+  }
+
+  void _subscribeRealtime() {
+    final svc = SupabaseService.instance;
+    _profileSub = svc.onProfileChanged.listen((_) {
+      if (!mounted) return;
+      _load();
+    });
+
+    _reviewAddedSub = svc.onReviewAdded.listen((rev) {
+      if (!mounted) return;
+      setState(() {
+        if (!_myReviews.any((r) => r.id == rev.id)) {
+          _myReviews.insert(0, rev);
+        }
+        _stats['reviews'] = (_stats['reviews'] ?? 0) + 1;
+        if (_profile != null) {
+          _profile = Profile(
+            id: _profile!.id,
+            displayName: _profile!.displayName,
+            avatarUrl: _profile!.avatarUrl,
+            points: _profile!.points + 20,
+            createdAt: _profile!.createdAt,
+          );
+        }
+      });
+      _load();
+      _loadHistory();
+    });
+
+    _favSub = svc.favoritesStream.listen((favs) {
+      if (!mounted) return;
+      setState(() {
+        _stats['favorites'] = favs.length;
+      });
+      _load();
+    });
   }
 
   @override
   void dispose() {
+    _profileSub?.cancel();
+    _reviewAddedSub?.cancel();
+    _favSub?.cancel();
     _histTab.dispose();
     super.dispose();
   }
@@ -842,23 +888,26 @@ class _ProfileTabState extends State<ProfileTab>
             itemBuilder: (_, i) {
               final item = _searchHistory[i];
               final q = item['query'] as String? ?? '';
-              return ListTile(
-                dense: true,
-                leading: const Icon(Icons.history_rounded,
-                    size: 18, color: AppColors.textMuted),
-                title: Text(
-                  q,
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textDark),
-                ),
-                trailing: GestureDetector(
-                  onTap: () async {
-                    await SupabaseService.instance.removeSearchItem(q);
-                    setState(() =>
-                        _searchHistory.removeWhere((e) => e['query'] == q));
-                  },
-                  child: const Icon(Icons.close_rounded,
-                      size: 16, color: AppColors.textMuted),
+              return Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.history_rounded,
+                      size: 18, color: AppColors.textMuted),
+                  title: Text(
+                    q,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppColors.textDark),
+                  ),
+                  trailing: GestureDetector(
+                    onTap: () async {
+                      await SupabaseService.instance.removeSearchItem(q);
+                      setState(() =>
+                          _searchHistory.removeWhere((e) => e['query'] == q));
+                    },
+                    child: const Icon(Icons.close_rounded,
+                        size: 16, color: AppColors.textMuted),
+                  ),
                 ),
               );
             },
@@ -901,9 +950,11 @@ class _ProfileTabState extends State<ProfileTab>
       ),
       itemBuilder: (_, i) {
         final rev = _myReviews[i];
-        return ListTile(
-          dense: true,
-          leading: Container(
+        return Material(
+          color: Colors.transparent,
+          child: ListTile(
+            dense: true,
+            leading: Container(
             width: 34,
             height: 34,
             decoration: BoxDecoration(
@@ -954,7 +1005,8 @@ class _ProfileTabState extends State<ProfileTab>
               );
             }
           },
-        );
+        ),
+      );
       },
     );
   }
