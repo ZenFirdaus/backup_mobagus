@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,6 +8,8 @@ import '../utils/validators.dart';
 import '../widgets/buttons.dart';
 import '../widgets/foodie_logo.dart';
 import '../widgets/text_field.dart';
+import '../widgets/face_id_scanner_sheet.dart';
+import '../services/face_biometric_service.dart';
 import 'home.dart';
 import 'register.dart';
 import '../services/supabase_service.dart';
@@ -76,10 +77,8 @@ class _LoginPageState extends State<LoginPage> {
       await _saveUserSession(name, _email.text.trim(), pwd);
       await SupabaseService.instance.initStorage(force: true);
 
-      final prefs = await SharedPreferences.getInstance();
-      final hasBiometric = prefs.getBool('foodie_biometric_enabled') ?? false;
-
-      if (!hasBiometric) {
+      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
+      if (!isEnrolled) {
         if (!mounted) return;
         _showEnrollBiometricPrompt(name, _email.text.trim(), pwd);
       } else {
@@ -106,9 +105,8 @@ class _LoginPageState extends State<LoginPage> {
         SupabaseService.instance.setDemoUser(_email.text.trim());
         await SupabaseService.instance.initStorage(force: true);
 
-        final prefs = await SharedPreferences.getInstance();
-        final hasBiometric = prefs.getBool('foodie_biometric_enabled') ?? false;
-        if (!hasBiometric) {
+        final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
+        if (!isEnrolled) {
           if (!mounted) return;
           _showEnrollBiometricPrompt(name, _email.text.trim(), pwd);
         } else {
@@ -134,9 +132,8 @@ class _LoginPageState extends State<LoginPage> {
       SupabaseService.instance.setDemoUser(_email.text.trim());
       await SupabaseService.instance.initStorage(force: true);
 
-      final prefs = await SharedPreferences.getInstance();
-      final hasBiometric = prefs.getBool('foodie_biometric_enabled') ?? false;
-      if (!hasBiometric) {
+      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
+      if (!isEnrolled) {
         if (!mounted) return;
         _showEnrollBiometricPrompt(resolvedName, _email.text.trim(), pwd);
       } else {
@@ -146,26 +143,24 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   /// Tombol Login Wajah di halaman login:
-  /// Pengguna HARUS sudah pernah login manual sebelumnya & mendaftarkan wajah.
+  /// Masuk cepat menggunakan pemindai kamera Apple Face ID.
+  /// Hanya dapat digunakan jika user sudah login email & mendaftarkan wajah sebelumnya.
   Future<void> _loginWithFaceId() async {
+    final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
     final prefs = await SharedPreferences.getInstance();
-    final bool isBiometricEnabled =
-        prefs.getBool('foodie_biometric_enabled') ?? false;
     final String? savedName = prefs.getString('foodie_last_user_name');
     final String? savedEmail = prefs.getString('foodie_last_user_email');
     final String? savedPassword = prefs.getString('foodie_saved_password');
 
-    // Jika belum login manual atau belum mendaftarkan wajah:
-    if (!isBiometricEnabled || savedName == null || savedName.trim().isEmpty) {
+    // Jika belum login email dan belum mendaftarkan wajah:
+    if (!isEnrolled || savedName == null || savedName.trim().isEmpty || savedEmail == null) {
       if (!mounted) return;
       _showBiometricNotEnrolledSheet();
       return;
     }
 
     final userName = savedName.trim();
-    final userEmail = (savedEmail != null && savedEmail.trim().isNotEmpty)
-        ? savedEmail.trim()
-        : 'dimas.dananjaya@culinary.id';
+    final userEmail = savedEmail.trim();
 
     if (!mounted) return;
 
@@ -173,19 +168,18 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
-      builder: (ctx) => _FaceAuthSheet(
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => FaceIdScannerSheet(
         userName: userName,
         userEmail: userEmail,
+        savedPassword: savedPassword,
         isEnrollment: false,
         onSuccess: () async {
           Navigator.of(ctx).pop();
 
-          // AUTENTIKASI SUPABASE SECARA REAL-TIME DENGAN BIOMETRIK:
-          // Login wajah adalah login akun resmi Supabase, bukan mode tamu!
+          // AUTENTIKASI SUPABASE SECARA REAL-TIME DENGAN FACE ID:
           if (savedPassword != null &&
               savedPassword.isNotEmpty &&
-              savedEmail != null &&
               savedEmail.isNotEmpty) {
             try {
               await Supabase.instance.client.auth.signInWithPassword(
@@ -197,7 +191,6 @@ class _LoginPageState extends State<LoginPage> {
             }
           }
           if (SupabaseService.instance.userId == null &&
-              savedEmail != null &&
               savedEmail.isNotEmpty) {
             SupabaseService.instance.setDemoUser(savedEmail);
           }
@@ -209,14 +202,14 @@ class _LoginPageState extends State<LoginPage> {
               content: Row(
                 children: [
                   const Icon(
-                    Icons.check_circle_rounded,
+                    Icons.face_unlock_rounded,
                     color: Colors.white,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Autentikasi Wajah Berhasil! Terhubung ke Akun, $userName ✨',
+                      'Face ID Terverifikasi! Selamat Datang Kembali, $userName ✨',
                     ),
                   ),
                 ],
@@ -232,7 +225,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// Sheet jika wajah belum terdaftar (mengarahkan pengguna untuk login manual)
+  /// Sheet jika wajah belum terdaftar (wajib login email & kata sandi terlebih dahulu)
   void _showBiometricNotEnrolledSheet() {
     showModalBottomSheet(
       context: context,
@@ -271,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 child: const Icon(
-                  Icons.face_retouching_off_rounded,
+                  Icons.no_accounts_rounded,
                   size: 34,
                   color: AppColors.orange,
                 ),
@@ -286,7 +279,7 @@ class _LoginPageState extends State<LoginPage> {
                   border: Border.all(color: AppColors.line),
                 ),
                 child: const Text(
-                  'KEAMANAN BIOMETRIK FOODIE',
+                  'APPLE FACE ID • KEAMANAN BIOMETRIK',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
@@ -297,13 +290,13 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Wajah Belum Terdaftar',
+                'Face ID Belum Didaftarkan',
                 textAlign: TextAlign.center,
                 style: AppText.display(20),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Demi keamanan akun Anda, silakan masuk secara manual menggunakan email dan kata sandi terlebih dahulu. Setelah berhasil masuk, Anda dapat mendaftarkan wajah Anda untuk login cepat berikutnya.',
+                'Untuk menggunakan Apple Face ID, Anda harus masuk menggunakan Email & Kata Sandi terlebih dahulu. Setelah berhasil masuk ke akun, Anda dapat mendaftarkan wajah Anda melalui kamera depan.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12.5,
@@ -311,9 +304,9 @@ class _LoginPageState extends State<LoginPage> {
                   color: AppColors.textMuted,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
               PrimaryButton(
-                label: 'Masuk Manual Sekarang',
+                label: 'Masuk dengan Email & Kata Sandi',
                 icon: Icons.login_rounded,
                 onPressed: () => Navigator.pop(ctx),
               ),
@@ -443,37 +436,28 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
-      builder: (ctx) => _FaceAuthSheet(
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => FaceIdScannerSheet(
         userName: name,
         userEmail: email,
+        savedPassword: password,
         isEnrollment: true,
         onSuccess: () async {
           Navigator.of(ctx).pop();
-          try {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setBool('foodie_biometric_enabled', true);
-            await prefs.setString('foodie_last_user_name', name);
-            await prefs.setString('foodie_last_user_email', email);
-            if (password != null && password.isNotEmpty) {
-              await prefs.setString('foodie_saved_password', password);
-            }
-          } catch (_) {}
-
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
                   const Icon(
-                    Icons.check_circle_rounded,
+                    Icons.face_unlock_rounded,
                     color: Colors.white,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Wajah berhasil didaftarkan! Autentikasi biometrik aktif ✨',
+                      'Face ID berhasil didaftarkan untuk $name! ✨',
                     ),
                   ),
                 ],
@@ -730,7 +714,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
                   SoftButton(
-                    label: 'Masuk dengan autentikasi wajah',
+                    label: 'Masuk dengan Face ID',
                     icon: Icons.face_retouching_natural_rounded,
                     onPressed: _loginWithFaceId,
                   ),
@@ -770,9 +754,9 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: SocialButton(
-                          label: 'Passkey ID',
+                          label: 'Apple Face ID',
                           leading: const Icon(
-                            Icons.fingerprint_rounded,
+                            Icons.face_unlock_rounded,
                             size: 20,
                             color: AppColors.greenDark,
                           ),
@@ -840,473 +824,3 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 /// Sheet Pemindai Wajah Real-Time berstandar tema utama FOODIE (Warm Mataraman Gastronomic Pass)
-class _FaceAuthSheet extends StatefulWidget {
-  final String userName;
-  final String userEmail;
-  final bool isEnrollment;
-  final VoidCallback onSuccess;
-
-  const _FaceAuthSheet({
-    required this.userName,
-    required this.userEmail,
-    this.isEnrollment = false,
-    required this.onSuccess,
-  });
-
-  @override
-  State<_FaceAuthSheet> createState() => _FaceAuthSheetState();
-}
-
-class _FaceAuthSheetState extends State<_FaceAuthSheet>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _scanPulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1300),
-  );
-
-  int _step = 0; // 0: init, 1: scan contours, 2: verify secure enclave, 3: success
-
-  @override
-  void initState() {
-    super.initState();
-    _startFaceScanningPipeline();
-  }
-
-  @override
-  void dispose() {
-    _scanPulse.dispose();
-    super.dispose();
-  }
-
-  Future<void> _startFaceScanningPipeline() async {
-    _scanPulse.repeat(reverse: true);
-    HapticFeedback.lightImpact();
-
-    // Fase 1: Deteksi sensor biometrik (0.6s)
-    await Future.delayed(const Duration(milliseconds: 650));
-    if (!mounted) return;
-    setState(() => _step = 1);
-    HapticFeedback.selectionClick();
-
-    // Fase 2: Pindai geometri & kontur wajah kurator (0.95s)
-    await Future.delayed(const Duration(milliseconds: 950));
-    if (!mounted) return;
-    setState(() => _step = 2);
-    HapticFeedback.lightImpact();
-
-    // Fase 3: Validasi Secure Enclave (0.8s)
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    _scanPulse.stop();
-    setState(() => _step = 3);
-    HapticFeedback.mediumImpact();
-
-    // Selesai & Callback
-    await Future.delayed(const Duration(milliseconds: 650));
-    if (!mounted) return;
-    widget.onSuccess();
-  }
-
-  String get _statusLabel {
-    switch (_step) {
-      case 0:
-        return 'Menginisialisasi sensor biometrik...';
-      case 1:
-        return widget.isEnrollment
-            ? 'Memetakan titik biometrik wajah kurator...'
-            : 'Memindai geometri & kontur wajah kurator...';
-      case 2:
-        return widget.isEnrollment
-            ? 'Mendaftarkan kunci ke Secure Enclave...'
-            : 'Mencocokkan tanda tangan Secure Enclave...';
-      case 3:
-      default:
-        return widget.isEnrollment
-            ? 'Wajah Berhasil Didaftarkan!'
-            : 'Autentikasi Wajah Berhasil!';
-    }
-  }
-
-  IconData get _statusIcon {
-    switch (_step) {
-      case 0:
-        return Icons.sensors_rounded;
-      case 1:
-        return Icons.face_retouching_natural_rounded;
-      case 2:
-        return Icons.security_rounded;
-      case 3:
-      default:
-        return Icons.verified_user_rounded;
-    }
-  }
-
-  Color get _statusColor {
-    switch (_step) {
-      case 3:
-        return AppColors.green;
-      case 2:
-        return AppColors.paprika;
-      default:
-        return AppColors.orange;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 26),
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag handle
-            Container(
-              width: 44,
-              height: 4.5,
-              decoration: BoxDecoration(
-                color: AppColors.line,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Top bar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSubtle,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.line),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: _statusColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        widget.isEnrollment
-                            ? 'PENDAFTARAN BIOMETRIK WAJAH'
-                            : 'AUTENTIKASI BIOMETRIK PRESISI',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                          color: AppColors.charcoal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: AppColors.textMuted,
-                    size: 22,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-            Text(
-              widget.isEnrollment
-                  ? 'Daftarkan Wajah Anda'
-                  : 'Masuk Cepat dengan Wajah',
-              textAlign: TextAlign.center,
-              style: AppText.display(20),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.isEnrollment
-                  ? 'Posisikan wajah Anda pada lingkaran sensor untuk mengaktifkan Face ID pada akun Anda.'
-                  : 'Posisikan wajah Anda pada lingkaran sensor untuk masuk instan tanpa kata sandi.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textMuted,
-                height: 1.4,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Reticle Pemindai Wajah Selaras dengan Tema Utama
-            _buildScannerReticle(),
-
-            const SizedBox(height: 18),
-
-            // Status Chip
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8.5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.line),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(_statusIcon, color: _statusColor, size: 16),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      _statusLabel,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Identitas Akun Kurator
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.line),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceSubtle,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.tint(AppColors.orange, 0.4),
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      widget.userName.isNotEmpty
-                          ? widget.userName[0].toUpperCase()
-                          : 'D',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.orange,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.userName,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.userEmail,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.verified_user_rounded,
-                    size: 20,
-                    color: AppColors.green,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Tombol Batal
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Batal / Gunakan Kata Sandi',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildScannerReticle() {
-    final isSuccess = _step == 3;
-
-    return AnimatedBuilder(
-      animation: _scanPulse,
-      builder: (context, _) {
-        final t = _scanPulse.value;
-
-        return SizedBox(
-          width: 220,
-          height: 220,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Gelombang radar luar berdenyut
-              if (!isSuccess)
-                Container(
-                  width: 204 + (16 * t),
-                  height: 204 + (16 * t),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.tint(AppColors.orange, 0.28 * (1.0 - t)),
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-
-              // Cincin tengah bertekstur hangat
-              Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.tint(AppColors.yellow, 0.22),
-                  border: Border.all(
-                    color: AppColors.tint(AppColors.orange, 0.45),
-                    width: 1.5,
-                  ),
-                ),
-              ),
-
-              // Piringan sensor utama (selaras dengan BiometricPage)
-              Container(
-                width: 144,
-                height: 144,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSuccess ? AppColors.green : AppColors.charcoal,
-                  border: Border.all(
-                    color: isSuccess ? AppColors.green : AppColors.orange,
-                    width: 2.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.tint(
-                        isSuccess ? AppColors.green : AppColors.orange,
-                        0.35 + 0.2 * t,
-                      ),
-                      blurRadius: 22 + 10 * t,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isSuccess
-                              ? Icons.check_circle_rounded
-                              : Icons.face_retouching_natural_rounded,
-                          size: 52,
-                          color: isSuccess ? Colors.white : AppColors.orange,
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          isSuccess
-                              ? 'TERVERIFIKASI'
-                              : (widget.isEnrollment
-                                  ? 'MENDAFTARKAN'
-                                  : 'MEMINDAI WAJAH'),
-                          style: const TextStyle(
-                            fontSize: 9,
-                            letterSpacing: 1.1,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.yellow,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Garis laser pemindai vertikal (Warm Amber / Saffron Sweep)
-                    if (!isSuccess)
-                      Positioned(
-                        top: 20 + (100 * t),
-                        left: 18,
-                        right: 18,
-                        child: Container(
-                          height: 2.5,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Colors.transparent,
-                                AppColors.saffron,
-                                Colors.white,
-                                AppColors.orange,
-                                Colors.transparent,
-                              ],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.orange.withValues(alpha: 0.8),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-

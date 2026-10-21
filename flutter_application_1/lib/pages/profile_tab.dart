@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +14,8 @@ import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/common_widgets.dart';
+import '../widgets/face_id_scanner_sheet.dart';
 import 'achievements_page.dart';
 import 'converter_page.dart';
 import 'detail_page.dart';
@@ -135,22 +139,66 @@ class _ProfileTabState extends State<ProfileTab>
   }
 
   Future<void> _toggleBiometric(bool val) async {
-    setState(() => _biometric = val);
+    if (val) {
+      final currentEmail =
+          Supabase.instance.client.auth.currentUser?.email ?? 'kurator@foodie.id';
+      final currentName = _profile?.displayName ?? 'Foodie Kurator';
+
+      // Buka FaceIdScannerSheet dengan preview kamera depan
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.55),
+        builder: (ctx) => FaceIdScannerSheet(
+          userName: currentName,
+          userEmail: currentEmail,
+          isEnrollment: true,
+          onSuccess: () async {
+            Navigator.of(ctx).pop();
+            setState(() => _biometric = true);
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('foodie_biometric_enabled', true);
+              await prefs.setString('foodie_last_user_name', currentName);
+              await prefs.setString('foodie_last_user_email', currentEmail);
+            } catch (_) {}
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.face_unlock_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text('Apple Face ID berhasil diaktifkan! ✨'),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: AppColors.greenDark,
+                  behavior: SnackBarBehavior.floating,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          },
+        ),
+      );
+      return;
+    }
+
+    setState(() => _biometric = false);
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('foodie_biometric_enabled', val);
+      await prefs.setBool('foodie_biometric_enabled', false);
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            val
-                ? 'Autentikasi Wajah aktif untuk login cepat ✨'
-                : 'Autentikasi Wajah dinonaktifkan',
-          ),
-          backgroundColor: val ? AppColors.greenDark : AppColors.charcoal,
+        const SnackBar(
+          content: Text('Apple Face ID dinonaktifkan'),
+          backgroundColor: AppColors.charcoal,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
+          duration: Duration(seconds: 2),
         ),
       );
     }
@@ -474,40 +522,13 @@ class _ProfileTabState extends State<ProfileTab>
                             shape: BoxShape.circle,
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: (tempAvatarUrl != null &&
-                                  tempAvatarUrl!.isNotEmpty)
-                              ? Image.network(
-                                  tempAvatarUrl!,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (ctx, err, stack) => Center(
-                                    child: Text(
-                                      (nameCtrl.text.isNotEmpty
-                                              ? nameCtrl.text
-                                              : 'F')[0]
-                                          .toUpperCase(),
-                                      style: const TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Center(
-                                  child: Text(
-                                    (nameCtrl.text.isNotEmpty
-                                            ? nameCtrl.text
-                                            : 'F')[0]
-                                        .toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                          child: AvatarImage(
+                            url: tempAvatarUrl,
+                            size: 80,
+                            fallbackText: nameCtrl.text.isNotEmpty
+                                ? nameCtrl.text
+                                : 'F',
+                          ),
                         ),
                         Positioned(
                           bottom: 0,
@@ -690,24 +711,13 @@ class _ProfileTabState extends State<ProfileTab>
         avatarUrl: '',
       );
       await _load();
-      setSheet(() {});
+      try {
+        setSheet(() {});
+      } catch (_) {}
       return;
     }
 
-    // Pastikan user sudah login
-    final uid = SupabaseService.instance.userId;
-    if (uid == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Silakan login terlebih dahulu untuk mengunggah foto profil ✨'),
-            backgroundColor: AppColors.orange,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
+    final uid = SupabaseService.instance.userId ?? 'curator_user';
 
     // Ambil gambar dari galeri atau kamera
     final picker = ImagePicker();
@@ -720,13 +730,13 @@ class _ProfileTabState extends State<ProfileTab>
       );
     } catch (e) {
       if (mounted) {
-        final isWebCamera = action == 'camera';
+        final isWebCamera = kIsWeb && action == 'camera';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               isWebCamera
-                  ? 'Kamera tidak didukung di browser ini. Silakan gunakan opsi "Pilih dari Galeri" untuk memilih file dari komputer.'
-                  : 'Tidak bisa membuka galeri/file: ${e.toString().split(':').first}',
+                  ? 'Kamera tidak didukung di browser ini. Silakan gunakan opsi "Pilih dari Galeri".'
+                  : 'Gagal mengakses ${action == 'camera' ? 'kamera' : 'galeri'}. Pastikan izin telah diberikan di Pengaturan perangkat: ${e.toString().split(':').first}',
             ),
             behavior: SnackBarBehavior.floating,
           ),
@@ -749,7 +759,7 @@ class _ProfileTabState extends State<ProfileTab>
               ),
             ),
             SizedBox(width: 12),
-            Text('Mengunggah foto...'),
+            Text('Memproses foto profil...'),
           ],
         ),
         behavior: SnackBarBehavior.floating,
@@ -774,27 +784,33 @@ class _ProfileTabState extends State<ProfileTab>
       final filePath = '$uid/profile.$ext';
       final supabase = Supabase.instance.client;
 
-      // Upload ke Supabase Storage bucket 'avatars'
-      await supabase.storage.from('avatars').uploadBinary(
-        filePath,
-        bytes,
-        fileOptions: FileOptions(
-          contentType: mimeType,
-          upsert: true,
-        ),
-      );
+      // Coba upload ke Supabase Storage bucket 'avatars'
+      try {
+        await supabase.storage.from('avatars').uploadBinary(
+          filePath,
+          bytes,
+          fileOptions: FileOptions(
+            contentType: mimeType,
+            upsert: true,
+          ),
+        );
 
-      // Ambil public URL
-      uploadedUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
-      // Tambah timestamp agar tidak ter-cache browser
-      uploadedUrl = '$uploadedUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+        // Ambil public URL
+        uploadedUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
+        uploadedUrl = '$uploadedUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      } catch (storageErr) {
+        debugPrint('Supabase storage upload fallback to base64: $storageErr');
+        // Fallback simpan offline/lokal jika bucket belum disiapkan
+        final b64 = base64Encode(bytes);
+        uploadedUrl = 'data:$mimeType;base64,$b64';
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
-              content: Text('Gagal upload: ${e.toString().split(':').first}'),
+              content: Text('Gagal memproses foto: ${e.toString().split(':').first}'),
               backgroundColor: AppColors.red,
               behavior: SnackBarBehavior.floating,
             ),
@@ -823,7 +839,9 @@ class _ProfileTabState extends State<ProfileTab>
         avatarUrl: uploadedUrl,
       );
       await _load();
-      setSheet(() {});
+      try {
+        setSheet(() {});
+      } catch (_) {}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1440,34 +1458,11 @@ class _ProfileTabState extends State<ProfileTab>
                     shape: BoxShape.circle,
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: (_profile?.avatarUrl != null &&
-                          _profile!.avatarUrl!.isNotEmpty)
-                      ? Image.network(
-                          _profile!.avatarUrl!,
-                          width: 56,
-                          height: 56,
-                          fit: BoxFit.cover,
-                          errorBuilder: (ctx, err, stack) => Center(
-                            child: Text(
-                              name.isNotEmpty ? name[0].toUpperCase() : 'F',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : 'F',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                  child: AvatarImage(
+                    url: _profile?.avatarUrl,
+                    size: 56,
+                    fallbackText: name.isNotEmpty ? name : 'F',
+                  ),
                 ),
                 Positioned(
                   bottom: 0,

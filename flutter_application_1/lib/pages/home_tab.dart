@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 
 import '../models/profile.dart';
 import '../models/restaurant.dart';
@@ -11,6 +8,7 @@ import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
+import '../services/location_service.dart';
 import '../widgets/decide.dart';
 import 'notifications_page.dart';
 
@@ -54,144 +52,37 @@ class _HomeTabState extends State<HomeTab> {
   int _page = 0;
   StreamSubscription<void>? _profileSub;
 
-  // ── GPS State ──
-  double? _lat;
-  double? _lng;
-  String _address = 'Mencari lokasi...';
-  bool _locLoading = true;
-
-  // Nominatim (OpenStreetMap) — gratis, tanpa API key
-  // Wajib kirim User-Agent sesuai policy Nominatim
-  static const _nominatimUserAgent = 'MoBagus-App/1.0 (flutter_application_1)';
-
   @override
   void initState() {
     super.initState();
+    LocationService.instance.currentLocation.addListener(_onLocationUpdated);
+    LocationService.instance.isLoading.addListener(_onLocationLoadingChanged);
     _load();
-    _fetchLocation();
+    // Auto-detect lokasi GPS pengguna saat aplikasi dibuka
+    LocationService.instance.fetchGpsLocation();
     _profileSub = _svc.onProfileChanged.listen((_) => _load());
+  }
+
+  void _onLocationUpdated() {
+    if (!mounted) return;
+    final loc = LocationService.instance.currentLocation.value;
+    if (loc != null) {
+      widget.onLocationFetched?.call(loc.lat, loc.lng);
+    }
+    _load();
+  }
+
+  void _onLocationLoadingChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    LocationService.instance.currentLocation.removeListener(_onLocationUpdated);
+    LocationService.instance.isLoading.removeListener(_onLocationLoadingChanged);
     _profileSub?.cancel();
     _pageCtrl.dispose();
     super.dispose();
-  }
-
-  // ── Haversine: hitung jarak dalam meter antara 2 koordinat ──
-  double _distanceM(double lat1, double lng1, double lat2, double lng2) {
-    const r = 6371000.0;
-    final dLat = (lat2 - lat1) * math.pi / 180;
-    final dLng = (lng2 - lng1) * math.pi / 180;
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1 * math.pi / 180) *
-            math.cos(lat2 * math.pi / 180) *
-            math.sin(dLng / 2) *
-            math.sin(dLng / 2);
-    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-  }
-
-  Future<void> _fetchLocation() async {
-    setState(() => _locLoading = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) setState(() { _address = 'Layanan lokasi nonaktif'; _locLoading = false; });
-        return;
-      }
-      LocationPermission perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.deniedForever || perm == LocationPermission.denied) {
-        if (mounted) setState(() { _address = 'Izin lokasi ditolak'; _locLoading = false; });
-        return;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _lat = pos.latitude;
-        _lng = pos.longitude;
-        _locLoading = false;
-      });
-
-      // Kirim koordinat ke parent (HomePage) agar ExploreTab bisa sort terdekat
-      widget.onLocationFetched?.call(pos.latitude, pos.longitude);
-
-      // Reverse geocode untuk nama alamat
-      await _reverseGeocode(pos.latitude, pos.longitude);
-
-      // Setelah dapat lokasi, re-sort picks berdasarkan jarak
-      _sortPicksByDistance();
-    } catch (e) {
-      if (mounted) setState(() { _address = 'Lokasi tidak tersedia'; _locLoading = false; });
-    }
-  }
-
-  /// Reverse geocoding pakai Nominatim (OpenStreetMap) — gratis, no API key.
-  Future<void> _reverseGeocode(double lat, double lng) async {
-    try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse'
-        '?lat=$lat&lon=$lng&format=json',
-      );
-      final res = await http.get(url, headers: {
-        // Wajib sesuai policy Nominatim: https://operations.osmfoundation.org/policies/nominatim/
-        'User-Agent': _nominatimUserAgent,
-        'Accept-Language': 'id', // respons dalam Bahasa Indonesia
-      }).timeout(const Duration(seconds: 8));
-
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body) as Map<String, dynamic>;
-        final addr = json['address'] as Map<String, dynamic>?;
-
-        if (addr != null) {
-          // Susun alamat pendek: jalan + kelurahan/desa + kota
-          final parts = <String>[
-            addr['road'] ?? addr['pedestrian'] ?? addr['neighbourhood'] ?? '',
-            addr['suburb'] ?? addr['village'] ?? addr['hamlet'] ?? '',
-            addr['city'] ?? addr['town'] ?? addr['county'] ?? '',
-          ].where((s) => s.isNotEmpty).toList();
-
-          final short = parts.take(2).join(', ');
-          if (mounted && short.isNotEmpty) {
-            setState(() => _address = short);
-            return;
-          }
-        }
-
-        // Fallback ke display_name jika address field kosong
-        final displayName = json['display_name'] as String?;
-        if (displayName != null && displayName.isNotEmpty && mounted) {
-          final short = displayName.split(',').take(2).join(',').trim();
-          setState(() => _address = short.isNotEmpty ? short : displayName);
-          return;
-        }
-      }
-    } catch (_) {}
-
-    // Fallback terakhir: tampilkan koordinat
-    if (mounted) {
-      setState(() => _address = '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}');
-    }
-  }
-
-  void _sortPicksByDistance() {
-    if (_lat == null || _lng == null || _picks.isEmpty) return;
-    final lat = _lat!;
-    final lng = _lng!;
-    final sorted = List<Restaurant>.from(_picks)
-      ..sort((a, b) {
-        final dA = _distanceM(lat, lng, a.lat, a.lng);
-        final dB = _distanceM(lat, lng, b.lat, b.lng);
-        return dA.compareTo(dB);
-      });
-    if (mounted) setState(() => _picks = sorted);
   }
 
   Future<void> _load() async {
@@ -202,15 +93,17 @@ class _HomeTabState extends State<HomeTab> {
     ]);
     var restos = List<Restaurant>.of(results[1] as List<Restaurant>);
 
-    // Jika sudah ada koordinat pengguna → sort by jarak (LBS)
-    if (_lat != null && _lng != null) {
-      final lat = _lat!;
-      final lng = _lng!;
+    final loc = LocationService.instance.currentLocation.value;
+    // Jika sudah ada koordinat pengguna → sort by jarak terdekat (LBS)
+    if (loc != null && (loc.lat != 0 || loc.lng != 0)) {
+      final lat = loc.lat;
+      final lng = loc.lng;
       restos.sort((a, b) {
-        final dA = _distanceM(lat, lng, a.lat, a.lng);
-        final dB = _distanceM(lat, lng, b.lat, b.lng);
+        final dA = LocationService.instance.distanceM(lat, lng, a.lat, a.lng);
+        final dB = LocationService.instance.distanceM(lat, lng, b.lat, b.lng);
         return dA.compareTo(dB);
       });
+      widget.onLocationFetched?.call(lat, lng);
     } else {
       // Fallback: sort by rating jika lokasi belum tersedia
       restos.sort((a, b) => b.rating.compareTo(a.rating));
@@ -265,12 +158,6 @@ class _HomeTabState extends State<HomeTab> {
     return Icons.ramen_dining_rounded;
   }
 
-  /// Format jarak ke string yang mudah dibaca
-  String _formatDistance(double meters) {
-    if (meters < 1000) return '${meters.toStringAsFixed(0)} m';
-    return '${(meters / 1000).toStringAsFixed(1)} km';
-  }
-
   /// Format label kategori agar rapi (misal fast_food -> Fast Food)
   String _formatCategoryLabel(String c) {
     final lower = c.trim().toLowerCase();
@@ -296,7 +183,7 @@ class _HomeTabState extends State<HomeTab> {
         child: RefreshIndicator(
           color: AppColors.orange,
           onRefresh: () async {
-            await _fetchLocation();
+            await LocationService.instance.fetchGpsLocation();
             await _load();
           },
           child: ListView(
@@ -583,21 +470,364 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // ---------- GPS Widget ----------
+  // ---------- GPS & Location Widget ----------
+  void _showLocationPickerSheet() {
+    final locSvc = LocationService.instance;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) {
+          final isGpsLoading = locSvc.isLoading.value;
+          final currentLoc = locSvc.currentLocation.value;
+
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 18),
+                    decoration: BoxDecoration(
+                      color: AppColors.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.tint(AppColors.orange, 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on_rounded,
+                        color: AppColors.orange,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Pilih Titik Lokasi Kamu', style: AppText.display(18)),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Rekomendasi terdekat dihitung dari titik ini',
+                            style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // ── Tombol GPS Otomatis ──
+                InkWell(
+                  onTap: isGpsLoading
+                      ? null
+                      : () async {
+                          setModal(() {});
+                          final ok = await locSvc.fetchGpsLocation();
+                          if (!ctx.mounted) return;
+                          setModal(() {});
+                          if (ok) {
+                            Navigator.pop(ctx);
+                            _load();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Lokasi GPS berhasil diperbarui: ${locSvc.currentLocation.value?.address ?? ''} 📍',
+                                  ),
+                                  backgroundColor: AppColors.greenDark,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } else {
+                            final msg = locSvc.statusMessage.value ?? 'Gagal mengakses GPS';
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(msg),
+                                  backgroundColor: AppColors.charcoal,
+                                  behavior: SnackBarBehavior.floating,
+                                  action: SnackBarAction(
+                                    label: 'Pengaturan',
+                                    textColor: AppColors.yellow,
+                                    onPressed: () => Geolocator.openAppSettings(),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: (currentLoc?.isGps ?? false)
+                          ? AppColors.tint(AppColors.greenDark, 0.08)
+                          : AppColors.surfaceSubtle,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: (currentLoc?.isGps ?? false)
+                            ? AppColors.greenDark
+                            : AppColors.line,
+                        width: (currentLoc?.isGps ?? false) ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: isGpsLoading
+                                ? AppColors.tint(AppColors.orange, 0.15)
+                                : ((currentLoc?.isGps ?? false)
+                                    ? AppColors.greenDark
+                                    : Colors.white),
+                            shape: BoxShape.circle,
+                          ),
+                          child: isGpsLoading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.orange,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.my_location_rounded,
+                                  size: 20,
+                                  color: (currentLoc?.isGps ?? false)
+                                      ? Colors.white
+                                      : AppColors.charcoal,
+                                ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Gunakan Lokasi GPS Saya',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                  if (currentLoc?.isGps ?? false) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.greenDark,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'AKTIF',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isGpsLoading
+                                    ? (locSvc.statusMessage.value ?? 'Mencari koordinat GPS...')
+                                    : ((currentLoc?.isGps ?? false)
+                                        ? currentLoc!.address
+                                        : 'Deteksi koordinat posisi ponsel saat ini'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 13,
+                          color: AppColors.textMuted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+                const Row(
+                  children: [
+                    Expanded(child: Divider(color: AppColors.line)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        'ATAU PILIH WILAYAH KULINER',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textMuted,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: AppColors.line)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // ── Daftar Preset Wilayah ──
+                ...LocationService.presetRegions.map((reg) {
+                  final name = reg['name'] as String;
+                  final desc = reg['desc'] as String;
+                  final city = reg['city'] as String;
+                  final lat = reg['lat'] as double;
+                  final lng = reg['lng'] as double;
+
+                  final isSelected = !(currentLoc?.isGps ?? true) &&
+                      (currentLoc?.city == city ||
+                          currentLoc?.address.contains(name) == true);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () async {
+                        await locSvc.setManualLocation(
+                          name: name,
+                          address: '$name, $desc',
+                          city: city,
+                          lat: lat,
+                          lng: lng,
+                        );
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        _load();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Lokasi aktif diatur ke $name ✨'),
+                              backgroundColor: AppColors.greenDark,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.tint(AppColors.orange, 0.08)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected ? AppColors.orange : AppColors.line,
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.place_outlined,
+                              size: 20,
+                              color: isSelected
+                                  ? AppColors.orange
+                                  : AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                      color: isSelected
+                                          ? AppColors.orange
+                                          : AppColors.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    desc,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _gpsWidget() {
+    final loc = LocationService.instance.currentLocation.value;
+    final isLoading = LocationService.instance.isLoading.value;
+
+    final displayAddr = loc?.address ?? 'Pusat Kota Yogyakarta';
+    final isGps = loc?.isGps ?? false;
+
     return GestureDetector(
-      onTap: () async {
-        // Tap untuk refresh lokasi
-        setState(() => _locLoading = true);
-        await _fetchLocation();
-        await _load();
-      },
+      behavior: HitTestBehavior.opaque,
+      onTap: _showLocationPickerSheet,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.line),
+          border: Border.all(
+            color: isGps
+                ? AppColors.tint(AppColors.greenDark, 0.4)
+                : AppColors.line,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -609,30 +839,30 @@ class _HomeTabState extends State<HomeTab> {
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: _locLoading
-                    ? AppColors.tint(AppColors.orange, 0.1)
-                    : (_lat != null
+                color: isLoading
+                    ? AppColors.tint(AppColors.orange, 0.12)
+                    : (isGps
                         ? AppColors.tint(AppColors.greenDark, 0.12)
-                        : AppColors.tint(AppColors.red, 0.1)),
+                        : AppColors.tint(AppColors.orange, 0.1)),
                 shape: BoxShape.circle,
               ),
-              child: _locLoading
+              child: isLoading
                   ? const Padding(
-                      padding: EdgeInsets.all(11),
+                      padding: EdgeInsets.all(10),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: AppColors.orange,
                       ),
                     )
                   : Icon(
-                      _lat != null
+                      isGps
                           ? Icons.my_location_rounded
-                          : Icons.location_off_rounded,
+                          : Icons.location_on_rounded,
                       size: 20,
-                      color: _lat != null ? AppColors.greenDark : AppColors.red,
+                      color: isGps ? AppColors.greenDark : AppColors.orange,
                     ),
             ),
             const SizedBox(width: 12),
@@ -640,46 +870,87 @@ class _HomeTabState extends State<HomeTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Lokasi Kamu Sekarang',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
-                    ),
+                  Row(
+                    children: [
+                      const Text(
+                        'Lokasi Kuliner Terdekat',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: isGps
+                              ? AppColors.tint(AppColors.greenDark, 0.15)
+                              : AppColors.tint(AppColors.orange, 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isGps ? 'GPS AKTIF' : 'WILAYAH',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: isGps ? AppColors.greenDark : AppColors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _address,
-                    maxLines: 2,
+                    displayAddr,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textDark,
-                      height: 1.3,
+                      height: 1.25,
                     ),
                   ),
-                  if (_lat != null && _lng != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      '${_lat!.toStringAsFixed(6)}, ${_lng!.toStringAsFixed(6)}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontFamily: 'monospace',
-                        color: AppColors.textMuted,
-                        letterSpacing: 0.3,
-                      ),
+                  const SizedBox(height: 1),
+                  const Text(
+                    'Ketuk untuk ubah lokasi atau GPS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textMuted,
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              Icons.refresh_rounded,
-              size: 18,
-              color: AppColors.textMuted,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceSubtle,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Ubah',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.charcoal,
+                    ),
+                  ),
+                  SizedBox(width: 2),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 14,
+                    color: AppColors.charcoal,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -807,9 +1078,10 @@ class _HomeTabState extends State<HomeTab> {
 
     // Hitung jarak jika koordinat tersedia
     String? distLabel;
-    if (_lat != null && _lng != null && (r.lat != 0 || r.lng != 0)) {
-      final dist = _distanceM(_lat!, _lng!, r.lat, r.lng);
-      distLabel = _formatDistance(dist);
+    final loc = LocationService.instance.currentLocation.value;
+    if (loc != null && (r.lat != 0 || r.lng != 0)) {
+      final dist = LocationService.instance.distanceM(loc.lat, loc.lng, r.lat, r.lng);
+      distLabel = LocationService.instance.formatDistance(dist);
     }
 
     return GestureDetector(

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../props/app_colors.dart';
@@ -180,5 +181,80 @@ class SectionHeader extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+/// Avatar visual yang mendukung URL internet, data base64, maupun inisial teks.
+class AvatarImage extends StatelessWidget {
+  final String? url;
+  final double size;
+  final String fallbackText;
+  final Color backgroundColor;
+
+  const AvatarImage({
+    super.key,
+    required this.url,
+    required this.size,
+    this.fallbackText = 'F',
+    this.backgroundColor = AppColors.orange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = fallbackText.trim().isNotEmpty
+        ? fallbackText.trim()[0].toUpperCase()
+        : 'F';
+
+    final fallbackWidget = Container(
+      width: size,
+      height: size,
+      color: backgroundColor,
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: size * 0.42,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
+    );
+
+    if (url == null || url!.trim().isEmpty) {
+      return fallbackWidget;
+    }
+
+    final trimmed = url!.trim();
+
+    if (trimmed.startsWith('data:image')) {
+      try {
+        final comma = trimmed.indexOf(',');
+        if (comma != -1) {
+          final b64 = trimmed.substring(comma + 1);
+          final bytes = base64Decode(b64);
+          return Image.memory(
+            bytes,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallbackWidget,
+          );
+        }
+      } catch (_) {
+        return fallbackWidget;
+      }
+    }
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return Image.network(
+        trimmed,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallbackWidget,
+      );
+    }
+
+    return fallbackWidget;
   }
 }

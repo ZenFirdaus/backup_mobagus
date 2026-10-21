@@ -7,6 +7,7 @@ import '../props/app_text.dart';
 import '../widgets/buttons.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/step_progress.dart';
+import '../widgets/face_id_scanner_sheet.dart';
 import 'home.dart';
 
 enum _ScanState { idle, scanning, success }
@@ -50,25 +51,28 @@ class _BiometricPageState extends State<BiometricPage>
   }
 
   Future<void> _activate() async {
-    if (_state != _ScanState.idle) return;
-    setState(() => _state = _ScanState.scanning);
-    _pulse.repeat(reverse: true);
-
-    await Future.delayed(const Duration(milliseconds: 1400));
-    if (!mounted) return;
-
-    _pulse.stop();
-    setState(() => _state = _ScanState.success);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('foodie_biometric_enabled', true);
-      await prefs.setString('foodie_last_user_name', widget.name);
-    } catch (_) {}
-
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    _goHome(biometric: true);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => FaceIdScannerSheet(
+        userName: widget.name,
+        userEmail: '${widget.name.toLowerCase().replaceAll(' ', '.')}@foodie.id',
+        isEnrollment: true,
+        onSuccess: () async {
+          Navigator.of(ctx).pop();
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('foodie_biometric_enabled', true);
+            await prefs.setString('foodie_last_user_name', widget.name);
+          } catch (_) {}
+          if (!mounted) return;
+          setState(() => _state = _ScanState.success);
+          _goHome(biometric: true);
+        },
+      ),
+    );
   }
 
   Future<void> _setPin() async {
@@ -128,7 +132,7 @@ class _BiometricPageState extends State<BiometricPage>
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'Langkah 3 dari 3: Keamanan Biometrik',
+                      'Langkah 3 dari 3: Keamanan Apple Face ID',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -153,11 +157,11 @@ class _BiometricPageState extends State<BiometricPage>
               const SizedBox(height: 18),
               const InfoPill(
                 icon: Icons.verified_user_outlined,
-                text: 'AUTENTIKASI BIOMETRIK PRESISI',
+                text: 'AUTENTIKASI APPLE FACE ID',
               ),
               const SizedBox(height: 16),
               Text(
-                'Masuk Cepat dengan\nAutentikasi Wajah',
+                'Masuk Cepat dengan\nApple Face ID',
                 textAlign: TextAlign.center,
                 style: AppText.display(
                   28,
@@ -167,7 +171,7 @@ class _BiometricPageState extends State<BiometricPage>
               ),
               const SizedBox(height: 10),
               const Text(
-                'Aktifkan autentikasi wajah untuk validasi check-in instan di warung legendaris, verifikasi voucher makan, dan akses akun tanpa kata sandi.',
+                'Aktifkan Apple Face ID untuk validasi check-in instan di warung legendaris, verifikasi voucher makan, dan akses akun tanpa kata sandi.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
@@ -181,7 +185,7 @@ class _BiometricPageState extends State<BiometricPage>
               _statusPill(),
               const SizedBox(height: 8),
               const Text(
-                'Sensor Biometrik Perangkat Terdeteksi (Android Biometric Prompt / Apple Face ID)',
+                'Sensor Apple Face ID Terdeteksi (Kamera Depan TrueDepth & Secure Enclave Aktif)',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 9.5,
@@ -209,8 +213,8 @@ class _BiometricPageState extends State<BiometricPage>
               ),
               const SizedBox(height: 18),
               PrimaryButton(
-                label: 'Aktifkan Autentikasi Wajah Sekarang',
-                icon: Icons.face_retouching_natural_rounded,
+                label: 'Pindai Wajah dengan Kamera Sekarang',
+                icon: Icons.camera_front_rounded,
                 onPressed: busy ? null : _activate,
               ),
               const SizedBox(height: 10),

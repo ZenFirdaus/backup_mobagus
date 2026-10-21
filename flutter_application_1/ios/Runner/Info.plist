@@ -7,7 +7,19 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Flutter Application 1</string>
+	<string>FOODIE</string>
+	<key>NSCameraUsageDescription</key>
+	<string>FOODIE memerlukan izin akses kamera untuk autentikasi biometrik Face ID dan mengambil foto profil Anda.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>FOODIE memerlukan Face ID untuk autentikasi biometrik cepat dan aman tanpa kata sandi.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FOODIE memerlukan izin akses galeri foto untuk memilih foto profil Anda.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>FOODIE memerlukan izin akses mikrofon jika Anda menggunakan fitur media.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FOODIE memerlukan akses lokasi untuk menampilkan rekomendasi tempat kuliner terdekat dari posisi Anda saat ini.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>FOODIE memerlukan akses lokasi untuk menampilkan rekomendasi tempat kuliner terdekat dari posisi Anda saat ini.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

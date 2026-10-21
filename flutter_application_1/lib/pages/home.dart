@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/profile.dart';
 import '../props/app_colors.dart';
 import '../services/supabase_service.dart';
+import '../widgets/common_widgets.dart';
 import '../widgets/decide.dart';
 import 'ai_tab.dart';
 import 'detail_page.dart';
@@ -207,18 +208,10 @@ class _BottomNav extends StatelessWidget {
                             ),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: Image.network(
-                            avatarUrl!.trim(),
-                            width: 22,
-                            height: 22,
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, stack) => Icon(
-                              active ? item.activeIcon : item.icon,
-                              size: 20,
-                              color: active
-                                  ? AppColors.orange
-                                  : AppColors.tint(AppColors.yellow, 0.7),
-                            ),
+                          child: AvatarImage(
+                            url: avatarUrl!.trim(),
+                            size: 22,
+                            fallbackText: 'F',
                           ),
                         )
                       else
