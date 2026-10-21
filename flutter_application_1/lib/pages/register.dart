@@ -50,6 +50,7 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _loading = true);
     final nameVal = _name.text.trim();
     final emailVal = _email.text.trim();
@@ -112,6 +113,7 @@ class _RegisterPageState extends State<RegisterPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Form(
               key: _formKey,

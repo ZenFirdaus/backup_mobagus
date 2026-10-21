@@ -92,58 +92,66 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _index,
-        children: [
-          HomeTab(
-            name: widget.name,
-            onSeeAll: () => _select(1),
-            onCategorySelected: _selectCategoryExplore,
-            onOpenRestaurant: (r) => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)),
+    return PopScope(
+      canPop: _index == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _index != 0) {
+          setState(() => _index = 0);
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _index,
+          children: [
+            HomeTab(
+              name: widget.name,
+              onSeeAll: () => _select(1),
+              onCategorySelected: _selectCategoryExplore,
+              onOpenRestaurant: (r) => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)),
+              ),
+              onLocationFetched: (lat, lng) {
+                setState(() {
+                  _userLat = lat;
+                  _userLng = lng;
+                });
+              },
             ),
-            onLocationFetched: (lat, lng) {
-              setState(() {
-                _userLat = lat;
-                _userLng = lng;
-              });
-            },
-          ),
-          ExploreTab(
-            name: widget.name,
-            initialCategory: _exploreCategory,
-            userLat: _userLat,
-            userLng: _userLng,
-          ),
-          const SizedBox.shrink(),   // slot "Decide" (dibuka sebagai sheet)
-          const AiTab(),
-          ProfileTab(
-            name: widget.name,
-            fromRegister: widget.fromRegister,
-            biometricOn: widget.biometricOn,
-            onAvatarChanged: (url) {
-              setState(() {
-                _customAvatarUrl = url;
-                if (_profile != null) {
-                  _profile = Profile(
-                    id: _profile!.id,
-                    displayName: _profile!.displayName,
-                    avatarUrl: url,
-                    points: _profile!.points,
-                    createdAt: _profile!.createdAt,
-                  );
-                }
-              });
-            },
-          ),
-        ],
-      ),
-      bottomNavigationBar: _BottomNav(
-        index: _index,
-        items: _items,
-        avatarUrl: _customAvatarUrl ?? _profile?.avatarUrl,
-        onSelect: _select,
+            ExploreTab(
+              name: widget.name,
+              initialCategory: _exploreCategory,
+              userLat: _userLat,
+              userLng: _userLng,
+            ),
+            const SizedBox.shrink(),   // slot "Decide" (dibuka sebagai sheet)
+            const AiTab(),
+            ProfileTab(
+              name: widget.name,
+              fromRegister: widget.fromRegister,
+              biometricOn: widget.biometricOn,
+              onAvatarChanged: (url) {
+                setState(() {
+                  _customAvatarUrl = url;
+                  if (_profile != null) {
+                    _profile = Profile(
+                      id: _profile!.id,
+                      displayName: _profile!.displayName,
+                      avatarUrl: url,
+                      points: _profile!.points,
+                      createdAt: _profile!.createdAt,
+                    );
+                  }
+                });
+              },
+            ),
+          ],
+        ),
+        bottomNavigationBar: _BottomNav(
+          index: _index,
+          items: _items,
+          avatarUrl: _customAvatarUrl ?? _profile?.avatarUrl,
+          onSelect: _select,
+        ),
       ),
     );
   }

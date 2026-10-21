@@ -93,6 +93,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   }
 
   Future<void> _verify() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final token = _code.text.trim();
     if (token.length != _codeLength) return;
     setState(() => _loading = true);
@@ -173,6 +174,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,

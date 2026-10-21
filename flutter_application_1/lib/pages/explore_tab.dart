@@ -207,6 +207,7 @@ class _ExploreTabState extends State<ExploreTab> {
           color: AppColors.orange,
           onRefresh: _load,
           child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
               _header(),
@@ -375,8 +376,14 @@ class _ExploreTabState extends State<ExploreTab> {
                 Expanded(
                   child: TextField(
                     controller: _search,
-                    onChanged: _onSearchChanged,
-                    onSubmitted: _onSearchSubmitted,
+                    onChanged: (v) {
+                      setState(() {});
+                      _onSearchChanged(v);
+                    },
+                    onSubmitted: (v) {
+                      _onSearchSubmitted(v);
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    },
                     textInputAction: TextInputAction.search,
                     style: const TextStyle(fontSize: 13),
                     decoration: const InputDecoration(
@@ -390,11 +397,29 @@ class _ExploreTabState extends State<ExploreTab> {
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.auto_awesome,
-                  size: 18,
-                  color: AppColors.orange,
-                ),
+                if (_search.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _search.clear();
+                      _onSearchChanged('');
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      setState(() {});
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        Icons.cancel_rounded,
+                        size: 18,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  )
+                else
+                  const Icon(
+                    Icons.auto_awesome,
+                    size: 18,
+                    color: AppColors.orange,
+                  ),
               ],
             ),
           ),
@@ -556,6 +581,11 @@ class _ExploreTabState extends State<ExploreTab> {
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Tutup',
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
                     ),
                   ],
                 ),

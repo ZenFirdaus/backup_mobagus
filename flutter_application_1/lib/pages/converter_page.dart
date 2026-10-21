@@ -157,6 +157,7 @@ class _ConverterPageState extends State<ConverterPage>
     final usd = _idr / _usdRate;
     final myr = _idr / _myrRate;
     return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
         Text('Masukkan Jumlah (IDR)', style: AppText.display(16)),
@@ -184,6 +185,9 @@ class _ConverterPageState extends State<ConverterPage>
                 child: TextField(
                   controller: _idrController,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) =>
+                      FocusManager.instance.primaryFocus?.unfocus(),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: const TextStyle(
                     fontSize: 16,
@@ -199,6 +203,26 @@ class _ConverterPageState extends State<ConverterPage>
                     setState(() => _idr = double.tryParse(v) ?? 0);
                   },
                 ),
+              ),
+              if (_idrController.text.isNotEmpty)
+                IconButton(
+                  tooltip: 'Hapus input',
+                  icon: const Icon(Icons.clear_rounded,
+                      size: 18, color: AppColors.textMuted),
+                  onPressed: () {
+                    _idrController.clear();
+                    setState(() => _idr = 0);
+                    FocusManager.instance.primaryFocus?.unfocus();
+                  },
+                ),
+              IconButton(
+                tooltip: 'Selesai / Sembunyikan Keyboard',
+                icon: const Icon(
+                  Icons.keyboard_hide_rounded,
+                  color: AppColors.greenDark,
+                  size: 20,
+                ),
+                onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
               ),
             ],
           ),

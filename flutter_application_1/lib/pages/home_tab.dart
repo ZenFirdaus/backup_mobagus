@@ -2,17 +2,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../models/ai_recommendation_result.dart';
 import '../models/profile.dart';
 import '../models/restaurant.dart';
+import '../models/user_ai_profile.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../services/ai_recommendation_service.dart';
 import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/location_service.dart';
+import '../widgets/ai_reasoning_sheet.dart';
 import '../widgets/decide.dart';
+import 'ai_profile_page.dart';
 import 'notifications_page.dart';
 
-/// Tab "Home": sapaan, Curated Shake, GPS widget, kategori, dan Rekomendasi Terdekat (LBS).
+/// Tab "Home": sapaan, Curated Shake, GPS widget, rekomendasi AI, kategori, dan Rekomendasi Terdekat (LBS).
 class HomeTab extends StatefulWidget {
   final String name;
 
@@ -44,12 +49,16 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   final _svc = SupabaseService.instance;
   final _pageCtrl = PageController(viewportFraction: 0.9);
+  final _aiPageCtrl = PageController(viewportFraction: 0.88);
 
   Profile? _profile;
   List<Restaurant> _picks = [];       // Rekomendasi terdekat (LBS)
+  List<AiRecommendationResult> _aiPicks = []; // Rekomendasi personal AI
+  UserAiProfile? _aiProfile;
   List<String> _categories = [];
   bool _loading = true;
   int _page = 0;
+  int _aiPage = 0;
   StreamSubscription<void>? _profileSub;
 
   @override
@@ -57,6 +66,7 @@ class _HomeTabState extends State<HomeTab> {
     super.initState();
     LocationService.instance.currentLocation.addListener(_onLocationUpdated);
     LocationService.instance.isLoading.addListener(_onLocationLoadingChanged);
+    AiRecommendationService.instance.profileNotifier.addListener(_onAiProfileUpdated);
     _load();
     // Auto-detect lokasi GPS pengguna saat aplikasi dibuka
     LocationService.instance.fetchGpsLocation();
@@ -76,46 +86,82 @@ class _HomeTabState extends State<HomeTab> {
     if (mounted) setState(() {});
   }
 
+  void _onAiProfileUpdated() {
+    if (!mounted) return;
+    _load();
+  }
+
   @override
   void dispose() {
     LocationService.instance.currentLocation.removeListener(_onLocationUpdated);
     LocationService.instance.isLoading.removeListener(_onLocationLoadingChanged);
+    AiRecommendationService.instance.profileNotifier.removeListener(_onAiProfileUpdated);
     _profileSub?.cancel();
     _pageCtrl.dispose();
+    _aiPageCtrl.dispose();
     super.dispose();
   }
 
+  bool _isLoadingData = false;
+
   Future<void> _load() async {
-    final results = await Future.wait([
-      _svc.getProfile(),
-      _svc.getRestaurants(),
-      _svc.getCategories(),
-    ]);
-    var restos = List<Restaurant>.of(results[1] as List<Restaurant>);
+    if (_isLoadingData) return;
+    _isLoadingData = true;
 
-    final loc = LocationService.instance.currentLocation.value;
-    // Jika sudah ada koordinat pengguna → sort by jarak terdekat (LBS)
-    if (loc != null && (loc.lat != 0 || loc.lng != 0)) {
-      final lat = loc.lat;
-      final lng = loc.lng;
-      restos.sort((a, b) {
-        final dA = LocationService.instance.distanceM(lat, lng, a.lat, a.lng);
-        final dB = LocationService.instance.distanceM(lat, lng, b.lat, b.lng);
-        return dA.compareTo(dB);
+    try {
+      final results = await Future.wait([
+        _svc.getProfile(),
+        _svc.getRestaurants(),
+        _svc.getCategories(),
+        AiRecommendationService.instance.getProfile(),
+      ]);
+      final rawRestos = results[1] as List<Restaurant>;
+      var restos = List<Restaurant>.of(rawRestos);
+      final aiProf = results[3] as UserAiProfile?;
+
+      final loc = LocationService.instance.currentLocation.value;
+      double? userLat;
+      double? userLng;
+
+      // Jika sudah ada koordinat pengguna → sort by jarak terdekat (LBS)
+      if (loc != null && (loc.lat != 0 || loc.lng != 0)) {
+        userLat = loc.lat;
+        userLng = loc.lng;
+        restos.sort((a, b) {
+          final dA = LocationService.instance.distanceM(userLat!, userLng!, a.lat, a.lng);
+          final dB = LocationService.instance.distanceM(userLat, userLng, b.lat, b.lng);
+          return dA.compareTo(dB);
+        });
+      } else {
+        // Fallback: sort by rating jika lokasi belum tersedia
+        restos.sort((a, b) => b.rating.compareTo(a.rating));
+      }
+
+      // Proses Rekomendasi Cerdas AI jika profil sudah diisi
+      List<AiRecommendationResult> aiResults = [];
+      if (aiProf != null && aiProf.isCompleted) {
+        aiResults = AiRecommendationService.instance.rankRestaurants(
+          restaurants: rawRestos,
+          profile: aiProf,
+          userLat: userLat,
+          userLng: userLng,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _profile = results[0] as Profile?;
+        _picks = restos.take(5).toList();
+        _categories = results[2] as List<String>;
+        _aiProfile = aiProf;
+        _aiPicks = aiResults.take(6).toList();
+        _loading = false;
       });
-      widget.onLocationFetched?.call(lat, lng);
-    } else {
-      // Fallback: sort by rating jika lokasi belum tersedia
-      restos.sort((a, b) => b.rating.compareTo(a.rating));
+    } catch (e) {
+      debugPrint('Error loading home tab: $e');
+    } finally {
+      if (mounted) _isLoadingData = false;
     }
-
-    if (!mounted) return;
-    setState(() {
-      _profile = results[0] as Profile?;
-      _picks = restos.take(5).toList();
-      _categories = results[2] as List<String>;
-      _loading = false;
-    });
   }
 
   void _open(Restaurant r) {
@@ -195,6 +241,9 @@ class _HomeTabState extends State<HomeTab> {
               const SizedBox(height: 22),
               // ── GPS / Lokasi Widget ──
               _gpsWidget(),
+              const SizedBox(height: 22),
+              // ── Rekomendasi Cerdas AI ──
+              _aiRecommendationSection(),
               const SizedBox(height: 22),
               if (_categories.isNotEmpty) ...[
                 Text('Kategori Kuliner', style: AppText.display(20)),
@@ -531,6 +580,11 @@ class _HomeTabState extends State<HomeTab> {
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Tutup',
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
                     ),
                   ],
                 ),
@@ -1011,6 +1065,490 @@ class _HomeTabState extends State<HomeTab> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ---------- Rekomendasi Cerdas AI (Smart Match) ----------
+  Widget _aiRecommendationSection() {
+    final aiProf = _aiProfile;
+    final isComplete = aiProf != null && aiProf.isCompleted;
+
+    if (!isComplete) {
+      return _aiActivationBanner();
+    }
+
+    if (_aiPicks.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.orange, AppColors.yellow],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Rekomendasi Cerdas AI', style: AppText.display(20)),
+                  Text(
+                    'Disesuaikan untuk: ${aiProf.personaSummary}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AiProfilePage()),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.tint(AppColors.orange, 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.tune_rounded, size: 12, color: AppColors.orange),
+                    SizedBox(width: 4),
+                    Text(
+                      'Ubah Data',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _aiCarousel(),
+      ],
+    );
+  }
+
+  Widget _aiActivationBanner() {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E2022), Color(0xFF2D3135)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -25,
+            bottom: -25,
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              size: 110,
+              color: Colors.white.withValues(alpha: 0.04),
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.auto_awesome_rounded, size: 11, color: AppColors.yellow),
+                          SizedBox(width: 4),
+                          Text(
+                            'FOODIE AI SMART MATCH',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.yellow,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Aktifkan Rekomendasi Cerdas AI',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Lengkapi data diri (pekerjaan, budget, tempat tinggal, dan selera rasa) agar AI dapat merekomendasikan kuliner yang 100% cocok untukmu!',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        height: 1.4,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AiProfilePage()),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppColors.orange, Color(0xFFFF8A00)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit_note_rounded, size: 16, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text(
+                              'Lengkapi Data Diri AI',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _aiCarousel() {
+    return Column(
+      children: [
+        SizedBox(
+          height: 285,
+          child: PageView.builder(
+            controller: _aiPageCtrl,
+            padEnds: false,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _aiPicks.length,
+            onPageChanged: (i) {
+              if (mounted) setState(() => _aiPage = i);
+            },
+            itemBuilder: (_, i) => Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _aiCard(_aiPicks[i]),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            _aiPicks.length,
+            (i) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: i == _aiPage ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: i == _aiPage ? AppColors.orange : AppColors.line,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _aiCard(AiRecommendationResult result) {
+    final r = result.restaurant;
+    final img = (r.imageUrl?.isEmpty ?? true) ? null : r.imageUrl;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Gambar dengan badge AI Match & Jarak
+          GestureDetector(
+            onTap: () => _open(r),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              child: SizedBox(
+                height: 135,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (img != null)
+                      Image.network(
+                        img,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _cardFallback(),
+                      )
+                    else
+                      _cardFallback(),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.35),
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.70),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppColors.orange, AppColors.yellow],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          result.matchBadge,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (result.distanceKm > 0)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.near_me_rounded, size: 9, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${result.distanceKm.toStringAsFixed(1)} km',
+                                style: const TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    Positioned(
+                      bottom: 8,
+                      left: 12,
+                      right: 12,
+                      child: Text(
+                        r.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Info konten & reasoning
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        r.category,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                    const Text(' • ', style: TextStyle(color: AppColors.textMuted)),
+                    Flexible(
+                      child: Text(
+                        r.priceRange,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.star_rounded, size: 14, color: AppColors.orange),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${r.rating}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.charcoal,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                // AI Reason chips
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: result.tags.map((t) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.tint(AppColors.orange, 0.10),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        t,
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.orange,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                // Tombol Kenapa AI Memilihkan Ini
+                GestureDetector(
+                  onTap: () => showAiReasoningSheet(
+                    context,
+                    result: result,
+                    onOpenDetail: () => _open(r),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.psychology_rounded, size: 14, color: AppColors.orange),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Kenapa AI merekomendasikan ini?',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.charcoal,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.textMuted),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

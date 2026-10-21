@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/restaurant.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../services/ai_recommendation_service.dart';
 import '../services/food_ai.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
@@ -57,6 +58,37 @@ class _AiTabState extends State<AiTab> {
   int _session = 0; // naik tiap "percakapan baru" agar balasan lama dibuang
 
   @override
+  void initState() {
+    super.initState();
+    _initPersonalizedWelcome();
+  }
+
+  Future<void> _initPersonalizedWelcome() async {
+    final prof = await AiRecommendationService.instance.getProfile();
+    if (!mounted) return;
+    if (prof != null && prof.isCompleted) {
+      final taste = prof.favoriteTastes.isNotEmpty ? prof.favoriteTastes.first : 'Kuliner';
+      setState(() {
+        _messages.clear();
+        _messages.add(
+          _Msg.bot(
+            BotReply(
+              'Halo! Aku mendeteksi profilmu sebagai **${prof.occupation}** yang tinggal di **${prof.housingType}** dengan selera **${prof.favoriteTastes.join(" & ")}** ✨\n\n'
+              'Ada yang bisa kubantu carikan hari ini? Kamu juga bisa memilih rekomendasi instan di bawah:',
+              chips: [
+                QuickReply('Rasa $taste untuk ${prof.occupation?.split(" ").first ?? "aku"}'),
+                QuickReply('Kuliner dekat ${prof.housingType}'),
+                QuickReply('Sesuai budget ${prof.mealBudget?.split(" ").first ?? "hemat"}'),
+                QuickReply('Rekomendasi terbaik'),
+              ],
+            ),
+          ),
+        );
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _scroll.dispose();
@@ -105,6 +137,7 @@ class _AiTabState extends State<AiTab> {
         ..clear()
         ..add(_Msg.bot(_ai.welcome()));
     });
+    _initPersonalizedWelcome();
     _scrollDown();
   }
 
@@ -143,6 +176,8 @@ class _AiTabState extends State<AiTab> {
             Expanded(
               child: ListView.builder(
                 controller: _scroll,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 itemCount: _messages.length + (_typing ? 1 : 0),
                 itemBuilder: (_, i) {
@@ -342,30 +377,52 @@ class _AiTabState extends State<AiTab> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.line),
               ),
-              child: TextField(
-                controller: _controller,
-                focusNode: _focus,
-                onSubmitted: (v) {
-                  _send(v);
-                  _focus.requestFocus();
-                },
-                textInputAction: TextInputAction.send,
-                textCapitalization: TextCapitalization.sentences,
-                style: const TextStyle(fontSize: 13),
-                decoration: const InputDecoration(
-                  hintText: 'Tanya rekomendasi kuliner...',
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textMuted,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focus,
+                      onSubmitted: (v) {
+                        _send(v);
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      },
+                      textInputAction: TextInputAction.send,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText: 'Tanya rekomendasi kuliner...',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textMuted,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                    ),
                   ),
-                  border: InputBorder.none,
-                ),
+                  if (_focus.hasFocus || _controller.text.isNotEmpty)
+                    IconButton(
+                      tooltip: 'Tutup Keyboard',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      icon: const Icon(
+                        Icons.keyboard_hide_rounded,
+                        size: 20,
+                        color: AppColors.textMuted,
+                      ),
+                      onPressed: () =>
+                          FocusManager.instance.primaryFocus?.unfocus(),
+                    ),
+                ],
               ),
             ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () => _send(_controller.text),
+            onTap: () {
+              _send(_controller.text);
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 150),
               opacity: _typing ? 0.5 : 1,

@@ -8,8 +8,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/profile.dart';
 import '../models/review.dart';
+import '../models/user_ai_profile.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../services/ai_recommendation_service.dart';
 import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
@@ -17,6 +19,7 @@ import '../widgets/auth_widgets.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/face_id_scanner_sheet.dart';
 import 'achievements_page.dart';
+import 'ai_profile_page.dart';
 import 'converter_page.dart';
 import 'detail_page.dart';
 import 'favorites_page.dart';
@@ -50,6 +53,7 @@ class _ProfileTabState extends State<ProfileTab>
   int _mealMinute = 0;
   String _mealLabel = 'Makan Siang';
   Profile? _profile;
+  UserAiProfile? _aiProfile;
   Map<String, int> _stats = {'favorites': 0, 'checkins': 0, 'reviews': 0};
   bool _loading = true;
 
@@ -72,6 +76,21 @@ class _ProfileTabState extends State<ProfileTab>
     _load();
     _loadHistory();
     _subscribeRealtime();
+    AiRecommendationService.instance.profileNotifier.addListener(_onAiProfileChanged);
+    _loadAiProfile();
+  }
+
+  void _onAiProfileChanged() {
+    if (mounted) {
+      setState(() {
+        _aiProfile = AiRecommendationService.instance.profileNotifier.value;
+      });
+    }
+  }
+
+  Future<void> _loadAiProfile() async {
+    final p = await AiRecommendationService.instance.getProfile();
+    if (mounted) setState(() => _aiProfile = p);
   }
 
   void _subscribeRealtime() {
@@ -113,6 +132,7 @@ class _ProfileTabState extends State<ProfileTab>
 
   @override
   void dispose() {
+    AiRecommendationService.instance.profileNotifier.removeListener(_onAiProfileChanged);
     _profileSub?.cancel();
     _reviewAddedSub?.cancel();
     _favSub?.cancel();
@@ -493,14 +513,34 @@ class _ProfileTabState extends State<ProfileTab>
                   child: Container(
                     width: 40,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 20),
+                    margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
                       color: AppColors.line,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-                Text('Edit Profil', style: AppText.display(20)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      tooltip: 'Kembali',
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    Text('Edit Profil', style: AppText.display(20)),
+                    IconButton(
+                      tooltip: 'Tutup',
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded,
+                          size: 22, color: AppColors.textMuted),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 20),
 
                 // ── Avatar area ──
@@ -570,6 +610,9 @@ class _ProfileTabState extends State<ProfileTab>
                 TextField(
                   controller: nameCtrl,
                   autofocus: false,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) =>
+                      FocusManager.instance.primaryFocus?.unfocus(),
                   style: const TextStyle(
                       fontSize: 14, color: AppColors.textDark),
                   decoration: InputDecoration(
@@ -982,6 +1025,9 @@ class _ProfileTabState extends State<ProfileTab>
             TextField(
               controller: msgCtrl,
               maxLines: 4,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
               style:
                   const TextStyle(fontSize: 13, color: AppColors.textDark),
               decoration: InputDecoration(
@@ -1078,6 +1124,8 @@ class _ProfileTabState extends State<ProfileTab>
                   await _loadHistory();
                 },
                 child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   children: [
                     Text('Profil', style: AppText.display(22)),
@@ -1087,6 +1135,8 @@ class _ProfileTabState extends State<ProfileTab>
                       const SizedBox(height: 12),
                       _welcomeBanner(),
                     ],
+                    const SizedBox(height: 14),
+                    _aiPersonaCard(),
                     const SizedBox(height: 14),
                     _statsRow(),
                     const SizedBox(height: 14),
@@ -1424,6 +1474,173 @@ class _ProfileTabState extends State<ProfileTab>
         ),
       );
       },
+    );
+  }
+
+  Widget _aiPersonaCard() {
+    final p = _aiProfile;
+    final bool isComplete = p != null && p.isCompleted;
+    final int progress = p?.completionPercentage ?? 0;
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AiProfilePage()),
+        );
+        _loadAiProfile();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isComplete
+                ? [const Color(0xFF1C1D1F), const Color(0xFF2C2E33)]
+                : [const Color(0xFF202024), const Color(0xFF382F24)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isComplete
+                ? AppColors.orange.withValues(alpha: 0.4)
+                : AppColors.line,
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.orange, AppColors.yellow],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Text(
+                            'Persona Kuliner AI',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            '✨ SMART MATCH',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.yellow,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isComplete
+                            ? p.personaSummary
+                            : 'Lengkapi data diri untuk rekomendasi personal',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isComplete ? AppColors.greenDark : AppColors.orange,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    isComplete ? 'Aktif' : '$progress%',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress / 100.0,
+                minHeight: 5,
+                backgroundColor: Colors.white.withValues(alpha: 0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isComplete ? AppColors.green : AppColors.orange,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isComplete
+                      ? 'Data diri, selera rasa & tempat tinggal terhubung'
+                      : 'Kelengkapan: $progress% • Klik untuk lengkapi profil',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: Colors.white.withValues(alpha: 0.65),
+                  ),
+                ),
+                const Row(
+                  children: [
+                    Text(
+                      'Atur',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.yellow,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: AppColors.yellow,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

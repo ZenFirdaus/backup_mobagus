@@ -202,6 +202,15 @@ class _DetailPageState extends State<DetailPage> {
                   color: AppColors.orange, size: 22),
               const SizedBox(width: 8),
               Text('Tulis Ulasan', style: AppText.display(18)),
+              const Spacer(),
+              IconButton(
+                tooltip: 'Tutup',
+                onPressed: () => Navigator.pop(ctx),
+                icon: const Icon(Icons.close_rounded,
+                    size: 20, color: AppColors.textMuted),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ],
           ),
           content: Column(
@@ -226,6 +235,9 @@ class _DetailPageState extends State<DetailPage> {
               TextField(
                 controller: commentCtrl,
                 maxLines: 4,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
                 style: const TextStyle(fontSize: 13, color: AppColors.textDark),
                 decoration: InputDecoration(
                   hintText: 'Bagikan pengalaman rasa Anda...',
@@ -392,6 +404,11 @@ class _DetailPageState extends State<DetailPage> {
                         ],
                       ),
                     ),
+                    IconButton(
+                      tooltip: 'Tutup',
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -493,6 +510,9 @@ class _DetailPageState extends State<DetailPage> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: noteCtrl,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) =>
+                      FocusManager.instance.primaryFocus?.unfocus(),
                   style:
                       const TextStyle(fontSize: 12.5, color: AppColors.textDark),
                   decoration: InputDecoration(

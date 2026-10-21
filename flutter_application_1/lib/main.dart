@@ -80,12 +80,19 @@ class FoodieApp extends StatelessWidget {
         ),
       ),
       // Di browser/desktop, tampilan dibatasi selebar HP supaya rapi.
+      // Global GestureDetector memastikan keyboard dapat ditutup dengan mengetuk area di luar input.
       builder: (context, child) => ColoredBox(
         color: const Color(0xFFEBE7DD),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: child,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+              child: child,
+            ),
           ),
         ),
       ),

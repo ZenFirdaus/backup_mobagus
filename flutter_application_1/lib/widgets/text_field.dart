@@ -13,6 +13,7 @@ class AppTextField extends StatefulWidget {
   final bool showValid;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
   final String? trailingLabel;
@@ -29,6 +30,7 @@ class AppTextField extends StatefulWidget {
     this.showValid = false,
     this.keyboardType,
     this.textInputAction,
+    this.onFieldSubmitted,
     this.validator,
     this.onChanged,
     this.trailingLabel,
@@ -107,6 +109,8 @@ class _AppTextFieldState extends State<AppTextField> {
           obscureText: widget.isPassword && _hidden,
           keyboardType: widget.keyboardType,
           textInputAction: widget.textInputAction,
+          onFieldSubmitted: widget.onFieldSubmitted ??
+              (_) => FocusManager.instance.primaryFocus?.unfocus(),
           validator: widget.validator,
           onChanged: widget.onChanged,
           inputFormatters: widget.inputFormatters,

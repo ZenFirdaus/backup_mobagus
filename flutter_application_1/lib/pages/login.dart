@@ -11,6 +11,7 @@ import '../widgets/text_field.dart';
 import '../widgets/face_id_scanner_sheet.dart';
 import '../services/face_biometric_service.dart';
 import 'home.dart';
+import 'onboarding.dart';
 import 'register.dart';
 import '../services/supabase_service.dart';
 
@@ -60,6 +61,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
@@ -503,6 +505,8 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: resetEmailCtrl,
               keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
               style: const TextStyle(fontSize: 13, color: AppColors.textDark),
               decoration: InputDecoration(
                 hintText: 'nama@gmail.com',
@@ -581,6 +585,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Form(
               key: _formKey,
@@ -590,52 +595,31 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      FoodieHeaderLogo(),
-                      
-                      // Container(
-                      //   padding: const EdgeInsets.symmetric(
-                      //       horizontal: 10, vertical: 6),
-                      //   decoration: BoxDecoration(
-                      //     color: AppColors.greenDark,
-                      //     borderRadius: BorderRadius.circular(10),
-                      //   ),
-                      //   child: const Text(
-                      //     'FOODIE',
-                      //     style: TextStyle(
-                      //       fontSize: 12,
-                      //       fontWeight: FontWeight.w800,
-                      //       letterSpacing: 1.2,
-                      //       color: Colors.white,
-                      //     ),
-                      //   ),
-                      // ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+                      InkWell(
+                        onTap: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          } else {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const OnboardingPage(),
+                              ),
+                            );
+                          }
+                        },
+                        customBorder: const CircleBorder(),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.line, width: 1),
+                          ),
+                          child: const Icon(Icons.arrow_back_rounded, size: 18),
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.line),
-                        ),
-                        // child: const Row(
-                        //   mainAxisSize: MainAxisSize.min,
-                        //   children: [
-                        //     Icon(Icons.location_on,
-                        //         size: 12, color: AppColors.red),
-                        //     SizedBox(width: 4),
-                        //     Text(
-                        //       'DIY & Jateng',
-                        //       style: TextStyle(
-                        //         fontSize: 10,
-                        //         fontWeight: FontWeight.w700,
-                        //         color: AppColors.textDark,
-                        //       ),
-                        //     ),
-                        //   ],
-                        // ),
                       ),
+                      const FoodieHeaderLogo(),
                     ],
                   ),
                   const SizedBox(height: 28),
