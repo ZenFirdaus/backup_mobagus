@@ -63,6 +63,7 @@ class _BiometricPageState extends State<BiometricPage>
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('foodie_biometric_enabled', true);
+      await prefs.setString('foodie_last_user_name', widget.name);
     } catch (_) {}
 
     await Future.delayed(const Duration(milliseconds: 600));
@@ -87,11 +88,11 @@ class _BiometricPageState extends State<BiometricPage>
   String get _pillText {
     switch (_state) {
       case _ScanState.idle:
-        return 'Tempelkan jari Anda pada sensor';
+        return 'Posisikan wajah Anda pada lingkaran sensor';
       case _ScanState.scanning:
-        return 'Memindai... tahan jari Anda';
+        return 'Memindai kontur wajah... harap tatap sensor';
       case _ScanState.success:
-        return 'Sidik jari berhasil didaftarkan';
+        return 'Autentikasi wajah berhasil didaftarkan';
     }
   }
 
@@ -156,7 +157,7 @@ class _BiometricPageState extends State<BiometricPage>
               ),
               const SizedBox(height: 16),
               Text(
-                'Masuk Cepat dengan\nSidik Jari',
+                'Masuk Cepat dengan\nAutentikasi Wajah',
                 textAlign: TextAlign.center,
                 style: AppText.display(
                   28,
@@ -166,7 +167,7 @@ class _BiometricPageState extends State<BiometricPage>
               ),
               const SizedBox(height: 10),
               const Text(
-                'Aktifkan sensor sidik jari untuk validasi check-in instan di warung legendaris, verifikasi voucher makan, dan akses akun tanpa kata sandi.',
+                'Aktifkan autentikasi wajah untuk validasi check-in instan di warung legendaris, verifikasi voucher makan, dan akses akun tanpa kata sandi.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
@@ -180,7 +181,7 @@ class _BiometricPageState extends State<BiometricPage>
               _statusPill(),
               const SizedBox(height: 8),
               const Text(
-                'Sensor Biometrik Perangkat Terdeteksi (Android Biometric Prompt / Apple Touch ID)',
+                'Sensor Biometrik Perangkat Terdeteksi (Android Biometric Prompt / Apple Face ID)',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 9.5,
@@ -208,8 +209,8 @@ class _BiometricPageState extends State<BiometricPage>
               ),
               const SizedBox(height: 18),
               PrimaryButton(
-                label: 'Aktifkan Sidik Jari Sekarang',
-                icon: Icons.fingerprint,
+                label: 'Aktifkan Autentikasi Wajah Sekarang',
+                icon: Icons.face_retouching_natural_rounded,
                 onPressed: busy ? null : _activate,
               ),
               const SizedBox(height: 10),
@@ -339,16 +340,16 @@ class _BiometricPageState extends State<BiometricPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        done ? Icons.check_rounded : Icons.fingerprint,
+                        done ? Icons.check_circle_rounded : Icons.face_retouching_natural_rounded,
                         size: 54,
                         color: done ? Colors.white : AppColors.orange,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
-                        done ? 'BERHASIL' : (scanning ? 'MEMINDAI' : 'SENTUH'),
+                        done ? 'TERVERIFIKASI' : (scanning ? 'MEMINDAI WAJAH' : 'PINDAI WAJAH'),
                         style: const TextStyle(
-                          fontSize: 10,
-                          letterSpacing: 1.3,
+                          fontSize: 9.5,
+                          letterSpacing: 1.1,
                           fontWeight: FontWeight.w800,
                           color: AppColors.yellow,
                         ),

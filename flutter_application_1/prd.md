@@ -77,7 +77,7 @@ Sesuai dengan acuan utama file desain Figma di `mobagus.zip`, aplikasi FOODIE te
     - Checkbox: "Ingat Saya di Perangkat Ini".
     - Link text: "Lupa Kata Sandi?".
   - Tombol Masuk Utama: "Masuk dengan Supabase ->".
-  - Tombol Biometrik: "Masuk dengan Sidik Jari (Tersambung ke Biometrik Lokal)".
+  - Tombol Biometrik: "Masuk dengan autentikasi wajah (Tersambung ke Biometrik Lokal)".
   - Pembatas SSO: "ATAU MASUK DENGAN: Google SSO | Passkey ID".
   - Link Beralih: "Belum memiliki akun FOODIE? Daftar Sekarang".
   - Indikator Keamanan: "Supabase Auth • TLS 1.3 End-to-End".
@@ -111,17 +111,17 @@ Sesuai dengan acuan utama file desain Figma di `mobagus.zip`, aplikasi FOODIE te
   - Tombol Utama: "Verifikasi & Lanjutkan ->" (Menuju Langkah 3: Setup Biometrik).
   - Footer Keamanan: "Dilindungi oleh Supabase Auth SSL 256-bit. Memastikan kurasi gastronomi terbebas dari akun palsu."
 ### 2.6 Screen 6: Verifikasi & Aktivasi Biometrik (`Verif biometrik.png`)
-- **Fungsi:** Langkah ke-3 registrasi untuk mengaitkan sensor sidik jari / Face ID perangkat ke sesi lokal.
+- **Fungsi:** Langkah ke-3 registrasi untuk mengaitkan sensor Face ID perangkat ke sesi lokal.
 - **Elemen UI:**
   - Top Bar: Label "Langkah 3 dari 3: Keamanan Biometrik", tombol "Nanti Saja" (Lewati).
-  - Judul: "AUTENTIKASI BIOMETRIK PRESISI — Masuk Cepat dengan Sidik Jari".
-  - Ilustrasi Sensor: Ikon pemindai sidik jari dengan status "Sensor Biometrik Perangkat Terdeteksi (Android Biometric Prompt / Apple Touch ID)".
+  - Judul: "AUTENTIKASI BIOMETRIK PRESISI — Masuk Cepat dengan autentikasi wajah".
+  - Ilustrasi Sensor: Ikon pemindai autentikasi wajah dengan status "Sensor Biometrik Perangkat Terdeteksi (Android Biometric Prompt / Apple Touch ID)".
   - 3 Keunggulan Fitur:
     1. Akses 1-Ketukan: Masuk aplikasi seketika tanpa input kata sandi berulang.
     2. Validasi Check-in Cepat: Konfirmasi kehadiran GPS di warung mitra & klaim voucher dalam hitungan detik.
     3. Privasi Terisolasi: Kunci biometrik disimpan aman di hardware Secure Enclave perangkat.
   - Tombol Tindakan:
-    - Primary CTA: "Aktifkan Sidik Jari Sekarang" (Memicu prompt biometrik sistem).
+    - Primary CTA: "Aktifkan Autentikasi Wajah Sekarang" (Memicu prompt biometrik sistem).
     - Secondary Link: "Gunakan PIN 6-Digit Sebagai Cadangan".
 ### 2.7 Screen 7: Home Dashboard (`Home Screen.png`)
 - **Fungsi:** Beranda utama penjelajahan kuliner, rekomendasi terkurasi, dan pintu masuk ke semua fitur.
@@ -357,7 +357,7 @@ Sesuai dengan acuan utama file desain Figma di `mobagus.zip`, aplikasi FOODIE te
       - Zona Waktu Makan (WIB, WITA, WIT, GMT) -> "Cek Jadwal ->".
     - **PREFERENSI SISTEM:**
       - Pengingat Waktu Makan (Jadwal sarapan, makan siang, makan malam).
-      - Biometrik & Autentikasi (Sidik jari / Face ID).
+      - Biometrik & Autentikasi (autentikasi wajah).
       - Cakupan Wilayah (DIY Jogja & Jawa Tengah).
       - Saran & Kesan Kurator (Formulir masukan mata kuliah).
       - Keluar Akun (Logout dengan dialog konfirmasi: Batal / Ya, Keluar).

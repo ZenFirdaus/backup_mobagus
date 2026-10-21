@@ -125,6 +125,20 @@ class _ProfileTabState extends State<ProfileTab>
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('foodie_biometric_enabled', val);
     } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            val
+                ? 'Autentikasi Wajah aktif untuk login cepat ✨'
+                : 'Autentikasi Wajah dinonaktifkan',
+          ),
+          backgroundColor: val ? AppColors.greenDark : AppColors.charcoal,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleNotif(bool val) async {
@@ -649,15 +663,16 @@ class _ProfileTabState extends State<ProfileTab>
 
   @override
   Widget build(BuildContext context) {
-    final isGuest = Supabase.instance.client.auth.currentUser == null;
+    final currentUser = Supabase.instance.client.auth.currentUser;
     final name = _profile?.displayName.isNotEmpty == true
         ? _profile!.displayName
-        : widget.name.trim().isEmpty
-            ? (isGuest ? 'Tamu Mataraman' : 'Foodie')
-            : widget.name.trim();
-    final email = isGuest
-        ? 'Mode Tamu (Akses Lengkap)'
-        : (Supabase.instance.client.auth.currentUser?.email ?? '');
+        : widget.name.trim().isNotEmpty
+            ? widget.name.trim()
+            : (currentUser?.userMetadata?['name'] as String? ?? 'Kurator Rasa');
+    final email = currentUser?.email ??
+        (widget.name.isNotEmpty
+            ? '${widget.name.toLowerCase().replaceAll(' ', '.')}@culinary.id'
+            : 'kurator@foodie.id');
     return PageBackground(
       child: SafeArea(
         bottom: false,
@@ -733,8 +748,8 @@ class _ProfileTabState extends State<ProfileTab>
                     const SizedBox(height: 8),
                     _group([
                       _switchTile(
-                        Icons.fingerprint,
-                        'Login Biometrik',
+                        Icons.face_retouching_natural_rounded,
+                        'Autentikasi Wajah (Face ID)',
                         _biometric,
                         _toggleBiometric,
                       ),
@@ -1335,27 +1350,30 @@ class _ProfileTabState extends State<ProfileTab>
 
   Widget _tile(IconData icon, String title,
       {String? trailing, VoidCallback? onTap}) {
-    return ListTile(
-      dense: true,
-      leading: _iconBox(icon),
-      title: Text(
-        title,
-        style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.greenDark),
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        dense: true,
+        leading: _iconBox(icon),
+        title: Text(
+          title,
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.greenDark),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (trailing != null)
+              Text(trailing,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppColors.textMuted)),
+            const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+          ],
+        ),
+        onTap: onTap ?? () {},
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (trailing != null)
-            Text(trailing,
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textMuted)),
-          const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
-        ],
-      ),
-      onTap: onTap ?? () {},
     );
   }
 
@@ -1365,21 +1383,24 @@ class _ProfileTabState extends State<ProfileTab>
     bool value,
     ValueChanged<bool> onChanged,
   ) {
-    return ListTile(
-      dense: true,
-      leading: _iconBox(icon),
-      title: Text(
-        title,
-        style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.greenDark),
-      ),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeThumbColor: Colors.white,
-        activeTrackColor: AppColors.orange,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        dense: true,
+        leading: _iconBox(icon),
+        title: Text(
+          title,
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.greenDark),
+        ),
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: Colors.white,
+          activeTrackColor: AppColors.orange,
+        ),
       ),
     );
   }

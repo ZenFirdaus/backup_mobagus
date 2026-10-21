@@ -21,9 +21,9 @@ class SupabaseService {
   SupabaseClient get _client => Supabase.instance.client;
   User? get currentUser => _client.auth.currentUser;
   String? get userId => currentUser?.id;
-  bool get isGuest => currentUser == null;
-
-  String guestName = 'Tamu Mataraman';
+  String curatorName = 'Dimas Dananjaya';
+  String get guestName => curatorName;
+  set guestName(String val) => curatorName = val;
 
   final Set<String> _localFavorites = {};
   final List<Checkin> _localCheckins = [];
@@ -190,7 +190,7 @@ class SupabaseService {
     _localReviews.clear();
     _localSearchHistory.clear();
     _localBonusPoints = 0;
-    guestName = 'Tamu Mataraman';
+    curatorName = 'Dimas Dananjaya';
     _initialized = false;
     await _client.auth.signOut();
   }
@@ -219,9 +219,9 @@ class SupabaseService {
       } catch (_) {}
     }
 
-    final name = currentUser?.userMetadata?['name'] as String? ?? guestName;
+    final name = currentUser?.userMetadata?['name'] as String? ?? curatorName;
     return Profile(
-      id: uid ?? 'guest_user',
+      id: uid ?? 'curator_user',
       displayName: name,
       points: 100 + _localBonusPoints + (_localCheckins.length * 50),
       createdAt: DateTime.now(),
