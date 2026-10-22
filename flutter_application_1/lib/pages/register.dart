@@ -154,7 +154,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   AppTextField(
                     label: 'Nama Lengkap',
                     hint: 'Masukkan nama Anda',
-                    icon: Icons.person_outline_rounded,
+                    icon: Icons.person_rounded,
                     controller: _name,
                     textInputAction: TextInputAction.next,
                     validator: (v) => Validators.required(v, 'Nama lengkap'),
@@ -163,7 +163,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   AppTextField(
                     label: 'Email',
                     hint: 'nama@gmail.com',
-                    icon: Icons.mail_outline_rounded,
+                    icon: Icons.mail_rounded,
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
@@ -173,7 +173,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   AppTextField(
                     label: 'Nomor WhatsApp / Telepon',
                     hint: '0812 3456 7890',
-                    icon: Icons.phone_outlined,
+                    icon: Icons.phone_rounded,
                     controller: _phone,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.next,
@@ -183,7 +183,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   AppTextField(
                     label: 'Kata Sandi',
                     hint: 'Minimal 8 karakter',
-                    icon: Icons.lock_outline_rounded,
+                    icon: Icons.lock_rounded,
                     controller: _password,
                     isPassword: true,
                     textInputAction: TextInputAction.next,
@@ -193,7 +193,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   AppTextField(
                     label: 'Konfirmasi Kata Sandi',
                     hint: 'Ulangi kata sandi',
-                    icon: Icons.lock_outline_rounded,
+                    icon: Icons.lock_rounded,
                     controller: _confirm,
                     isPassword: true,
                     textInputAction: TextInputAction.done,

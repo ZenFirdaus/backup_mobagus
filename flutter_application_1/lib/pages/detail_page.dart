@@ -200,7 +200,7 @@ class _DetailPageState extends State<DetailPage> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              const Icon(Icons.rate_review_outlined,
+              const Icon(Icons.rate_review_rounded,
                   color: AppColors.orange, size: 22),
               const SizedBox(width: 8),
               Text('Tulis Ulasan', style: AppText.display(18)),
@@ -288,7 +288,7 @@ class _DetailPageState extends State<DetailPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content:
-                          Text('Ulasan berhasil ditambahkan! (+20 Poin) ✨'),
+                          Text('Ulasan berhasil ditambahkan (+20 Poin)'),
                       backgroundColor: AppColors.greenDark,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -304,14 +304,14 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future<void> _shareRestaurant() async {
-    final text = 'Yuk cobain kuliner ini bareng-bareng! 🍽️✨\n\n'
+    final text = 'Rekomendasi Kuliner:\n\n'
         '*${_r.name}*\n'
-        '🏷️ Kategori: ${_r.category}\n'
-        '⭐ Rating: ${_r.rating.toStringAsFixed(1)} / 5.0\n'
-        '💰 Kisaran Harga: ${_r.priceRange}\n'
-        '📍 Alamat: ${_r.address}\n'
-        '🗺️ Buka di Google Maps: https://www.google.com/maps/search/?api=1&query=${_r.lat},${_r.lng}\n\n'
-        'Ditemukan melalui aplikasi FOODIE Mataraman.';
+        'Kategori: ${_r.category}\n'
+        'Rating: ${_r.rating.toStringAsFixed(1)} / 5.0\n'
+        'Kisaran Harga: ${_r.priceRange}\n'
+        'Alamat: ${_r.address}\n'
+        'Buka di Google Maps: https://www.google.com/maps/search/?api=1&query=${_r.lat},${_r.lng}\n\n'
+        'Ditemukan melalui aplikasi FOODIE.';
 
     try {
       final box = context.findRenderObject() as RenderBox?;
@@ -472,7 +472,13 @@ class _DetailPageState extends State<DetailPage> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.line),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x06000000),
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
@@ -512,7 +518,13 @@ class _DetailPageState extends State<DetailPage> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.line),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x06000000),
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
@@ -886,16 +898,24 @@ class _DetailPageState extends State<DetailPage> {
       left: 0,
       right: 0,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(12, top + 8, 12, 0),
+        padding: EdgeInsets.fromLTRB(16, top + 8, 16, 0),
         child: Row(
           children: [
-            _circleButton(
-              Icons.arrow_back_ios_new_rounded,
+            InkWell(
               onTap: () => Navigator.of(context).maybePop(),
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.all(6.0),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 20,
+                  color: AppColors.charcoal,
+                ),
+              ),
             ),
             const Spacer(),
             _circleButton(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
               color: _isFavorite ? AppColors.red : AppColors.textDark,
               onTap: _toggleFavorite,
             ),
@@ -911,12 +931,10 @@ class _DetailPageState extends State<DetailPage> {
       child: Container(
         width: 38,
         height: 38,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border:
-              Border.all(color: AppColors.line.withValues(alpha: 0.8), width: 1),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
               color: Color(0x20000000),
               blurRadius: 8,
@@ -937,7 +955,7 @@ class _DetailPageState extends State<DetailPage> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.location_on_outlined,
+            const Icon(Icons.location_on_rounded,
                 size: 15, color: AppColors.red),
             const SizedBox(width: 4),
             Expanded(
@@ -955,7 +973,7 @@ class _DetailPageState extends State<DetailPage> {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(Icons.payments_outlined,
+            const Icon(Icons.payments_rounded,
                 size: 16, color: AppColors.greenDark),
             const SizedBox(width: 6),
             Text(
@@ -975,7 +993,7 @@ class _DetailPageState extends State<DetailPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.phone_outlined,
+                    const Icon(Icons.phone_rounded,
                         size: 14, color: AppColors.textMuted),
                     const SizedBox(width: 4),
                     Text(
@@ -1013,13 +1031,13 @@ class _DetailPageState extends State<DetailPage> {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _actionButton(
-          Icons.map_outlined,
+          Icons.map_rounded,
           'Peta',
           _openMaps,
           color: AppColors.greenDark,
         ),
         _actionButton(
-          _isFavorite ? Icons.bookmark : Icons.bookmark_border,
+          _isFavorite ? Icons.bookmark_rounded : Icons.bookmark_rounded,
           _isFavorite ? 'Tersimpan' : 'Simpan',
           _toggleFavorite,
           color: _isFavorite ? AppColors.orange : AppColors.greenDark,
@@ -1031,13 +1049,13 @@ class _DetailPageState extends State<DetailPage> {
           color: _hasReminder ? AppColors.orange : AppColors.greenDark,
         ),
         _actionButton(
-          Icons.rate_review_outlined,
+          Icons.rate_review_rounded,
           'Ulas',
           _showAddReviewDialog,
           color: AppColors.greenDark,
         ),
         _actionButton(
-          Icons.share_outlined,
+          Icons.share_rounded,
           'Bagikan',
           _shareRestaurant,
           color: AppColors.greenDark,
@@ -1062,7 +1080,6 @@ class _DetailPageState extends State<DetailPage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.line, width: 1),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x06000000),
@@ -1096,12 +1113,11 @@ class _DetailPageState extends State<DetailPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.line),
           boxShadow: const [
             BoxShadow(
               color: Color(0x06000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
+              blurRadius: 10,
+              offset: Offset(0, 3),
             ),
           ],
         ),
@@ -1359,11 +1375,10 @@ class _DetailPageState extends State<DetailPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
-            blurRadius: 6,
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
@@ -1469,7 +1484,7 @@ class _DetailPageState extends State<DetailPage> {
       children: [
         Row(
           children: [
-            const Icon(Icons.forum_outlined,
+            const Icon(Icons.forum_rounded,
                 size: 18, color: AppColors.charcoal),
             const SizedBox(width: 8),
             Expanded(
@@ -1512,11 +1527,17 @@ class _DetailPageState extends State<DetailPage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.line),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               children: [
-                const Icon(Icons.rate_review_outlined,
+                const Icon(Icons.rate_review_rounded,
                     size: 32, color: AppColors.line),
                 const SizedBox(height: 8),
                 const Text(
@@ -1558,11 +1579,10 @@ class _DetailPageState extends State<DetailPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line),
         boxShadow: const [
           BoxShadow(
             color: Color(0x04000000),
-            blurRadius: 6,
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
@@ -1651,7 +1671,13 @@ class _DetailPageState extends State<DetailPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x05000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [

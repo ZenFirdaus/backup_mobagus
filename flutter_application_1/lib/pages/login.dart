@@ -212,7 +212,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Face ID Terverifikasi! Selamat Datang Kembali, $userName ✨',
+                      'Face ID terverifikasi. Selamat datang kembali, $userName',
                     ),
                   ),
                 ],
@@ -261,10 +261,6 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.orange, 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.tint(AppColors.orange, 0.3),
-                    width: 1.5,
-                  ),
                 ),
                 child: const Icon(
                   Icons.no_accounts_rounded,
@@ -279,7 +275,6 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: BoxDecoration(
                   color: AppColors.cream,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.line),
                 ),
                 child: const Text(
                   'APPLE FACE ID • KEAMANAN BIOMETRIK',
@@ -316,7 +311,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 10),
               SoftButton(
                 label: 'Daftar Akun Baru',
-                icon: Icons.person_add_outlined,
+                icon: Icons.person_add_rounded,
                 onPressed: () {
                   Navigator.pop(ctx);
                   _toRegister();
@@ -363,10 +358,6 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.orange, 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.tint(AppColors.orange, 0.3),
-                    width: 1.5,
-                  ),
                 ),
                 child: const Icon(
                   Icons.face_retouching_natural_rounded,
@@ -381,7 +372,6 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: BoxDecoration(
                   color: AppColors.cream,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.line),
                 ),
                 child: const Text(
                   'FITUR LOGIN CEPAT & AMAN',
@@ -460,7 +450,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Face ID berhasil didaftarkan untuk $name! ✨',
+                      'Face ID berhasil didaftarkan untuk $name.',
                     ),
                   ),
                 ],
@@ -542,7 +532,7 @@ class _LoginPageState extends State<LoginPage> {
                   AppTextField(
                     label: 'Email',
                     hint: 'nama@gmail.com',
-                    icon: Icons.mail_outline_rounded,
+                    icon: Icons.mail_rounded,
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
@@ -552,7 +542,7 @@ class _LoginPageState extends State<LoginPage> {
                   AppTextField(
                     label: 'Kata Sandi',
                     hint: 'Masukkan kata sandi',
-                    icon: Icons.lock_outline_rounded,
+                    icon: Icons.lock_rounded,
                     controller: _password,
                     isPassword: true,
                     textInputAction: TextInputAction.done,
@@ -668,4 +658,4 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-/// Sheet Pemindai Wajah Real-Time berstandar tema utama FOODIE (Warm Mataraman Gastronomic Pass)
+/// Sheet Pemindai Wajah Real-Time berstandar tema utama FOODIE (Warm Gastronomic Pass)

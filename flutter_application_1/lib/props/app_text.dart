@@ -9,13 +9,13 @@ class AppFonts {
   AppFonts._();
 
   static const String body = 'Manrope'; // teks umum
-  static const String display = 'PlayfairDisplay'; // judul / aksen elegan
+  static const String display = 'Gotham'; // judul / aksen modern
 }
 
 class AppText {
   AppText._();
 
-  /// Gaya judul (serif elegan Playfair Display).
+  /// Gaya judul (font modern Gotham).
   static TextStyle display(
     double size, {
     FontWeight weight = FontWeight.w700,

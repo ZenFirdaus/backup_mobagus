@@ -479,10 +479,9 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
                   child: Container(
                     width: 32,
                     height: 32,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.background,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.line, width: 0.8),
                     ),
                     child: const Icon(
                       Icons.close_rounded,
@@ -511,13 +510,12 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.line.withValues(alpha: 0.6)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    Icons.shield_outlined,
+                    Icons.shield_rounded,
                     size: 15,
                     color: AppColors.slateBlue,
                   ),

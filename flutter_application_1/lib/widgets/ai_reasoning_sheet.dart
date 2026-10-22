@@ -67,24 +67,22 @@ class _AiReasoningSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.orange, AppColors.yellow],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppColors.orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: Colors.white,
-                  size: 22,
+                  Icons.insights_rounded,
+                  color: AppColors.orange,
+                  size: 20,
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Analisis Rekomendasi AI',
+                    Text(
+                      'Alasan Rekomendasi',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -92,7 +90,7 @@ class _AiReasoningSheet extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'AI Smart Match Matrix',
+                      'Berdasarkan preferensi kuliner aktifmu',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,

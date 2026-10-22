@@ -150,14 +150,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
     await NotificationService.instance.requestPermissions();
     await NotificationService.instance.showInstantNotification(
       id: 7777,
-      title: 'Halo dari FOODIE (Mataraman Edition)! 🍲',
+      title: 'Halo dari FOODIE!',
       body:
-          'Sistem notifikasi pengingat kuliner berhasil diuji coba dengan lancar!',
+          'Sistem notifikasi pengingat kuliner berhasil diuji coba dengan lancar.',
     );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Notifikasi telah dikirim ke bilah status HP Anda! 🔔'),
+          content: Text('Notifikasi telah dikirim ke bilah status HP Anda.'),
           backgroundColor: AppColors.greenDark,
           behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: 2),
@@ -245,7 +245,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.line),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x06000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Text(
                   'Tandai Dibaca',
@@ -270,7 +276,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.3)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -351,9 +356,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 decoration: BoxDecoration(
                   color: active ? AppColors.greenDark : Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: active ? AppColors.greenDark : AppColors.line,
-                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x05000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Text(
                   filters[i],
@@ -382,12 +391,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: item.type == _NotifType.visitReminder
-              ? AppColors.tint(AppColors.orange, 0.4)
-              : (item.isRead ? AppColors.line : AppColors.tint(AppColors.greenDark, 0.4)),
-          width: item.type == _NotifType.visitReminder ? 1.5 : 1,
-        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,7 +505,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_off_outlined,
+          Icon(Icons.notifications_off_rounded,
               size: 44, color: AppColors.textMuted),
           SizedBox(height: 10),
           Text(

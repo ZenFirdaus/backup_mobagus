@@ -322,13 +322,12 @@ class _ExploreTabState extends State<ExploreTab> {
                   Container(
                     width: 38,
                     height: 38,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.line),
                     ),
                     child: const Icon(
-                      Icons.notifications_none_rounded,
+                      Icons.notifications_rounded,
                       size: 20,
                       color: AppColors.greenDark,
                     ),
@@ -367,7 +366,13 @@ class _ExploreTabState extends State<ExploreTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -413,12 +418,6 @@ class _ExploreTabState extends State<ExploreTab> {
                         color: AppColors.textMuted,
                       ),
                     ),
-                  )
-                else
-                  const Icon(
-                    Icons.auto_awesome,
-                    size: 18,
-                    color: AppColors.orange,
                   ),
               ],
             ),
@@ -478,17 +477,16 @@ class _ExploreTabState extends State<ExploreTab> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.line),
           ),
           child: Row(
             children: [
               _toggleBtn(
-                Icons.view_agenda_outlined,
+                Icons.view_agenda_rounded,
                 !_mapView,
                 () => setState(() => _mapView = false),
               ),
               _toggleBtn(
-                Icons.map_outlined,
+                Icons.map_rounded,
                 _mapView,
                 () => setState(() => _mapView = true),
               ),
@@ -635,14 +633,15 @@ class _ExploreTabState extends State<ExploreTab> {
                     decoration: BoxDecoration(
                       color: (currentLoc?.isGps ?? false) && _selectedCity == null
                           ? AppColors.tint(AppColors.greenDark, 0.08)
-                          : AppColors.surfaceSubtle,
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: (currentLoc?.isGps ?? false) && _selectedCity == null
-                            ? AppColors.greenDark
-                            : AppColors.line,
-                        width: 1.5,
-                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -704,11 +703,13 @@ class _ExploreTabState extends State<ExploreTab> {
                           ? AppColors.tint(AppColors.orange, 0.08)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _selectedCity == null && !(currentLoc?.isGps ?? false)
-                            ? AppColors.orange
-                            : AppColors.line,
-                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -784,10 +785,13 @@ class _ExploreTabState extends State<ExploreTab> {
                             ? AppColors.tint(AppColors.greenDark, 0.08)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected ? AppColors.greenDark : AppColors.line,
-                          width: isSelected ? 1.5 : 1,
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
@@ -835,11 +839,6 @@ class _ExploreTabState extends State<ExploreTab> {
               ? AppColors.tint(AppColors.greenDark, 0.08)
               : AppColors.tint(AppColors.orange, 0.08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isGps
-                ? AppColors.tint(AppColors.greenDark, 0.25)
-                : AppColors.tint(AppColors.orange, 0.25),
-          ),
         ),
         child: Row(
           children: [
@@ -909,7 +908,13 @@ class _ExploreTabState extends State<ExploreTab> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.line),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Row(
                 children: [
@@ -962,9 +967,13 @@ class _ExploreTabState extends State<ExploreTab> {
         decoration: BoxDecoration(
           color: active ? AppColors.greenDark : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active ? AppColors.greenDark : AppColors.line,
-          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -1022,7 +1031,13 @@ class _ExploreTabState extends State<ExploreTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -1066,7 +1081,7 @@ class _ExploreTabState extends State<ExploreTab> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.map_outlined, size: 40, color: AppColors.greenDark),
+          const Icon(Icons.map_rounded, size: 40, color: AppColors.greenDark),
           const SizedBox(height: 8),
           Text('Tampilan peta segera hadir', style: AppText.display(15)),
         ],
@@ -1102,7 +1117,6 @@ class _ExploreTabState extends State<ExploreTab> {
       decoration: BoxDecoration(
         color: AppColors.tint(AppColors.yellow, 0.35),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1257,7 +1271,7 @@ class _PlaceCard extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(
-                        Icons.payments_outlined,
+                        Icons.payments_rounded,
                         size: 16,
                         color: AppColors.greenDark,
                       ),

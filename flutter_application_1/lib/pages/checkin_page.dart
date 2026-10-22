@@ -190,7 +190,7 @@ class _CheckinPageState extends State<CheckinPage> {
                 Row(
                   children: [
                     Icon(
-                      Icons.location_on_outlined,
+                      Icons.location_on_rounded,
                       size: 13,
                       color: AppColors.tint(AppColors.yellow, 0.7),
                     ),
@@ -222,7 +222,13 @@ class _CheckinPageState extends State<CheckinPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.12)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +315,6 @@ class _CheckinPageState extends State<CheckinPage> {
       decoration: BoxDecoration(
         color: AppColors.tint(AppColors.green, 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.green, 0.25)),
       ),
       child: Column(
         children: [
@@ -552,7 +557,6 @@ class _CheckinPageState extends State<CheckinPage> {
       decoration: BoxDecoration(
         color: AppColors.tint(AppColors.red, 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.red, 0.2)),
       ),
       child: Column(
         children: [
@@ -574,7 +578,13 @@ class _CheckinPageState extends State<CheckinPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x05000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Text(
                 'Coba Lagi',
@@ -601,7 +611,7 @@ class _CheckinPageState extends State<CheckinPage> {
       child: Column(
         children: [
           const Icon(
-            Icons.explore_outlined,
+            Icons.explore_rounded,
             size: 36,
             color: AppColors.textMuted,
           ),
@@ -626,7 +636,13 @@ class _CheckinPageState extends State<CheckinPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -642,7 +658,7 @@ class _CheckinPageState extends State<CheckinPage> {
             child: Icon(
               checkin.verified
                   ? Icons.verified_rounded
-                  : Icons.pending_outlined,
+                  : Icons.pending_rounded,
               size: 20,
               color: checkin.verified ? AppColors.green : AppColors.orange,
             ),

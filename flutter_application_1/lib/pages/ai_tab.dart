@@ -73,8 +73,8 @@ class _AiTabState extends State<AiTab> {
         _messages.add(
           _Msg.bot(
             BotReply(
-              'Halo! Aku mendeteksi profilmu sebagai **${prof.occupation}** yang tinggal di **${prof.housingType}** dengan selera **${prof.favoriteTastes.join(" & ")}** ✨\n\n'
-              'Ada yang bisa kubantu carikan hari ini? Kamu juga bisa memilih rekomendasi instan di bawah:',
+              'Halo! Sesuai preferensimu sebagai **${prof.occupation}** dengan selera **${prof.favoriteTastes.join(" & ")}**,\n\n'
+              'Ada yang bisa kubantu carikan hari ini? Kamu juga bisa memilih rekomendasi di bawah:',
               chips: [
                 QuickReply('Rasa $taste untuk ${prof.occupation?.split(" ").first ?? "aku"}'),
                 QuickReply('Kuliner dekat ${prof.housingType}'),
@@ -206,7 +206,7 @@ class _AiTabState extends State<AiTab> {
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
-              Icons.auto_awesome,
+              Icons.chat_bubble_rounded,
               size: 22,
               color: AppColors.yellow,
             ),
@@ -294,7 +294,13 @@ class _AiTabState extends State<AiTab> {
             bottomLeft: Radius.circular(user ? 18 : 4),
             bottomRight: Radius.circular(user ? 4 : 18),
           ),
-          border: user ? null : Border.all(color: AppColors.line),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: user ? 0.08 : 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Text.rich(TextSpan(children: _spans(m.text, base, bold))),
       ),
@@ -328,9 +334,6 @@ class _AiTabState extends State<AiTab> {
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.yellow, 0.45),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.tint(AppColors.orange, 0.4),
-                  ),
                 ),
                 child: Text(
                   c.label,
@@ -356,7 +359,6 @@ class _AiTabState extends State<AiTab> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.line),
         ),
         child: const _TypingDots(),
       ),
@@ -375,7 +377,13 @@ class _AiTabState extends State<AiTab> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x06000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -488,8 +496,15 @@ class _RestaurantTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
+              color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.line),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [

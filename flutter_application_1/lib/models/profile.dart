@@ -39,11 +39,11 @@ class Profile {
       case 2:
         return 'Penjelajah Kuliner';
       case 3:
-        return 'Kurator Mataraman';
+        return 'Kurator Kuliner';
       case 4:
-        return 'Penjelajah Mataraman';
+        return 'Penjelajah Kuliner Sejati';
       case 5:
-        return 'Kurator Agung Kesultanan';
+        return 'Kurator Utama';
       default:
         return 'Pemula Rasa';
     }

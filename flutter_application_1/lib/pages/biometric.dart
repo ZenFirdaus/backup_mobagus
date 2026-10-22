@@ -171,7 +171,7 @@ class _BiometricPageState extends State<BiometricPage>
               const StepBar(current: 3),
               const SizedBox(height: 18),
               const InfoPill(
-                icon: Icons.verified_user_outlined,
+                icon: Icons.verified_user_rounded,
                 text: 'AUTENTIKASI APPLE FACE ID',
               ),
               const SizedBox(height: 16),
@@ -216,13 +216,13 @@ class _BiometricPageState extends State<BiometricPage>
               ),
               const SizedBox(height: 8),
               const _BenefitCard(
-                icon: Icons.location_on_outlined,
+                icon: Icons.location_on_rounded,
                 title: 'Validasi Check-in Cepat',
                 text: 'Konfirmasi kehadiran GPS di warung mitra & klaim voucher santap dalam hitungan detik.',
               ),
               const SizedBox(height: 8),
               const _BenefitCard(
-                icon: Icons.lock_outline,
+                icon: Icons.lock_rounded,
                 title: 'Privasi Terisolasi',
                 text: 'Kunci biometrik disimpan aman di hardware Secure Enclave perangkat Anda.',
               ),
@@ -273,7 +273,13 @@ class _BiometricPageState extends State<BiometricPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -255,8 +255,9 @@ class _GamePageState extends State<GamePage> {
   }
 
   Widget _buildQuestion() {
-    if (_sessionQuestions.isEmpty)
+    if (_sessionQuestions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
+    }
 
     final activeQ = _sessionQuestions[_currentIndex];
     final originalQ = activeQ.original;
@@ -385,12 +386,11 @@ class _GamePageState extends State<GamePage> {
           decoration: BoxDecoration(
             color: AppColors.tint(AppColors.yellow, 0.6),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.tint(AppColors.orange, 0.3)),
           ),
           child: Row(
             children: [
               const Icon(
-                Icons.location_on_outlined,
+                Icons.location_on_rounded,
                 size: 14,
                 color: AppColors.orange,
               ),
@@ -416,7 +416,6 @@ class _GamePageState extends State<GamePage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.line, width: 1),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x06000000),
@@ -566,7 +565,7 @@ class _GamePageState extends State<GamePage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.timer_outlined,
+            Icons.timer_rounded,
             size: 14,
             color: urgent ? AppColors.red : AppColors.greenDark,
           ),
@@ -676,7 +675,6 @@ class _GamePageState extends State<GamePage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.line, width: 1),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x08000000),
@@ -752,7 +750,7 @@ class _GamePageState extends State<GamePage> {
                     ),
                     const SizedBox(width: 16),
                     _statBubble(
-                      Icons.cancel_outlined,
+                      Icons.cancel_rounded,
                       '$incorrectAnswers',
                       'Salah',
                       AppColors.red,

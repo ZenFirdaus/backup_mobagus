@@ -5,7 +5,7 @@ import 'restaurant.dart';
 class AiRecommendationResult {
   final Restaurant restaurant;
   final double matchScore; // 0.0 - 100.0
-  final String matchBadge; // e.g. "✨ 98% Match"
+  final String matchBadge; // e.g. "98% Cocok"
   final List<String> tags; // e.g. ["Sesuai Kantong Kos", "Pencinta Pedas", "Dekat Lokasimu"]
   final String explanation; // Kalimat penjelasan cerdas dari AI
   final Map<String, double> breakdown; // Skor per pilar: 'budget', 'taste', 'lifestyle', 'location'

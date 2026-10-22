@@ -41,11 +41,11 @@ class _HomePageState extends State<HomePage> {
   StreamSubscription<void>? _profileSub;
 
   static const _items = [
-    _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
-    _NavItem(Icons.explore_outlined, Icons.explore, 'Explore'),
-    _NavItem(Icons.casino_outlined, Icons.casino, 'Decide'),
-    _NavItem(Icons.auto_awesome_outlined, Icons.auto_awesome, 'AI'),
-    _NavItem(Icons.person_outline, Icons.person, 'Profile'),
+    _NavItem(Icons.home_rounded, Icons.home_rounded, 'Home'),
+    _NavItem(Icons.explore_rounded, Icons.explore_rounded, 'Explore'),
+    _NavItem(Icons.casino_rounded, Icons.casino_rounded, 'Decide'),
+    _NavItem(Icons.auto_awesome_rounded, Icons.auto_awesome_rounded, 'AI'),
+    _NavItem(Icons.person_rounded, Icons.person_rounded, 'Profile'),
   ];
 
   @override
@@ -231,14 +231,8 @@ class _BottomNav extends StatelessWidget {
                         Container(
                           width: 22,
                           height: 22,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: active
-                                  ? AppColors.orange
-                                  : AppColors.tint(AppColors.yellow, 0.7),
-                              width: active ? 2 : 1.2,
-                            ),
                           ),
                           clipBehavior: Clip.antiAlias,
                           child: AvatarImage(

@@ -264,11 +264,11 @@ class _AiProfilePageState extends State<AiProfilePage> {
         const SnackBar(
           content: Row(
             children: [
-              Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Persona & preferensi berhasil diterapkan! Rekomendasi telah diperbarui ✨',
+                  'Persona & preferensi berhasil diterapkan.',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -341,9 +341,9 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   _headerBanner(progress),
                   const SizedBox(height: 20),
                   _buildSectionCard(
-                    title: '1. Profil Personal & Finansial',
+                    title: '1. Profil & Finansial',
                     subtitle:
-                        'Membantu AI menyesuaikan kapasitas porsi & level harga restoran',
+                        'Penyesuaian porsi makan dan estimasi pengeluaran',
                     icon: Icons.person_rounded,
                     children: [
                       _label('Jenis Kelamin *'),
@@ -377,7 +377,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   _buildSectionCard(
                     title: '2. Tempat Tinggal & Domisili',
                     subtitle:
-                        'AI menyelaraskan pilihan kuliner dengan mobilitas harian Anda',
+                        'Penyesuaian jarak tempat makan dari area tinggal Anda',
                     icon: Icons.home_rounded,
                     children: [
                       _label('Tipe Tempat Tinggal *'),
@@ -404,9 +404,6 @@ class _AiProfilePageState extends State<AiProfilePage> {
                               decoration: BoxDecoration(
                                 color: AppColors.tint(AppColors.orange, 0.12),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.orange.withValues(alpha: 0.3),
-                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -445,7 +442,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'AI akan merekomendasikan kuliner terdekat dari alamat ini. Anda bisa tekan tombol di atas atau ketik manual.',
+                        'Rekomendasi kuliner terdekat dihitung dari alamat ini. Anda bisa tekan tombol di atas atau ketik manual.',
                         style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                       ),
                       const SizedBox(height: 8),
@@ -454,9 +451,9 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   ),
                   const SizedBox(height: 18),
                   _buildSectionCard(
-                    title: '3. Selera Rasa & Preferensi Kuliner',
+                    title: '3. Selera Rasa & Tipe Tempat',
                     subtitle:
-                        'AI mencocokkan profil rempah dan rasa favorit lidah Anda',
+                        'Pilihan cita rasa dan tipe tempat makan yang Anda sukai',
                     icon: Icons.restaurant_menu_rounded,
                     children: [
                       _label('Rasa Kesukaan * (Bisa pilih lebih dari satu)'),
@@ -466,7 +463,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
                       _label('Pilihan Tipe Tempat Favorit * (Sesuai Explore)'),
                       const SizedBox(height: 4),
                       const Text(
-                        'Pilih jenis tempat kuliner yang paling Anda sukai saat berburu makanan',
+                        'Pilih jenis tempat kuliner yang paling sering Anda kunjungi',
                         style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
                       ),
                       const SizedBox(height: 10),
@@ -540,7 +537,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
-                  Icons.auto_awesome_rounded,
+                  Icons.tune_rounded,
                   color: AppColors.orange,
                   size: 22,
                 ),
@@ -551,7 +548,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'FOODIE AI Smart Match Engine',
+                      'Preferensi & Profil Kuliner',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15,
@@ -584,11 +581,11 @@ class _AiProfilePageState extends State<AiProfilePage> {
           ),
           const SizedBox(height: 10),
           Text(
-            'Semakin lengkap data yang Anda isi, semakin presisi AI merekomendasikan kuliner yang cocok dengan selera, kantong, dan gaya hidup Anda.',
+            'Data ini digunakan untuk menyesuaikan rekomendasi kuliner, rentang harga, dan tempat makan terdekat untuk Anda.',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.65),
+              color: Colors.white.withValues(alpha: 0.75),
               fontSize: 11.5,
-              height: 1.4,
+              height: 1.45,
             ),
           ),
         ],
@@ -607,7 +604,6 @@ class _AiProfilePageState extends State<AiProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.line),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -702,10 +698,6 @@ class _AiProfilePageState extends State<AiProfilePage> {
               ? AppColors.tint(AppColors.orange, 0.12)
               : const Color(0xFFF8F9FA),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppColors.orange : AppColors.line,
-            width: isSelected ? 1.5 : 1,
-          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -821,7 +813,6 @@ class _AiProfilePageState extends State<AiProfilePage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.line),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -953,8 +944,8 @@ class _AiProfilePageState extends State<AiProfilePage> {
             : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.auto_awesome_rounded, size: 20),
-                  SizedBox(width: 10),
+                  Icon(Icons.check_rounded, size: 20),
+                  SizedBox(width: 8),
                   Text(
                     'Terapkan',
                     style: TextStyle(

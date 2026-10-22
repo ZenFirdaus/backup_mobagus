@@ -184,14 +184,14 @@ final kDefaultRestaurants = <Restaurant>[
     reviewCount: 1567,
     description:
         'Sate kambing muda paling ikonik di DIY. Hanya dibumbui garam dan bawang, '
-        'dipanggang di atas jeruji besi sepeda yang unik — inilah yang membuat tekstur dagingnya '
+        'dipanggang di atas jeruji besi sepeda yang unik, inilah yang membuat tekstur dagingnya '
         'berbeda dari sate biasa. Cita rasa alami tanpa kecap yang khas dan tak tertandingi di Jogja.',
   ),
   Restaurant(
     id: 'resto_9',
     name: 'Warung Nasi Pecel Bu Wiryo',
     category: 'Kuliner Tradisional',
-    address: 'Pasar Kranggan, Jl. Tentara Rakyat Mataram, Yogyakarta',
+    address: 'Pasar Kranggan, Jl. Tentara Rakyat, Yogyakarta',
     province: 'DIY',
     lat: -7.7942,
     lng: 110.3659,

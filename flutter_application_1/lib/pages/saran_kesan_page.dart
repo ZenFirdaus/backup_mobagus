@@ -155,7 +155,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Saran & kesan berhasil diperbarui! ✨'),
+                  content: Text('Saran & kesan berhasil diperbarui.'),
                   backgroundColor: AppColors.charcoal,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -176,7 +176,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content:
-                      Text('Saran & kesan berhasil dibagikan ke publik! ✨'),
+                      Text('Saran & kesan berhasil dibagikan.'),
                   backgroundColor: AppColors.charcoal,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -445,7 +445,13 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -551,12 +557,6 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isMyFeedback
-              ? AppColors.paprika.withValues(alpha: 0.5)
-              : AppColors.line,
-          width: isMyFeedback ? 1.2 : 1.0,
-        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -676,7 +676,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                           height: 38,
                           child: Row(
                             children: [
-                              Icon(Icons.edit_outlined,
+                              Icon(Icons.edit_rounded,
                                   size: 16, color: AppColors.charcoal),
                               SizedBox(width: 8),
                               Text(
@@ -815,7 +815,13 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -827,7 +833,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
               color: AppColors.cream,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.rate_review_outlined,
+            child: const Icon(Icons.rate_review_rounded,
                 size: 28, color: AppColors.paprika),
           ),
           const SizedBox(height: 14),

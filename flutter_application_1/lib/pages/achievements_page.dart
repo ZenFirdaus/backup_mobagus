@@ -26,19 +26,19 @@ class _AchievementsPageState extends State<AchievementsPage> {
       'Voucher Makan Rp25.000',
       'Sentra Gudeg Wijilan & Resto Mitra',
       500,
-      Icons.confirmation_number_outlined,
+      Icons.confirmation_number_rounded,
     ),
     (
       'Gratis 1 Cangkir Kopi Joss',
       'Angkringan Lik Man Stasiun Tugu',
       200,
-      Icons.local_cafe_outlined,
+      Icons.local_cafe_rounded,
     ),
     (
       'Paket Besek Oleh-oleh',
       'Eksklusif Dapur Kuliner Keraton',
       1500,
-      Icons.card_giftcard_outlined,
+      Icons.card_giftcard_rounded,
     ),
   ];
 
@@ -181,7 +181,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               children: [
                 Text('Pencapaian & Poin', style: AppText.display(18)),
                 const Text(
-                  'Hadiah Gastronomi Mataraman',
+                  'Koleksi Hadiah & Badge',
                   style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                 ),
               ],
@@ -327,7 +327,13 @@ class _AchievementsPageState extends State<AchievementsPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.line),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x06000000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -353,7 +359,13 @@ class _AchievementsPageState extends State<AchievementsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -420,10 +432,13 @@ class _AchievementsPageState extends State<AchievementsPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: unlocked ? AppColors.orange : AppColors.line,
-              width: unlocked ? 1.5 : 1.0,
-            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x05000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -509,7 +524,13 @@ class _AchievementsPageState extends State<AchievementsPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.line),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x05000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [

@@ -353,13 +353,12 @@ class _HomeTabState extends State<HomeTab> {
                       Container(
                         width: 46,
                         height: 46,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.line),
                         ),
                         child: const Icon(
-                          Icons.notifications_none_rounded,
+                          Icons.notifications_rounded,
                           size: 22,
                           color: AppColors.charcoal,
                         ),
@@ -529,11 +528,7 @@ class _HomeTabState extends State<HomeTab> {
                 height: 70,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05),
-                  border: Border.all(
-                    color: AppColors.yellow.withValues(alpha: 0.4),
-                    width: 1.5,
-                  ),
+                  color: Colors.white.withValues(alpha: 0.10),
                 ),
                 child: const Icon(
                   Icons.restaurant_rounded,
@@ -666,14 +661,15 @@ class _HomeTabState extends State<HomeTab> {
                     decoration: BoxDecoration(
                       color: (currentLoc?.isGps ?? false)
                           ? AppColors.tint(AppColors.greenDark, 0.08)
-                          : AppColors.surfaceSubtle,
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: (currentLoc?.isGps ?? false)
-                            ? AppColors.greenDark
-                            : AppColors.line,
-                        width: (currentLoc?.isGps ?? false) ? 1.5 : 1,
-                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -818,7 +814,7 @@ class _HomeTabState extends State<HomeTab> {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Lokasi aktif diatur ke $name ✨'),
+                              content: Text('Lokasi aktif diatur ke $name'),
                               backgroundColor: AppColors.greenDark,
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -833,17 +829,20 @@ class _HomeTabState extends State<HomeTab> {
                               ? AppColors.tint(AppColors.orange, 0.08)
                               : Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isSelected ? AppColors.orange : AppColors.line,
-                            width: isSelected ? 1.5 : 1,
-                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
                             Icon(
                               isSelected
                                   ? Icons.check_circle_rounded
-                                  : Icons.place_outlined,
+                                  : Icons.place_rounded,
                               size: 20,
                               color: isSelected
                                   ? AppColors.orange
@@ -906,11 +905,6 @@ class _HomeTabState extends State<HomeTab> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isGps
-                ? AppColors.tint(AppColors.greenDark, 0.4)
-                : AppColors.line,
-          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -1013,7 +1007,6 @@ class _HomeTabState extends State<HomeTab> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceSubtle,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.line),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1068,14 +1061,13 @@ class _HomeTabState extends State<HomeTab> {
                     width: 62,
                     height: 62,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: const Color(0xFFFFECC8),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.line),
                     ),
                     child: Icon(
                       _iconFor(c),
                       size: 27,
-                      color: AppColors.charcoal,
+                      color: AppColors.orange,
                     ),
                   ),
                   const SizedBox(height: 7),
@@ -1120,13 +1112,11 @@ class _HomeTabState extends State<HomeTab> {
             Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.orange, AppColors.yellow],
-                ),
+                color: AppColors.orange,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
-                Icons.auto_awesome_rounded,
+                Icons.tune_rounded,
                 color: Colors.white,
                 size: 16,
               ),
@@ -1136,15 +1126,15 @@ class _HomeTabState extends State<HomeTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Rekomendasi Cerdas AI', style: AppText.display(20)),
+                  Text('Rekomendasi Untukmu', style: AppText.display(20)),
                   Text(
-                    'Disesuaikan untuk: ${aiProf.personaSummary}',
+                    'Sesuai dengan preferensi rasa, budget, dan lokasimu',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.orange,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],
@@ -1166,7 +1156,7 @@ class _HomeTabState extends State<HomeTab> {
                     Icon(Icons.tune_rounded, size: 12, color: AppColors.orange),
                     SizedBox(width: 4),
                     Text(
-                      'Ubah Data',
+                      'Ubah Preferensi',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
@@ -1190,112 +1180,94 @@ class _HomeTabState extends State<HomeTab> {
       clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E2022), Color(0xFF2D3135)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
+        color: AppColors.charcoal,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: Color(0x14000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -25,
-            bottom: -25,
-            child: Icon(
-              Icons.auto_awesome_rounded,
-              size: 110,
-              color: Colors.white.withValues(alpha: 0.04),
-            ),
-          ),
           Row(
             children: [
-              Expanded(
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.saffron,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.orange.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.auto_awesome_rounded, size: 11, color: AppColors.yellow),
-                          SizedBox(width: 4),
-                          Text(
-                            'FOODIE AI SMART MATCH',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.yellow,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Aktifkan Rekomendasi Cerdas AI',
+                    Text(
+                      'Rekomendasi Sesuai Seleramu',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     Text(
-                      'Lengkapi data diri (pekerjaan, budget, tempat tinggal, dan selera rasa) agar AI dapat merekomendasikan kuliner yang 100% cocok untukmu!',
+                      'Personalisasi pencarian kuliner',
                       style: TextStyle(
-                        fontSize: 11.5,
-                        height: 1.4,
-                        color: Colors.white.withValues(alpha: 0.75),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const AiProfilePage()),
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.orange, Color(0xFFFF8A00)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.edit_note_rounded, size: 16, color: Colors.white),
-                            SizedBox(width: 6),
-                            Text(
-                              'Lengkapi Data Diri AI',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
+                        fontSize: 11,
+                        color: Color(0xFFC7CED1),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Tentukan preferensi rasa, budget makan, dan lokasi agar kamu selalu menemukan kuliner yang cocok.',
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.45,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: 14),
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AiProfilePage()),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppColors.orange,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded, size: 15, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text(
+                    'Atur Preferensi',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -1350,7 +1322,6 @@ class _HomeTabState extends State<HomeTab> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.line),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -1400,13 +1371,11 @@ class _HomeTabState extends State<HomeTab> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.orange, AppColors.yellow],
-                          ),
+                          color: AppColors.orange,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
+                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 4,
                             ),
                           ],
@@ -1549,9 +1518,8 @@ class _HomeTabState extends State<HomeTab> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
+                      color: const Color(0xFFF5F3EF),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.line),
                     ),
                     child: const Row(
                       children: [
@@ -1781,7 +1749,7 @@ class _HomeTabState extends State<HomeTab> {
                   Row(
                     children: [
                       Icon(
-                        Icons.place_outlined,
+                        Icons.place_rounded,
                         size: 12,
                         color: Colors.white.withValues(alpha: 0.7),
                       ),

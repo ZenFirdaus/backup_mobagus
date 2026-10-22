@@ -213,7 +213,7 @@ class _ProfileTabState extends State<ProfileTab>
                       Icon(Icons.face_unlock_rounded, color: Colors.white, size: 20),
                       SizedBox(width: 10),
                       Expanded(
-                        child: Text('Apple Face ID berhasil diaktifkan! ✨'),
+                        child: Text('Apple Face ID berhasil diaktifkan.'),
                       ),
                     ],
                   ),
@@ -452,9 +452,15 @@ class _ProfileTabState extends State<ProfileTab>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.surfaceSubtle,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x06000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,7 +812,7 @@ class _ProfileTabState extends State<ProfileTab>
                           ..hideCurrentSnackBar()
                           ..showSnackBar(
                             const SnackBar(
-                              content: Text('Profil berhasil diperbarui ✨'),
+                              content: Text('Profil berhasil diperbarui.'),
                               backgroundColor: AppColors.greenDark,
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -936,9 +942,15 @@ class _ProfileTabState extends State<ProfileTab>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.surfaceSubtle,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.line),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x06000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -1071,7 +1083,7 @@ class _ProfileTabState extends State<ProfileTab>
                         ),
                       ),
                       _tile(
-                        Icons.emoji_events_outlined,
+                        Icons.emoji_events_rounded,
                         'Pencapaian & Poin',
                         trailing: '${_profile?.points ?? 0} Poin',
                         onTap: () => Navigator.of(context).push(
@@ -1104,7 +1116,7 @@ class _ProfileTabState extends State<ProfileTab>
                         _toggleBiometric,
                       ),
                       _switchTile(
-                        Icons.notifications_none_rounded,
+                        Icons.notifications_rounded,
                         'Notifikasi',
                         _notif,
                         _toggleNotif,
@@ -1119,11 +1131,11 @@ class _ProfileTabState extends State<ProfileTab>
                             : 'Notifikasi Nonaktif',
                         onTap: _showMealReminderPicker,
                       ),
-                      _tile(Icons.map_outlined, 'Cakupan Wilayah',
+                      _tile(Icons.map_rounded, 'Cakupan Wilayah',
                           trailing: 'DIY & Jateng',
                           onTap: _showCoverageDialog),
                       _tile(
-                        Icons.rate_review_outlined,
+                        Icons.rate_review_rounded,
                         'Saran & Kesan',
                         trailing: 'Mata Kuliah',
                         onTap: () => Navigator.of(context).push(
@@ -1138,7 +1150,7 @@ class _ProfileTabState extends State<ProfileTab>
                     const SizedBox(height: 16),
                     Center(
                       child: Text(
-                        'FOODIE INDONESIA\nMATARAMAN EDITION - v1.0.0\nDaerah Istimewa Yogyakarta',
+                        'FOODIE INDONESIA\nv1.0.0\nDaerah Istimewa Yogyakarta',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 9,
@@ -1163,12 +1175,11 @@ class _ProfileTabState extends State<ProfileTab>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.line, width: 1),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x04000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
           ),
         ],
       ),
@@ -1303,7 +1314,7 @@ class _ProfileTabState extends State<ProfileTab>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.rate_review_outlined,
+            Icon(Icons.rate_review_rounded,
                 size: 32, color: AppColors.line),
             SizedBox(height: 8),
             Text(
@@ -1414,12 +1425,6 @@ class _ProfileTabState extends State<ProfileTab>
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isComplete
-                ? AppColors.orange.withValues(alpha: 0.4)
-                : AppColors.line,
-            width: 1.2,
-          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -1436,14 +1441,12 @@ class _ProfileTabState extends State<ProfileTab>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.orange, AppColors.yellow],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Colors.white,
+                    Icons.tune_rounded,
+                    color: AppColors.orange,
                     size: 18,
                   ),
                 ),
@@ -1455,21 +1458,11 @@ class _ProfileTabState extends State<ProfileTab>
                       const Row(
                         children: [
                           Text(
-                            'Persona Kuliner AI',
+                            'Preferensi & Persona Kuliner',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            '✨ SMART MATCH',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.yellow,
-                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
@@ -1564,8 +1557,6 @@ class _ProfileTabState extends State<ProfileTab>
       decoration: BoxDecoration(
         color: AppColors.greenDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.12), width: 1),
         boxShadow: const [
           BoxShadow(
             color: Color(0x10000000),
@@ -1640,7 +1631,7 @@ class _ProfileTabState extends State<ProfileTab>
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.edit_outlined,
+                            Icon(Icons.edit_rounded,
                                 size: 12, color: Colors.white),
                             SizedBox(width: 4),
                             Text(
@@ -1701,11 +1692,10 @@ class _ProfileTabState extends State<ProfileTab>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line, width: 1),
       ),
       child: const Row(
         children: [
-          Icon(Icons.celebration_outlined,
+          Icon(Icons.celebration_rounded,
               size: 20, color: AppColors.orange),
           SizedBox(width: 12),
           Expanded(
@@ -1741,12 +1731,11 @@ class _ProfileTabState extends State<ProfileTab>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.line, width: 1),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x05000000),
-                blurRadius: 8,
-                offset: Offset(0, 2)),
+                color: Color(0x06000000),
+                blurRadius: 10,
+                offset: Offset(0, 3)),
           ],
         ),
         child: Row(
@@ -1796,12 +1785,11 @@ class _ProfileTabState extends State<ProfileTab>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.line, width: 1),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x04000000),
-                blurRadius: 6,
-                offset: Offset(0, 2)),
+                color: Color(0x06000000),
+                blurRadius: 10,
+                offset: Offset(0, 3)),
           ],
         ),
         child: Column(
@@ -1838,10 +1826,9 @@ class _ProfileTabState extends State<ProfileTab>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.line, width: 1),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2)),
+              color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 3)),
         ],
       ),
       child: Column(
@@ -1865,10 +1852,8 @@ class _ProfileTabState extends State<ProfileTab>
       width: 34,
       height: 34,
       decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
+        color: const Color(0xFFF6F3EE),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-            color: AppColors.line.withValues(alpha: 0.8), width: 0.8),
       ),
       child: Icon(icon, size: 18, color: AppColors.greenDark),
     );
@@ -1940,7 +1925,13 @@ class _ProfileTabState extends State<ProfileTab>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.tint(AppColors.red, 0.4)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x05000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,

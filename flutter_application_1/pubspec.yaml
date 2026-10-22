@@ -49,20 +49,12 @@ flutter:
           weight: 700
         - asset: assets/fonts/Manrope-ExtraBold.ttf
           weight: 800
-    - family: PlayfairDisplay
+    - family: Gotham
       fonts:
-        - asset: assets/fonts/PlayfairDisplay-Regular.ttf
-        - asset: assets/fonts/PlayfairDisplay-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlayfairDisplay-Bold.ttf
+        - asset: assets/fonts/Gotham-Regular.ttf
+        - asset: assets/fonts/Gotham-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Gotham-Bold.ttf
           weight: 700
-        - asset: assets/fonts/PlayfairDisplay-ExtraBold.ttf
+        - asset: assets/fonts/Gotham-Black.ttf
           weight: 800
-        - asset: assets/fonts/PlayfairDisplay-Italic.ttf
-          style: italic
-        - asset: assets/fonts/PlayfairDisplay-SemiBoldItalic.ttf
-          weight: 600
-          style: italic
-        - asset: assets/fonts/PlayfairDisplay-BoldItalic.ttf
-          weight: 700
-          style: italic

@@ -132,7 +132,7 @@ class AiRecommendationService {
       results.add(AiRecommendationResult(
         restaurant: r,
         matchScore: finalMatchScore,
-        matchBadge: '✨ $finalMatchScore% Match',
+        matchBadge: '${finalMatchScore.toStringAsFixed(0)}% Cocok',
         tags: tags,
         explanation: explanation,
         distanceKm: distanceKm,
@@ -456,7 +456,7 @@ class AiRecommendationService {
     }
 
     if (tags.isEmpty) {
-      tags.add('Pilihan Terbaik AI');
+      tags.add('Rekomendasi Pilihan');
     }
 
     return tags.take(3).toList();

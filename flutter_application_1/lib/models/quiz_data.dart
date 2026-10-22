@@ -59,7 +59,7 @@ const kQuizQuestions = <GameQuestion>[
   ),
   GameQuestion(
     id: 'q7',
-    hint: 'Jejak Mataram Islam, Kota Surakarta',
+    hint: 'Kuliner Tradisional, Kota Surakarta',
     question: 'Nasi gurih yang dimasak dengan santan, disajikan dengan sayur labu siam, suwiran ayam, dan areh (sari santan kental) merupakan karakteristik hidangan...',
     options: ['Nasi Liwet', 'Nasi Gudeg', 'Nasi Langgi', 'Nasi Jamblang'],
     correctIndex: 0,

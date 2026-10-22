@@ -130,7 +130,6 @@ class _ConverterPageState extends State<ConverterPage>
       decoration: BoxDecoration(
         color: AppColors.tint(AppColors.yellow, 0.75),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.orange, 0.2)),
       ),
       child: TabBar(
         controller: _tab,
@@ -266,7 +265,13 @@ class _ConverterPageState extends State<ConverterPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -322,7 +327,13 @@ class _ConverterPageState extends State<ConverterPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -439,7 +450,13 @@ class _ConverterPageState extends State<ConverterPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,7 +507,13 @@ class _ConverterPageState extends State<ConverterPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,15 +610,15 @@ class _ConverterPageState extends State<ConverterPage>
   IconData _mealIcon(String name) {
     switch (name) {
       case 'Sarapan':
-        return Icons.wb_sunny_outlined;
+        return Icons.wb_sunny_rounded;
       case 'Makan Siang':
-        return Icons.wb_cloudy_outlined;
+        return Icons.wb_cloudy_rounded;
       case 'Makan Malam':
-        return Icons.nightlight_outlined;
+        return Icons.nightlight_rounded;
       case 'Supper':
-        return Icons.dark_mode_outlined;
+        return Icons.dark_mode_rounded;
       default:
-        return Icons.restaurant;
+        return Icons.restaurant_rounded;
     }
   }
 }

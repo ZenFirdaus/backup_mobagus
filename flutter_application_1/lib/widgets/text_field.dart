@@ -55,7 +55,7 @@ class _AppTextFieldState extends State<AppTextField> {
       final eye = IconButton(
         onPressed: () => setState(() => _hidden = !_hidden),
         icon: Icon(
-          _hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+          _hidden ? Icons.visibility_off_rounded : Icons.visibility_rounded,
           size: 19,
           color: AppColors.textMuted,
         ),

@@ -651,7 +651,7 @@ class FoodAi {
   BotReply welcome({DateTime? now, bool again = false}) {
     final part = _dayPart(now ?? DateTime.now());
     final hello = again
-        ? 'Siap, kita mulai dari awal! ✨'
+        ? 'Siap, kita mulai dari awal!'
         : 'Selamat $part! Aku FOODIE AI 👋';
     return BotReply(
       '$hello\n${_mealHint(part)}\n\n'
@@ -941,7 +941,7 @@ class FoodAi {
       if (_price(cheap) != _unknown && _price(cheap) != _price(sorted.last)) {
         tip = _say('tip', [
           'Paling hemat: **${cheap.name}** (${_priceText(cheap)}).',
-          'Kalau mau yang ramah di kantong, **${cheap.name}** paling murah — ${_priceText(cheap)}.',
+          'Kalau mau yang ramah di kantong, **${cheap.name}** paling murah (${_priceText(cheap)}).',
         ]);
       }
     }
@@ -954,7 +954,7 @@ class FoodAi {
       ]);
     } else {
       follow = _say('follow', [
-        'Kalau belum cocok, bilang aja — bisa kupersempit lewat budget atau jenis makanan.',
+        'Kalau belum cocok, bilang saja. Bisa kupersempit lewat budget atau jenis makanan.',
         'Ada preferensi lain? Misalnya budget atau suasana yang kamu mau.',
         'Mau kuubah kriterianya? Tinggal bilang.',
       ]);
@@ -1000,7 +1000,7 @@ class FoodAi {
         _needMax = _price(best).ceil();
         return BotReply(
           'Untuk $desc belum ada yang pas. Yang paling dekat dengan budgetmu: '
-          '**${best.name}** — ${_priceText(best)}.\n\n'
+          '**${best.name}** (${_priceText(best)}).\n\n'
           'Mau kunaikkan budgetnya sedikit?',
           cards: [best],
           chips: [
@@ -1211,7 +1211,7 @@ class FoodAi {
         _say('clarify', [
           'Boleh tahu lagi pengin yang mana? Sebutkan jenis makanan atau budget-mu, atau pilih salah satu di bawah.',
           'Biar tepat sasaran: ${_mealHint(part)} Mau cari yang seperti apa?',
-          'Aku butuh sedikit petunjuk nih 😄 — jenis makanan, budget, atau suasana yang kamu mau?',
+          'Aku butuh sedikit petunjuk nih 😄: jenis makanan, budget, atau suasana yang kamu mau?',
         ]);
     if (_unclear >= 2) {
       return BotReply(
@@ -1286,8 +1286,8 @@ class FoodAi {
   BotReply _info(DateTime now) {
     return BotReply(
       'Jam buka, alamat, dan rute lengkap ada di halaman detail tiap tempat '
-      '(tab Explore). Aku bantu menyaring dari jenis makanan dan budget dulu '
-      'ya — mau cari apa?',
+      '(tab Explore). Aku bantu menyaring dari jenis makanan dan budget dulu, '
+      'mau cari apa?',
       chips: _starterChips(_dayPart(now)).take(4).toList(),
     );
   }
@@ -1308,7 +1308,7 @@ class FoodAi {
     return BotReply(
       _say('dislike', [
         'Oke, bukan yang itu ya. Mau kuubah di bagian mana?',
-        'Noted! Bagian mana yang kurang pas — harga, atau jenis makanannya?',
+        'Noted! Bagian mana yang kurang pas, harga atau jenis makanannya?',
         'Siap, kita cari arah lain. Pilih salah satu, atau ceritakan maunya.',
       ]),
       chips: [

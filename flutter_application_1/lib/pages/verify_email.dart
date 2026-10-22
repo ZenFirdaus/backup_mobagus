@@ -211,7 +211,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.mark_email_read_outlined,
+                    Icons.mark_email_read_rounded,
                     size: 32,
                     color: AppColors.orange,
                   ),

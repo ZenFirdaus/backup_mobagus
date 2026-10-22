@@ -660,13 +660,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             decoration: BoxDecoration(
               color: AppColors.tint(AppColors.orange, 0.12),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.tint(AppColors.orange, 0.25),
-                width: 1.2,
-              ),
             ),
             child: const Icon(
-              Icons.mark_email_read_outlined,
+              Icons.mark_email_read_rounded,
               size: 28,
               color: AppColors.orange,
             ),
