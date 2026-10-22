@@ -11,6 +11,7 @@ import '../models/profile.dart';
 import '../models/review.dart';
 import '../models/checkin.dart';
 import '../models/seed_data.dart';
+import '../models/course_feedback.dart';
 
 class SupabaseService {
   SupabaseService._() {
@@ -53,8 +54,14 @@ class SupabaseService {
       StreamController<void>.broadcast();
   Stream<void> get onProfileChanged => _profileChangedController.stream;
 
+  final StreamController<CourseFeedback> _courseFeedbackAddedController =
+      StreamController<CourseFeedback>.broadcast();
+  Stream<CourseFeedback> get onCourseFeedbackAdded =>
+      _courseFeedbackAddedController.stream;
+
   RealtimeChannel? _reviewsChannel;
   RealtimeChannel? _favoritesChannel;
+  RealtimeChannel? _courseFeedbackChannel;
   StreamSubscription<AuthState>? _authSub;
 
   void _initAuthListener() {
@@ -83,8 +90,10 @@ class SupabaseService {
           _initialized = false;
           _reviewsChannel?.unsubscribe();
           _favoritesChannel?.unsubscribe();
+          _courseFeedbackChannel?.unsubscribe();
           _reviewsChannel = null;
           _favoritesChannel = null;
+          _courseFeedbackChannel = null;
         }
       });
     } catch (_) {}
@@ -119,6 +128,24 @@ class SupabaseService {
               await getFavoriteIds();
               _favoritesController.add(Set<String>.from(_localFavorites));
               _profileChangedController.add(null);
+            },
+          )
+          .subscribe();
+
+      _courseFeedbackChannel?.unsubscribe();
+      _courseFeedbackChannel = _client
+          .channel('public:course_feedback')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'course_feedback',
+            callback: (payload) {
+              if (payload.newRecord.isNotEmpty) {
+                try {
+                  final fb = CourseFeedback.fromJson(payload.newRecord);
+                  _courseFeedbackAddedController.add(fb);
+                } catch (_) {}
+              }
             },
           )
           .subscribe();
@@ -984,6 +1011,184 @@ class SupabaseService {
         'rating': rating,
         'message': message,
       });
+    } catch (_) {}
+  }
+
+  // ─── COURSE FEEDBACK (MATA KULIAH PEMROGRAMAN APLIKASI MOBILE) ───
+
+  Future<List<CourseFeedback>> getCourseFeedbacks() async {
+    try {
+      final res = await _client
+          .from('course_feedback')
+          .select('*, profiles:user_id(display_name, avatar_url)')
+          .order('created_at', ascending: false);
+      final list = (res as List)
+          .map((e) => CourseFeedback.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return list;
+    } catch (e) {
+      debugPrint('getCourseFeedbacks fallback to simple select: $e');
+      try {
+        final res = await _client
+            .from('course_feedback')
+            .select()
+            .order('created_at', ascending: false);
+        return (res as List)
+            .map((e) => CourseFeedback.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (err) {
+        debugPrint('getCourseFeedbacks fallback to local: $err');
+        return _getLocalCachedFeedbacks();
+      }
+    }
+  }
+
+  Future<CourseFeedback?> submitCourseFeedback({
+    required String kesan,
+    required String saran,
+    int rating = 5,
+  }) async {
+    final uid = userId ?? 'guest_mhs';
+    final profile = await getProfile();
+    final name = profile?.displayName ??
+        currentUser?.userMetadata?['name'] as String? ??
+        guestName;
+    final avatar = profile?.avatarUrl ??
+        currentUser?.userMetadata?['avatar_url'] as String?;
+
+    final Map<String, dynamic> payload = {
+      'user_id': uid,
+      'user_name': name,
+      'user_avatar': avatar,
+      'kesan': kesan,
+      'saran': saran,
+      'rating': rating,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    CourseFeedback? created;
+    try {
+      final res = await _client
+          .from('course_feedback')
+          .insert(payload)
+          .select()
+          .single();
+      created = CourseFeedback.fromJson(res);
+      _courseFeedbackAddedController.add(created);
+    } catch (e) {
+      debugPrint('submitCourseFeedback error in supabase: $e');
+      created = CourseFeedback(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: uid,
+        userName: name,
+        userAvatar: avatar,
+        kesan: kesan,
+        saran: saran,
+        rating: rating,
+        createdAt: DateTime.now(),
+      );
+      _courseFeedbackAddedController.add(created);
+      await _cacheLocalFeedback(created);
+    }
+    return created;
+  }
+
+  Future<List<CourseFeedback>> _getLocalCachedFeedbacks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final strList = prefs.getStringList('local_course_feedbacks') ?? [];
+      strList.removeWhere((s) => s.contains('sample_'));
+      return strList
+          .map((s) => CourseFeedback.fromJson(jsonDecode(s) as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<CourseFeedback?> updateCourseFeedback({
+    required String id,
+    required String kesan,
+    required String saran,
+    required int rating,
+  }) async {
+    final Map<String, dynamic> payload = {
+      'kesan': kesan,
+      'saran': saran,
+      'rating': rating,
+    };
+
+    CourseFeedback? updated;
+    try {
+      final res = await _client
+          .from('course_feedback')
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single();
+      updated = CourseFeedback.fromJson(res);
+      _courseFeedbackAddedController.add(updated);
+    } catch (e) {
+      debugPrint('updateCourseFeedback error in supabase: $e');
+    }
+
+    await _updateLocalCachedFeedback(id, kesan, saran, rating);
+    return updated;
+  }
+
+  Future<bool> deleteCourseFeedback(String id) async {
+    bool ok = false;
+    try {
+      await _client.from('course_feedback').delete().eq('id', id);
+      ok = true;
+    } catch (e) {
+      debugPrint('deleteCourseFeedback error in supabase: $e');
+    }
+    await _deleteLocalCachedFeedback(id);
+    return ok;
+  }
+
+  Future<void> _updateLocalCachedFeedback(
+      String id, String kesan, String saran, int rating) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = await _getLocalCachedFeedbacks();
+      final idx = current.indexWhere((e) => e.id == id);
+      if (idx != -1) {
+        final old = current[idx];
+        current[idx] = CourseFeedback(
+          id: old.id,
+          userId: old.userId,
+          userName: old.userName,
+          userAvatar: old.userAvatar,
+          kesan: kesan,
+          saran: saran,
+          rating: rating,
+          createdAt: old.createdAt,
+        );
+        final jsonList = current.map((e) => jsonEncode(e.toJson())).toList();
+        await prefs.setStringList('local_course_feedbacks', jsonList);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _deleteLocalCachedFeedback(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = await _getLocalCachedFeedbacks();
+      current.removeWhere((e) => e.id == id);
+      final jsonList = current.map((e) => jsonEncode(e.toJson())).toList();
+      await prefs.setStringList('local_course_feedbacks', jsonList);
+    } catch (_) {}
+  }
+
+  Future<void> _cacheLocalFeedback(CourseFeedback fb) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = await _getLocalCachedFeedbacks();
+      current.insert(0, fb);
+      final jsonList = current.map((e) => jsonEncode(e.toJson())).toList();
+      await prefs.setStringList('local_course_feedbacks', jsonList);
     } catch (_) {}
   }
 

@@ -24,6 +24,7 @@ import 'detail_page.dart';
 import 'favorites_page.dart';
 import 'game_page.dart';
 import 'intro.dart';
+import 'saran_kesan_page.dart';
 
 class ProfileTab extends StatefulWidget {
   final String name;
@@ -1005,125 +1006,6 @@ class _ProfileTabState extends State<ProfileTab>
     }
   }
 
-  Future<void> _showFeedback() async {
-    final ratingCtrl = ValueNotifier<int>(5);
-    final msgCtrl = TextEditingController();
-    final sent = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.rate_review_outlined,
-                color: AppColors.orange, size: 22),
-            const SizedBox(width: 8),
-            const Text('Saran & Kesan'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Berikan penilaian dan saran Anda untuk mata kuliah ini.',
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 16),
-            ValueListenableBuilder<int>(
-              valueListenable: ratingCtrl,
-              builder: (_, val, _) => Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (i) {
-                  return GestureDetector(
-                    onTap: () => ratingCtrl.value = i + 1,
-                    child: Icon(
-                      i < val
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      size: 36,
-                      color: AppColors.orange,
-                    ),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: msgCtrl,
-              maxLines: 4,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) =>
-                  FocusManager.instance.primaryFocus?.unfocus(),
-              style:
-                  const TextStyle(fontSize: 13, color: AppColors.textDark),
-              decoration: InputDecoration(
-                hintText: 'Tulis saran & kesan untuk mata kuliah...',
-                filled: true,
-                fillColor: AppColors.surfaceSubtle,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.line),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.charcoal,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Kirim'),
-          ),
-        ],
-      ),
-    );
-    if (sent == true) {
-      final msg = msgCtrl.text.trim();
-      if (msg.isNotEmpty) {
-        try {
-          await SupabaseService.instance.submitFeedback(
-            rating: ratingCtrl.value,
-            message: msg,
-          );
-        } catch (_) {
-          // Gagal kirim ke server, tapi tetap tampilkan konfirmasi
-        }
-        if (mounted) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              const SnackBar(
-                content: Text('Terima kasih atas masukan Anda! ✨'),
-                backgroundColor: AppColors.greenDark,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              const SnackBar(
-                content: Text('Mohon tulis saran atau kesan terlebih dahulu.'),
-                backgroundColor: AppColors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-        }
-      }
-    }
-    ratingCtrl.dispose();
-    msgCtrl.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1242,8 +1124,13 @@ class _ProfileTabState extends State<ProfileTab>
                           onTap: _showCoverageDialog),
                       _tile(
                         Icons.rate_review_outlined,
-                        'Saran & Kesan Kurator',
-                        onTap: _showFeedback,
+                        'Saran & Kesan',
+                        trailing: 'Mata Kuliah',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SaranKesanPage(),
+                          ),
+                        ),
                       ),
                     ]),
                     const SizedBox(height: 16),
