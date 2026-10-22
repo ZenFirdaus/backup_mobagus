@@ -70,12 +70,53 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
   }
 
   String _formatTimeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Baru saja';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} menit lalu';
-    if (diff.inHours < 24) return '${diff.inHours} jam lalu';
-    if (diff.inDays < 7) return '${diff.inDays} hari lalu';
-    return '${dt.day}/${dt.month}/${dt.year}';
+    DateTime localDt = dt.toLocal();
+    final now = DateTime.now();
+
+    // Koreksi jika waktu tercatat di masa depan (akibat salah simpan UTC +7 jam sebelumnya)
+    if (localDt.isAfter(now)) {
+      final diffFuture = localDt.difference(now);
+      if (diffFuture.inHours >= 5 && diffFuture.inHours <= 9) {
+        localDt = localDt.subtract(const Duration(hours: 7));
+      } else {
+        localDt = now;
+      }
+    }
+
+    final diff = now.difference(localDt);
+
+    // Jika selisihnya kurang dari 1 menit (misal baru saja ditekan tombol kirim)
+    if (diff.inSeconds < 60 && diff.inSeconds >= 0) {
+      return 'Baru saja';
+    }
+
+    final isToday = localDt.year == now.year &&
+        localDt.month == now.month &&
+        localDt.day == now.day;
+
+    final yesterday = now.subtract(const Duration(days: 1));
+    final isYesterday = localDt.year == yesterday.year &&
+        localDt.month == yesterday.month &&
+        localDt.day == yesterday.day;
+
+    final timeStr =
+        '${localDt.hour.toString().padLeft(2, '0')}:${localDt.minute.toString().padLeft(2, '0')} WIB';
+
+    if (isToday) {
+      if (diff.inMinutes < 60 && diff.inMinutes > 0) {
+        return '${diff.inMinutes} menit lalu';
+      }
+      return 'Hari ini, $timeStr';
+    } else if (isYesterday) {
+      return 'Kemarin, $timeStr';
+    } else {
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      final monthName = months[localDt.month - 1];
+      return '${localDt.day} $monthName ${localDt.year}, $timeStr';
+    }
   }
 
   void _openFeedbackBottomSheet({CourseFeedback? existing}) {
@@ -568,24 +609,6 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                             color: AppColors.slateBlue,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Container(
-                          width: 3,
-                          height: 3,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.slateBlue,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Mahasiswa Mobile',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.green,
-                          ),
-                        ),
                         if (isMyFeedback) ...[
                           const SizedBox(width: 6),
                           Container(
@@ -610,8 +633,8 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -620,77 +643,72 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                         i < fb.rating
                             ? Icons.star_rounded
                             : Icons.star_outline_rounded,
-                        size: 15,
+                        size: 14,
                         color: AppColors.saffron,
                       );
                     }),
                   ),
-                  if (isMyFeedback) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: () =>
-                              _openFeedbackBottomSheet(existing: fb),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.slateBlue
-                                  .withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.edit_rounded,
-                                    size: 11, color: AppColors.slateBlue),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Edit',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.slateBlue,
-                                  ),
+                  if (isMyFeedback)
+                    PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert_rounded,
+                        size: 20,
+                        color: AppColors.slateBlue,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 18,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      onSelected: (val) {
+                        if (val == 'edit') {
+                          _openFeedbackBottomSheet(existing: fb);
+                        } else if (val == 'delete') {
+                          _confirmDeleteFeedback(fb);
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          height: 38,
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined,
+                                  size: 16, color: AppColors.charcoal),
+                              SizedBox(width: 8),
+                              Text(
+                                'Edit Ulasan',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.charcoal,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => _confirmDeleteFeedback(fb),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.red.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.delete_outline_rounded,
-                                    size: 11, color: AppColors.red),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Hapus',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.red,
-                                  ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          height: 38,
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded,
+                                  size: 16, color: AppColors.red),
+                              SizedBox(width: 8),
+                              Text(
+                                'Hapus Ulasan',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.red,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ],
                 ],
               ),
             ],

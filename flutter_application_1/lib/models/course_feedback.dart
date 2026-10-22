@@ -38,7 +38,8 @@ class CourseFeedback {
           '',
       saran: json['saran'] as String? ?? '',
       rating: (json['rating'] as num?)?.toInt() ?? 5,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '')
+              ?.toLocal() ??
           DateTime.now(),
     );
   }
