@@ -4,6 +4,7 @@ import '../models/user_ai_profile.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/ai_recommendation_service.dart';
+import '../services/location_service.dart';
 
 /// Halaman untuk melengkapi data diri, gaya hidup, dan preferensi kuliner pengguna.
 /// Data ini diproses oleh AI FOODIE untuk menghasilkan rekomendasi tempat makan personal.
@@ -25,12 +26,14 @@ class _AiProfilePageState extends State<AiProfilePage> {
   String? _housingType;
   final _addressCtrl = TextEditingController();
   final List<String> _favoriteTastes = [];
+  final List<String> _preferredPlaces = [];
   String? _mealBudget;
   String? _preferredVibe;
   String _dietaryPreference = 'Semua Makanan';
 
   bool _loading = true;
   bool _saving = false;
+  bool _fetchingLocation = false;
 
   static const _occupations = [
     'Mahasiswa / Pelajar',
@@ -55,6 +58,18 @@ class _AiProfilePageState extends State<AiProfilePage> {
     'Rumah Sendiri',
     'Rumah Orang Tua',
     'Apartemen',
+  ];
+
+  // Pilihan kategori tempat makan sesuai yang ada di tab Explore
+  static const _placeTypeOptions = [
+    'Rumah Makan / Restoran',
+    'Cafe',
+    'Fast Food',
+    'Food Court',
+    'Warung Tradisional / Angkringan',
+    'Gudeg',
+    'Soto',
+    'Bakmi Jawa',
   ];
 
   static const _tasteOptions = [
@@ -111,6 +126,8 @@ class _AiProfilePageState extends State<AiProfilePage> {
       _addressCtrl.text = p.address ?? '';
       _favoriteTastes.clear();
       _favoriteTastes.addAll(p.favoriteTastes);
+      _preferredPlaces.clear();
+      _preferredPlaces.addAll(p.preferredPlaces);
       _mealBudget = p.mealBudget;
       _preferredVibe = p.preferredVibe;
       _dietaryPreference = p.dietaryPreference ?? 'Semua Makanan';
@@ -119,7 +136,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
   }
 
   int _calculateCurrentProgress() {
-    int total = 8;
+    int total = 9;
     int filled = 0;
     if (_gender != null && _gender!.isNotEmpty) filled++;
     if (int.tryParse(_ageCtrl.text.trim()) != null) filled++;
@@ -128,8 +145,70 @@ class _AiProfilePageState extends State<AiProfilePage> {
     if (_housingType != null && _housingType!.isNotEmpty) filled++;
     if (_addressCtrl.text.trim().isNotEmpty) filled++;
     if (_favoriteTastes.isNotEmpty) filled++;
+    if (_preferredPlaces.isNotEmpty) filled++;
     if (_mealBudget != null && _mealBudget!.isNotEmpty) filled++;
     return ((filled / total) * 100).round();
+  }
+
+  /// Mengambil lokasi GPS saat ini dan otomatis mengisi kolom alamat
+  Future<void> _useCurrentLocation() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _fetchingLocation = true);
+
+    try {
+      final success = await LocationService.instance.fetchGpsLocation();
+      if (!mounted) return;
+
+      if (success) {
+        final loc = LocationService.instance.currentLocation.value;
+        if (loc != null && loc.address.isNotEmpty) {
+          _addressCtrl.text = loc.address;
+          setState(() {});
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.my_location_rounded,
+                      color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Alamat terdeteksi: ${loc.address}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.greenDark,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        final msg = LocationService.instance.statusMessage.value ??
+            'Gagal mendeteksi lokasi GPS. Anda dapat mengetik alamat secara manual.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kendala saat membaca GPS: $e'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _fetchingLocation = false);
+    }
   }
 
   Future<void> _save() async {
@@ -164,6 +243,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
         housingType: _housingType,
         address: _addressCtrl.text.trim(),
         favoriteTastes: List.from(_favoriteTastes),
+        preferredPlaces: List.from(_preferredPlaces),
         mealBudget: _mealBudget,
         preferredVibe: _preferredVibe,
         dietaryPreference: _dietaryPreference,
@@ -188,7 +268,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Data diri & persona AI berhasil disimpan! Rekomendasi telah diperbarui ✨',
+                  'Persona & preferensi berhasil diterapkan! Rekomendasi telah diperbarui ✨',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -240,7 +320,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   )
                 : const Icon(Icons.check_rounded, color: AppColors.orange, size: 18),
             label: Text(
-              _saving ? 'Menyimpan...' : 'Simpan',
+              _saving ? 'Menerapkan...' : 'Terapkan',
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 color: AppColors.orange,
@@ -309,7 +389,65 @@ class _AiProfilePageState extends State<AiProfilePage> {
                         onChanged: (v) => setState(() => _housingType = v),
                       ),
                       const SizedBox(height: 16),
-                      _label('Alamat / Area Domisili (Kecamatan / Kota)'),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: _label('Alamat / Area Domisili'),
+                          ),
+                          InkWell(
+                            onTap: _fetchingLocation ? null : _useCurrentLocation,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.tint(AppColors.orange, 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.orange.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_fetchingLocation)
+                                    const SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.orange,
+                                      ),
+                                    )
+                                  else
+                                    const Icon(
+                                      Icons.my_location_rounded,
+                                      size: 14,
+                                      color: AppColors.orange,
+                                    ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    _fetchingLocation
+                                        ? 'Mencari...'
+                                        : 'Gunakan Alamat Saat Ini',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.orange,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'AI akan merekomendasikan kuliner terdekat dari alamat ini. Anda bisa tekan tombol di atas atau ketik manual.',
+                        style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      ),
                       const SizedBox(height: 8),
                       _addressField(),
                     ],
@@ -324,6 +462,15 @@ class _AiProfilePageState extends State<AiProfilePage> {
                       _label('Rasa Kesukaan * (Bisa pilih lebih dari satu)'),
                       const SizedBox(height: 10),
                       _tasteChips(),
+                      const SizedBox(height: 20),
+                      _label('Pilihan Tipe Tempat Favorit * (Sesuai Explore)'),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Pilih jenis tempat kuliner yang paling Anda sukai saat berburu makanan',
+                        style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: 10),
+                      _placeTypeChips(),
                       const SizedBox(height: 20),
                       _label('Target Budget Sekali Makan *'),
                       const SizedBox(height: 8),
@@ -629,11 +776,21 @@ class _AiProfilePageState extends State<AiProfilePage> {
       onFieldSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
-        hintText: 'Contoh: Pogung Baru, Depok, Sleman, Yogyakarta',
+        hintText: 'Ketik alamat manual atau gunakan tombol di atas...',
         prefixIcon: const Padding(
           padding: EdgeInsets.only(bottom: 24),
           child: Icon(Icons.location_on_rounded, size: 20, color: AppColors.textMuted),
         ),
+        suffixIcon: _addressCtrl.text.isNotEmpty
+            ? IconButton(
+                tooltip: 'Hapus Alamat',
+                icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textMuted),
+                onPressed: () {
+                  _addressCtrl.clear();
+                  setState(() {});
+                },
+              )
+            : null,
         filled: true,
         fillColor: const Color(0xFFF8F9FA),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -732,6 +889,44 @@ class _AiProfilePageState extends State<AiProfilePage> {
     );
   }
 
+  Widget _placeTypeChips() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _placeTypeOptions.map((place) {
+        final isSelected = _preferredPlaces.contains(place);
+        return FilterChip(
+          label: Text(place),
+          selected: isSelected,
+          onSelected: (selected) {
+            setState(() {
+              if (selected) {
+                _preferredPlaces.add(place);
+              } else {
+                _preferredPlaces.remove(place);
+              }
+            });
+          },
+          labelStyle: TextStyle(
+            fontSize: 12.5,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? Colors.white : AppColors.charcoal,
+          ),
+          backgroundColor: const Color(0xFFF4F4F6),
+          selectedColor: AppColors.orange,
+          checkmarkColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isSelected ? AppColors.orange : AppColors.line,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _saveButton() {
     return SizedBox(
       width: double.infinity,
@@ -761,10 +956,11 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   Icon(Icons.auto_awesome_rounded, size: 20),
                   SizedBox(width: 10),
                   Text(
-                    'Simpan Persona AI & Terapkan',
+                    'Terapkan',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ],

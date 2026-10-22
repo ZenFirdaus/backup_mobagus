@@ -318,6 +318,32 @@ class AiRecommendationService {
       }
     }
 
+    // Preferensi Tipe Tempat Pilihan (Rumah Makan, Cafe, Fast Food, Warung, Gudeg, Soto, Bakmi Jawa)
+    if (p.preferredPlaces.isNotEmpty) {
+      for (final place in p.preferredPlaces) {
+        final pl = place.toLowerCase();
+        if (pl.contains('cafe') && (text.contains('cafe') || text.contains('kafe') || text.contains('kopi') || r.category.toLowerCase().contains('cafe'))) {
+          score += 15.0;
+        } else if ((pl.contains('warung') || pl.contains('angkringan')) && (text.contains('warung') || text.contains('angkringan') || text.contains('lesehan') || r.category.toLowerCase().contains('warung'))) {
+          score += 15.0;
+        } else if (pl.contains('gudeg') && (text.contains('gudeg') || r.category.toLowerCase().contains('gudeg'))) {
+          score += 15.0;
+        } else if (pl.contains('soto') && (text.contains('soto') || r.category.toLowerCase().contains('soto'))) {
+          score += 15.0;
+        } else if (pl.contains('bakmi') && (text.contains('bakmi') || r.category.toLowerCase().contains('bakmi'))) {
+          score += 15.0;
+        } else if (pl.contains('rumah makan') || pl.contains('restoran')) {
+          if (r.category.toLowerCase().contains('restoran') || text.contains('resto') || text.contains('rumah makan')) {
+            score += 15.0;
+          }
+        } else if (pl.contains('fast food') && (text.contains('fast food') || text.contains('burger') || text.contains('fried chicken'))) {
+          score += 15.0;
+        } else if (pl.contains('food court') && text.contains('food court')) {
+          score += 15.0;
+        }
+      }
+    }
+
     return score.clamp(60.0, 100.0);
   }
 
@@ -382,6 +408,22 @@ class AiRecommendationService {
     double distanceKm,
   ) {
     final tags = <String>[];
+
+    // Tag Tipe Tempat Favorit
+    if (p.preferredPlaces.isNotEmpty) {
+      for (final place in p.preferredPlaces) {
+        final pl = place.toLowerCase();
+        final text = '${r.name} ${r.category}'.toLowerCase();
+        if ((pl.contains('cafe') && (text.contains('cafe') || text.contains('kafe') || text.contains('kopi'))) ||
+            (pl.contains('gudeg') && text.contains('gudeg')) ||
+            (pl.contains('soto') && text.contains('soto')) ||
+            (pl.contains('bakmi') && text.contains('bakmi')) ||
+            (pl.contains('warung') && text.contains('warung'))) {
+          tags.add('Tipe $place Favorit');
+          break;
+        }
+      }
+    }
 
     // Tag Budget
     if (budgetScore >= 90) {

@@ -559,7 +559,10 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    Row(
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 2,
                       children: [
                         Text(
                           _formatTimeAgo(fb.createdAt),
@@ -568,7 +571,6 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                             color: AppColors.slateBlue,
                           ),
                         ),
-                        const SizedBox(width: 6),
                         Container(
                           width: 3,
                           height: 3,
@@ -577,7 +579,6 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                             color: AppColors.slateBlue,
                           ),
                         ),
-                        const SizedBox(width: 6),
                         const Text(
                           'Mahasiswa Mobile',
                           style: TextStyle(
@@ -587,7 +588,6 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                           ),
                         ),
                         if (isMyFeedback) ...[
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 1.5),

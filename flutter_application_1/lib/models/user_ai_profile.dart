@@ -13,6 +13,7 @@ class UserAiProfile {
   final String? mealBudget; // 'Hemat (< Rp 20k)', 'Menengah (Rp 20k - 45k)', 'Santai (Rp 45k - 80k)', 'Eksklusif (> Rp 80k)'
   final String? preferredVibe; // 'WFC / Nugas', 'Nongkrong Santai', 'Cepat Saji', 'Warung Tradisional', 'Keluarga'
   final String? dietaryPreference; // 'Halal', 'Bebas Santan', 'Vegetarian', 'Semua Makanan'
+  final List<String> preferredPlaces; // e.g. ['Rumah Makan / Restoran', 'Cafe', 'Fast Food', 'Food Court', 'Warung Tradisional / Angkringan', dll.]
 
   const UserAiProfile({
     this.gender,
@@ -25,6 +26,7 @@ class UserAiProfile {
     this.mealBudget,
     this.preferredVibe,
     this.dietaryPreference = 'Semua Makanan',
+    this.preferredPlaces = const [],
   });
 
   /// Cek apakah profil sudah cukup lengkap untuk menghasilkan rekomendasi AI
@@ -40,7 +42,7 @@ class UserAiProfile {
 
   /// Menghitung persentase kelengkapan profil (0 - 100%)
   int get completionPercentage {
-    int total = 8;
+    int total = 9;
     int filled = 0;
     if (gender != null && gender!.isNotEmpty) filled++;
     if (age != null && age! > 0) filled++;
@@ -49,6 +51,7 @@ class UserAiProfile {
     if (housingType != null && housingType!.isNotEmpty) filled++;
     if (address != null && address!.trim().isNotEmpty) filled++;
     if (favoriteTastes.isNotEmpty) filled++;
+    if (preferredPlaces.isNotEmpty) filled++;
     if (mealBudget != null && mealBudget!.isNotEmpty) filled++;
     return ((filled / total) * 100).round();
   }
@@ -62,7 +65,9 @@ class UserAiProfile {
     if (housingType != null && housingType!.isNotEmpty) {
       parts.add(housingType!);
     }
-    if (favoriteTastes.isNotEmpty) {
+    if (preferredPlaces.isNotEmpty) {
+      parts.add(preferredPlaces.first);
+    } else if (favoriteTastes.isNotEmpty) {
       parts.add('Suka ${favoriteTastes.first}');
     }
     if (mealBudget != null && mealBudget!.isNotEmpty) {
@@ -82,6 +87,7 @@ class UserAiProfile {
     String? mealBudget,
     String? preferredVibe,
     String? dietaryPreference,
+    List<String>? preferredPlaces,
   }) {
     return UserAiProfile(
       gender: gender ?? this.gender,
@@ -94,6 +100,7 @@ class UserAiProfile {
       mealBudget: mealBudget ?? this.mealBudget,
       preferredVibe: preferredVibe ?? this.preferredVibe,
       dietaryPreference: dietaryPreference ?? this.dietaryPreference,
+      preferredPlaces: preferredPlaces ?? this.preferredPlaces,
     );
   }
 
@@ -109,6 +116,7 @@ class UserAiProfile {
       'meal_budget': mealBudget,
       'preferred_vibe': preferredVibe,
       'dietary_preference': dietaryPreference,
+      'preferred_places': preferredPlaces,
     };
   }
 
@@ -127,6 +135,10 @@ class UserAiProfile {
       mealBudget: map['meal_budget'] as String?,
       preferredVibe: map['preferred_vibe'] as String?,
       dietaryPreference: map['dietary_preference'] as String? ?? 'Semua Makanan',
+      preferredPlaces: (map['preferred_places'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 
