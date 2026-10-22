@@ -42,15 +42,45 @@ class EnrolledFaceMetrics {
         enrolledAt: json['enrolledAt']?.toString() ?? '',
       );
 
-  /// Hitung selisih jarak geometris dengan wajah lain.
-  /// Nilai < 0.38 mengindikasikan orang yang sama (kecocokan biometrik tinggi).
+  /// Hitung selisih jarak geometris relatif dengan wajah referensi.
+  /// Menggunakan normalized relative error agar toleran terhadap jarak, ekspresi & kemiringan wajah.
   double computeDifference(EnrolledFaceMetrics other) {
-    double diff = 0.0;
-    diff += (faceAspectRatio - other.faceAspectRatio).abs() * 1.4;
-    diff += (eyeDistanceRatio - other.eyeDistanceRatio).abs() * 2.2;
-    diff += (noseToEyeRatio - other.noseToEyeRatio).abs() * 1.8;
-    diff += (mouthToNoseRatio - other.mouthToNoseRatio).abs() * 1.5;
-    return diff;
+    double totalDiff = 0.0;
+    int count = 0;
+
+    // 1. Rasio aspek wajah (tinggi / lebar bounding box)
+    if (faceAspectRatio > 0.1 && other.faceAspectRatio > 0.1) {
+      final d = (faceAspectRatio - other.faceAspectRatio).abs() /
+          other.faceAspectRatio;
+      totalDiff += d * 0.8;
+      count++;
+    }
+
+    // 2. Rasio jarak kedua mata terhadap lebar wajah
+    if (eyeDistanceRatio > 0.05 && other.eyeDistanceRatio > 0.05) {
+      final d = (eyeDistanceRatio - other.eyeDistanceRatio).abs() /
+          other.eyeDistanceRatio;
+      totalDiff += d * 1.2;
+      count++;
+    }
+
+    // 3. Rasio jarak hidung ke mata terhadap tinggi wajah
+    if (noseToEyeRatio > 0.05 && other.noseToEyeRatio > 0.05) {
+      final d = (noseToEyeRatio - other.noseToEyeRatio).abs() /
+          other.noseToEyeRatio;
+      totalDiff += d * 1.0;
+      count++;
+    }
+
+    // 4. Rasio jarak mulut ke hidung terhadap tinggi wajah
+    if (mouthToNoseRatio > 0.05 && other.mouthToNoseRatio > 0.05) {
+      final d = (mouthToNoseRatio - other.mouthToNoseRatio).abs() /
+          other.mouthToNoseRatio;
+      totalDiff += d * 1.0;
+      count++;
+    }
+
+    return count > 0 ? (totalDiff / count) : 1.0;
   }
 }
 
@@ -94,10 +124,10 @@ class FaceBiometricService {
     _faceDetector ??= FaceDetector(
       options: FaceDetectorOptions(
         enableLandmarks: true,
-        enableContours: true,
-        enableClassification: true,
-        minFaceSize: 0.15,
-        performanceMode: FaceDetectorMode.accurate,
+        enableContours: false,
+        enableClassification: false,
+        minFaceSize: 0.05,
+        performanceMode: FaceDetectorMode.fast,
       ),
     );
     return _faceDetector!;
@@ -185,15 +215,16 @@ class FaceBiometricService {
     }
   }
 
-  /// Analisis Wajah Menyeluruh: Pencahayaan, Deteksi Wajah, & Kecocokan Metrik
-  Future<FaceAnalysisResult> analyzeFaceImage({
-    required String imagePath,
+  /// Analisis Wajah langsung dari InputImage (Digunakan oleh Kamera Real-time ImageStream)
+  /// Tanpa I/O disk, tanpa shutter sound, respon dalam milidetik.
+  Future<FaceAnalysisResult> analyzeInputImage({
+    required InputImage inputImage,
     required bool isEnrollment,
+    double luminance = 100.0,
     EnrolledFaceMetrics? referenceMetrics,
   }) async {
-    // 1. Validasi Pencahayaan (Lighting Check)
-    final luminance = await calculateLuminance(imagePath);
-    if (luminance < 36.0) {
+    // 1. Validasi Pencahayaan
+    if (luminance < 12.0) {
       return FaceAnalysisResult(
         isSuccess: false,
         isLightingAdequate: false,
@@ -205,12 +236,11 @@ class FaceBiometricService {
         differenceScore: 1.0,
         errorCategory: 'LIGHTING',
         errorMessage:
-            'Cahaya tidak memadai / terlalu gelap (${luminance.toStringAsFixed(0)} lux). Harap cari tempat yang lebih terang atau nyalakan lampu.',
+            'Cahaya terlalu gelap. Nyalakan lampu atau cari tempat lebih terang.',
       );
     }
 
-    // 2. Deteksi Wajah via Google ML Kit
-    final inputImage = InputImage.fromFilePath(imagePath);
+    // 2. Deteksi Wajah via Google ML Kit (Mode Fast, latency ~20ms)
     List<Face> faces = [];
     try {
       faces = await _detector.processImage(inputImage);
@@ -225,11 +255,11 @@ class FaceBiometricService {
         isFaceMatched: false,
         differenceScore: 1.0,
         errorCategory: 'DETECTOR_ERROR',
-        errorMessage: 'Gagal memproses gambar pada sensor kamera: $e',
+        errorMessage: 'Sensor kamera belum siap: $e',
       );
     }
 
-    // Kasus: Kamera tidak mengarah ke wajah (tidak ada wajah)
+    // Kasus: Tidak ada wajah di frame
     if (faces.isEmpty) {
       return FaceAnalysisResult(
         isSuccess: false,
@@ -241,8 +271,7 @@ class FaceBiometricService {
         isFaceMatched: false,
         differenceScore: 1.0,
         errorCategory: 'NO_FACE',
-        errorMessage:
-            'Wajah tidak terdeteksi! Pastikan kamera depan diarahkan tepat ke wajah Anda.',
+        errorMessage: 'Wajah tidak terdeteksi. Posisikan wajah tepat di depan kamera.',
       );
     }
 
@@ -259,7 +288,7 @@ class FaceBiometricService {
         differenceScore: 1.0,
         errorCategory: 'MULTIPLE_FACES',
         errorMessage:
-            'Terdeteksi ${faces.length} wajah. Harap posisikan hanya satu wajah di dalam sensor.',
+            'Terdeteksi ${faces.length} wajah. Harap posisikan hanya satu wajah di sensor.',
       );
     }
 
@@ -271,24 +300,25 @@ class FaceBiometricService {
     final faceHeight = box.height <= 0 ? 1.0 : box.height;
     final aspect = faceHeight / faceWidth;
 
-    // Ambil landmark mata dan hidung
+    // Ambil landmark mata, hidung, mulut
     final leftEye = face.landmarks[FaceLandmarkType.leftEye];
     final rightEye = face.landmarks[FaceLandmarkType.rightEye];
     final noseBase = face.landmarks[FaceLandmarkType.noseBase];
     final bottomMouth = face.landmarks[FaceLandmarkType.bottomMouth];
 
-    double eyeDistRatio = 0.42;
+    double eyeDistRatio = 0.0;
     if (leftEye != null && rightEye != null) {
       eyeDistRatio =
           (leftEye.position.x - rightEye.position.x).abs() / faceWidth;
     }
 
-    double noseEyeRatio = 0.36;
+    double noseEyeRatio = 0.0;
     if (noseBase != null && leftEye != null) {
-      noseEyeRatio = (noseBase.position.y - leftEye.position.y).abs() / faceHeight;
+      noseEyeRatio =
+          (noseBase.position.y - leftEye.position.y).abs() / faceHeight;
     }
 
-    double mouthNoseRatio = 0.32;
+    double mouthNoseRatio = 0.0;
     if (bottomMouth != null && noseBase != null) {
       mouthNoseRatio =
           (bottomMouth.position.y - noseBase.position.y).abs() / faceHeight;
@@ -303,7 +333,7 @@ class FaceBiometricService {
       enrolledAt: DateTime.now().toIso8601String(),
     );
 
-    // 4. Jika Pendaftaran (Enrollment), wajah valid & langsung disimpan
+    // 4. Jika Pendaftaran (Enrollment), simpan metrik
     if (isEnrollment) {
       return FaceAnalysisResult(
         isSuccess: true,
@@ -338,9 +368,8 @@ class FaceBiometricService {
 
     final diff = detectedMetrics.computeDifference(ref);
 
-    // Batas toleransi perbedaan biometrik: 0.38
-    // Jika diff > 0.38 artinya wajah orang lain / bukan wajah terdaftar!
-    if (diff > 0.38) {
+    // Batas toleransi relatif biometrik: 0.48 (48% deviasi)
+    if (diff > 0.48) {
       return FaceAnalysisResult(
         isSuccess: false,
         isLightingAdequate: true,
@@ -353,11 +382,11 @@ class FaceBiometricService {
         detectedMetrics: detectedMetrics,
         errorCategory: 'MISMATCH',
         errorMessage:
-            'Wajah tidak cocok dengan yang didaftarkan pada akun ini! Akses ditolak.',
+            'Wajah tidak cocok dengan yang didaftarkan pada akun ini.',
       );
     }
 
-    // Wajah Asli, Cocok, & Cahaya Memadai!
+    // Wajah Asli, Cocok, & Valid
     return FaceAnalysisResult(
       isSuccess: true,
       isLightingAdequate: true,
@@ -368,6 +397,22 @@ class FaceBiometricService {
       isFaceMatched: true,
       differenceScore: diff,
       detectedMetrics: detectedMetrics,
+    );
+  }
+
+  /// Analisis Wajah dari File (Fallback)
+  Future<FaceAnalysisResult> analyzeFaceImage({
+    required String imagePath,
+    required bool isEnrollment,
+    EnrolledFaceMetrics? referenceMetrics,
+  }) async {
+    final luminance = await calculateLuminance(imagePath);
+    final inputImage = InputImage.fromFilePath(imagePath);
+    return analyzeInputImage(
+      inputImage: inputImage,
+      isEnrollment: isEnrollment,
+      luminance: luminance,
+      referenceMetrics: referenceMetrics,
     );
   }
 

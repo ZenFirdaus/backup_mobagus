@@ -861,7 +861,7 @@ class _DetailPageState extends State<DetailPage> {
         child: Row(
           children: [
             _circleButton(
-              Icons.arrow_back,
+              Icons.arrow_back_ios_new_rounded,
               onTap: () => Navigator.of(context).maybePop(),
             ),
             const Spacer(),

@@ -101,7 +101,8 @@ class _ConverterPageState extends State<ConverterPage>
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 20, color: AppColors.textDark),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           title: Text('Konverter', style: AppText.display(20)),

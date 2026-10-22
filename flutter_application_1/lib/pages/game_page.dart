@@ -111,24 +111,12 @@ class _GamePageState extends State<GamePage> {
           children: [
             InkWell(
               onTap: () => Navigator.of(context).maybePop(),
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.tint(AppColors.orange, 0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.arrow_back,
-                  size: 18,
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.all(6.0),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 20,
                   color: AppColors.textDark,
                 ),
               ),
