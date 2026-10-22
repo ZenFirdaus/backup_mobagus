@@ -47,6 +47,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
   bool _isProcessing = false;
   int _lastProcessTime = 0;
   int _mismatchCount = 0;
+  DateTime? _scanStartTime;
   Timer? _timeoutTimer;
 
   late final AnimationController _pulseController = AnimationController(
@@ -138,6 +139,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
     if (_isStreaming || _cameraController == null || !_isCameraReady) return;
     _isStreaming = true;
     _mismatchCount = 0;
+    _scanStartTime = null;
 
     setState(() {
       _status = _ScanStatus.scanning;
@@ -146,7 +148,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
     });
 
     _timeoutTimer?.cancel();
-    _timeoutTimer = Timer(const Duration(seconds: 8), () {
+    _timeoutTimer = Timer(const Duration(seconds: 10), () {
       if (mounted && _status == _ScanStatus.scanning) {
         _stopCameraStream();
         setState(() {
@@ -184,7 +186,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
 
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
-      // Evaluasi setiap 100ms untuk respon kilat tanpa membebani thread
+      // Evaluasi setiap 100ms untuk respon responsif tanpa membebani thread
       if (now - _lastProcessTime < 100) {
         _isProcessing = false;
         return;
@@ -211,6 +213,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
 
       // 1. Wajah belum terdeteksi di frame ini
       if (!result.isFaceDetected) {
+        _scanStartTime = null;
         _mismatchCount = 0;
         if (_statusMessage != 'Arahkan wajah ke kamera') {
           setState(() => _statusMessage = 'Arahkan wajah ke kamera');
@@ -221,6 +224,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
 
       // 2. Terlalu banyak wajah
       if (!result.isSingleFace) {
+        _scanStartTime = null;
         if (_statusMessage != 'Posisikan hanya satu wajah di sensor') {
           setState(() => _statusMessage = 'Posisikan hanya satu wajah di sensor');
         }
@@ -230,7 +234,27 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
 
       // 3. Wajah Valid Ditemukan!
       if (widget.isEnrollment) {
-        // PENDAFTARAN SUKSES
+        // Berikan jeda pemindaian alami (~1.2 detik) agar terasa seperti memindai beneran
+        if (_scanStartTime == null) {
+          _scanStartTime = DateTime.now();
+          if (_statusMessage != 'Memindai kontur wajah...') {
+            setState(() => _statusMessage = 'Memindai kontur wajah...');
+          }
+          _isProcessing = false;
+          return;
+        }
+
+        final elapsed =
+            DateTime.now().difference(_scanStartTime!).inMilliseconds;
+        if (elapsed < 1200) {
+          if (_statusMessage != 'Memindai kontur wajah...') {
+            setState(() => _statusMessage = 'Memindai kontur wajah...');
+          }
+          _isProcessing = false;
+          return;
+        }
+
+        // PENDAFTARAN SUKSES SETELAH JEDA PEMINDAIAN ALAMI
         await _stopCameraStream();
 
         if (result.detectedMetrics != null) {
@@ -251,12 +275,35 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
           _statusMessage = 'Face ID Berhasil Didaftarkan';
         });
 
-        await Future.delayed(const Duration(milliseconds: 550));
+        await Future.delayed(const Duration(milliseconds: 650));
         if (mounted) widget.onSuccess();
         return;
       } else {
         // AUTENTIKASI / LOGIN
         if (result.isFaceMatched) {
+          _mismatchCount = 0;
+
+          // Berikan jeda pemindaian alami (~1.2 detik) agar terasa seperti memindai beneran
+          if (_scanStartTime == null) {
+            _scanStartTime = DateTime.now();
+            if (_statusMessage != 'Memverifikasi identitas...') {
+              setState(() => _statusMessage = 'Memverifikasi identitas...');
+            }
+            _isProcessing = false;
+            return;
+          }
+
+          final elapsed =
+              DateTime.now().difference(_scanStartTime!).inMilliseconds;
+          if (elapsed < 1200) {
+            if (_statusMessage != 'Memverifikasi identitas...') {
+              setState(() => _statusMessage = 'Memverifikasi identitas...');
+            }
+            _isProcessing = false;
+            return;
+          }
+
+          // SUKSES TERVERIFIKASI SETELAH JEDA PEMINDAIAN ALAMI
           await _stopCameraStream();
 
           // Suara klik & haptic HANYA saat wajah berhasil dideteksi!
@@ -268,13 +315,14 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
             _statusMessage = 'Wajah Terverifikasi';
           });
 
-          await Future.delayed(const Duration(milliseconds: 550));
+          await Future.delayed(const Duration(milliseconds: 650));
           if (mounted) widget.onSuccess();
           return;
         } else {
+          _scanStartTime = null;
           _mismatchCount++;
-          // Toleransi hingga 8 frame (~800ms) sebelum memvonis tidak cocok
-          if (_mismatchCount >= 8) {
+          // Toleransi hingga 12 frame (~1.2 detik) sebelum memvonis tidak cocok
+          if (_mismatchCount >= 12) {
             await _stopCameraStream();
             HapticFeedback.heavyImpact();
             setState(() {
