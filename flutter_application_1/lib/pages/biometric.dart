@@ -16,8 +16,15 @@ enum _ScanState { idle, scanning, success }
 /// "Nanti Saja" dan PIN cadangan juga berakhir di HomePage.
 class BiometricPage extends StatefulWidget {
   final String name;
+  final String? email;
+  final String? password;
 
-  const BiometricPage({super.key, required this.name});
+  const BiometricPage({
+    super.key,
+    required this.name,
+    this.email,
+    this.password,
+  });
 
   @override
   State<BiometricPage> createState() => _BiometricPageState();
@@ -51,6 +58,9 @@ class _BiometricPageState extends State<BiometricPage>
   }
 
   Future<void> _activate() async {
+    final effectiveEmail = widget.email ??
+        '${widget.name.toLowerCase().replaceAll(' ', '.')}@foodie.id';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -58,7 +68,8 @@ class _BiometricPageState extends State<BiometricPage>
       barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (ctx) => FaceIdScannerSheet(
         userName: widget.name,
-        userEmail: '${widget.name.toLowerCase().replaceAll(' ', '.')}@foodie.id',
+        userEmail: effectiveEmail,
+        savedPassword: widget.password,
         isEnrollment: true,
         onSuccess: () async {
           Navigator.of(ctx).pop();
@@ -66,6 +77,10 @@ class _BiometricPageState extends State<BiometricPage>
             final prefs = await SharedPreferences.getInstance();
             await prefs.setBool('foodie_biometric_enabled', true);
             await prefs.setString('foodie_last_user_name', widget.name);
+            await prefs.setString('foodie_last_user_email', effectiveEmail);
+            if (widget.password != null && widget.password!.isNotEmpty) {
+              await prefs.setString('foodie_saved_password', widget.password!);
+            }
           } catch (_) {}
           if (!mounted) return;
           setState(() => _state = _ScanState.success);

@@ -162,19 +162,14 @@ class _AchievementsPageState extends State<AchievementsPage> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         children: [
-          GestureDetector(
+          InkWell(
             onTap: () => Navigator.of(context).maybePop(),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.line),
-              ),
-              child: const Icon(
-                Icons.arrow_back,
-                size: 18,
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.all(6.0),
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 20,
                 color: AppColors.textDark,
               ),
             ),

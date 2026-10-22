@@ -12,8 +12,14 @@ import 'biometric.dart';
 class VerifyEmailPage extends StatefulWidget {
   final String name;
   final String email;
+  final String? password;
 
-  const VerifyEmailPage({super.key, required this.name, required this.email});
+  const VerifyEmailPage({
+    super.key,
+    required this.name,
+    required this.email,
+    this.password,
+  });
 
   @override
   State<VerifyEmailPage> createState() => _VerifyEmailPageState();
@@ -66,7 +72,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   void _goNext() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => BiometricPage(name: widget.name),
+        builder: (_) => BiometricPage(
+          name: widget.name,
+          email: widget.email,
+          password: widget.password,
+        ),
       ),
     );
   }
@@ -183,7 +193,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back_rounded),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 20,
+                      color: AppColors.charcoal,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),

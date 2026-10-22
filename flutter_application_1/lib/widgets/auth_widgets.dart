@@ -47,25 +47,12 @@ class AuthHeader extends StatelessWidget {
             child: showBack
                 ? InkWell(
                     onTap: () => Navigator.of(context).maybePop(),
-                    customBorder: const CircleBorder(),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.line, width: 1),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0A000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        size: 18,
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 20,
                         color: AppColors.textDark,
                       ),
                     ),

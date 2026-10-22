@@ -69,7 +69,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => VerifyEmailPage(name: nameVal, email: emailVal),
+          builder: (_) => VerifyEmailPage(
+            name: nameVal,
+            email: emailVal,
+            password: _password.text,
+          ),
         ),
       );
     } on AuthException catch (e) {
@@ -94,7 +98,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => VerifyEmailPage(name: nameVal, email: emailVal),
+          builder: (_) => VerifyEmailPage(
+            name: nameVal,
+            email: emailVal,
+            password: _password.text,
+          ),
         ),
       );
     }
@@ -125,27 +133,22 @@ class _RegisterPageState extends State<RegisterPage> {
                       children: [
                         InkWell(
                           onTap: () => Navigator.of(context).maybePop(),
-                          customBorder: const CircleBorder(),
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.line, width: 1),
+                          borderRadius: BorderRadius.circular(8),
+                          child: const Padding(
+                            padding: EdgeInsets.all(6.0),
+                            child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              size: 20,
+                              color: AppColors.charcoal,
                             ),
-                            child: const Icon(Icons.arrow_back_rounded, size: 18),
                           ),
                         ),
                         const FoodieHeaderLogo(),
                       ],
                     ),
                   const SizedBox(height: 24),
-                  Text('Buat Akun Baru', style: AppText.display(26)),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Daftar untuk menjelajahi rasa khas Mataraman.',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                  Center(
+                    child: Text('Daftar', style: AppText.display(26)),
                   ),
                   const SizedBox(height: 22),
                   AppTextField(

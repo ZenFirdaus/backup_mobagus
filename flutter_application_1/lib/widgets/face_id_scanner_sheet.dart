@@ -1,15 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 import '../props/app_colors.dart';
-import '../props/app_text.dart';
 import '../services/face_biometric_service.dart';
 
-/// Modal Sheet Autentikasi / Pendaftaran Biometrik Face ID Profesional
-/// Mengakses kamera depan nyata perangkat, mendeteksi wajah dengan Google ML Kit,
-/// memeriksa kecukupan cahaya (lux), dan mencocokkan biometrik wajah terdaftar.
+/// Modal Sheet Autentikasi / Pendaftaran Biometrik Face ID
+/// Real-time live frame stream (TANPA suara kamera shutter berulang),
+/// deteksi kilat (fast mode), suara berbunyi HANYA saat wajah berhasil terdeteksi.
 class FaceIdScannerSheet extends StatefulWidget {
   final String userName;
   final String userEmail;
@@ -32,8 +33,7 @@ class FaceIdScannerSheet extends StatefulWidget {
 
 enum _ScanStatus {
   initializing,
-  aligning,
-  analyzing,
+  scanning,
   success,
   error,
 }
@@ -41,18 +41,29 @@ enum _ScanStatus {
 class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
     with SingleTickerProviderStateMixin {
   CameraController? _cameraController;
+  CameraDescription? _frontCamera;
   bool _isCameraReady = false;
-  String? _cameraInitError;
+  bool _isStreaming = false;
+  bool _isProcessing = false;
+  int _lastProcessTime = 0;
+  int _mismatchCount = 0;
+  Timer? _timeoutTimer;
 
-  late final AnimationController _scanPulse = AnimationController(
+  late final AnimationController _pulseController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
-  );
+  )..repeat(reverse: true);
 
   _ScanStatus _status = _ScanStatus.initializing;
+  String _statusMessage = 'Menyiapkan sensor kamera...';
   String? _errorMessage;
-  String? _errorCategory;
-  bool _isAnalyzing = false;
+
+  static const Map<DeviceOrientation, int> _orientations = {
+    DeviceOrientation.portraitUp: 0,
+    DeviceOrientation.landscapeLeft: 90,
+    DeviceOrientation.portraitDown: 180,
+    DeviceOrientation.landscapeRight: 270,
+  };
 
   @override
   void initState() {
@@ -62,7 +73,9 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
 
   @override
   void dispose() {
-    _scanPulse.dispose();
+    _timeoutTimer?.cancel();
+    _stopCameraStream();
+    _pulseController.dispose();
     _cameraController?.dispose();
     super.dispose();
   }
@@ -74,23 +87,27 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
       if (cameras.isEmpty) {
         if (!mounted) return;
         setState(() {
-          _cameraInitError = 'Kamera tidak terdeteksi pada perangkat';
           _status = _ScanStatus.error;
-          _errorMessage = 'Tidak ditemukan modul kamera pada perangkat.';
+          _statusMessage = 'Kamera tidak ditemukan';
+          _errorMessage =
+              'Perangkat tidak memiliki modul kamera yang dapat diakses.';
         });
         return;
       }
 
       // Cari kamera depan untuk Face ID
-      final frontCamera = cameras.firstWhere(
+      _frontCamera = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
 
       final controller = CameraController(
-        frontCamera,
+        _frontCamera!,
         ResolutionPreset.medium,
         enableAudio: false,
+        imageFormatGroup: Platform.isAndroid
+            ? ImageFormatGroup.nv21
+            : ImageFormatGroup.bgra8888,
       );
 
       await controller.initialize();
@@ -102,300 +119,370 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
       setState(() {
         _cameraController = controller;
         _isCameraReady = true;
-        _status = _ScanStatus.aligning;
       });
 
-      _startScanProcess();
+      _startCameraStream();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _cameraInitError =
-            'Izin kamera belum aktif. Buka Pengaturan perangkat untuk mengizinkan kamera.';
         _status = _ScanStatus.error;
-        _errorMessage = _cameraInitError;
+        _statusMessage = 'Izin kamera diperlukan';
+        _errorMessage =
+            'Harap izinkan akses kamera di Pengaturan untuk menggunakan fitur Face ID.';
       });
     }
   }
 
-  /// Memulai Proses Pemindaian Nyata
-  Future<void> _startScanProcess() async {
-    if (_isAnalyzing || !_isCameraReady || _cameraController == null) return;
-    _isAnalyzing = true;
+  /// Memulai Live Image Stream (Langsung di Memori, Tanpa Shutter Sound)
+  Future<void> _startCameraStream() async {
+    if (_isStreaming || _cameraController == null || !_isCameraReady) return;
+    _isStreaming = true;
+    _mismatchCount = 0;
 
     setState(() {
-      _status = _ScanStatus.aligning;
+      _status = _ScanStatus.scanning;
+      _statusMessage = 'Posisikan wajah Anda di dalam lingkaran...';
       _errorMessage = null;
-      _errorCategory = null;
     });
 
-    _scanPulse.repeat(reverse: true);
-    HapticFeedback.lightImpact();
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(const Duration(seconds: 8), () {
+      if (mounted && _status == _ScanStatus.scanning) {
+        _stopCameraStream();
+        setState(() {
+          _status = _ScanStatus.error;
+          _statusMessage = 'Wajah Belum Terdeteksi';
+          _errorMessage =
+              'Pastikan wajah Anda berada di tengah bingkai kamera dalam pencahayaan yang cukup.';
+        });
+      }
+    });
 
-    // 1. Berikan jeda 800ms agar kamera stabil dan pengguna memposisikan wajah
-    await Future.delayed(const Duration(milliseconds: 850));
-    if (!mounted) return;
-
-    setState(() => _status = _ScanStatus.analyzing);
-    HapticFeedback.selectionClick();
-
-    // 2. Ambil snapshot nyata dari kamera depan
-    XFile? capturedFile;
     try {
-      capturedFile = await _cameraController!.takePicture();
-    } catch (e) {
-      if (!mounted) return;
-      _scanPulse.stop();
-      setState(() {
-        _status = _ScanStatus.error;
-        _errorMessage = 'Gagal menangkap frame kamera: $e';
-        _isAnalyzing = false;
+      await _cameraController!.startImageStream((CameraImage image) {
+        _processFrame(image);
       });
-      return;
-    }
+    } catch (_) {}
+  }
 
-    // 3. Analisis Wajah Nyata via FaceBiometricService (ML Kit + Luminance + Geometric Match)
-    final result = await FaceBiometricService.instance.analyzeFaceImage(
-      imagePath: capturedFile.path,
-      isEnrollment: widget.isEnrollment,
-    );
+  /// Menghentikan Image Stream
+  Future<void> _stopCameraStream() async {
+    _isStreaming = false;
+    _timeoutTimer?.cancel();
+    try {
+      if (_cameraController != null &&
+          _cameraController!.value.isStreamingImages) {
+        await _cameraController!.stopImageStream();
+      }
+    } catch (_) {}
+  }
 
-    if (!mounted) return;
-    _isAnalyzing = false;
+  /// Proses Frame Kamera Real-time
+  void _processFrame(CameraImage image) async {
+    if (_isProcessing || !_isStreaming || !mounted) return;
+    _isProcessing = true;
 
-    // JIKA GAGAL (Kamera tidak mengarah ke wajah / cahaya kurang / bukan wajah terdaftar)
-    if (!result.isSuccess) {
-      _scanPulse.stop();
-      HapticFeedback.heavyImpact();
-      setState(() {
-        _status = _ScanStatus.error;
-        _errorMessage = result.errorMessage ?? 'Autentikasi wajah gagal.';
-        _errorCategory = result.errorCategory;
-      });
-      return;
-    }
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      // Evaluasi setiap 100ms untuk respon kilat tanpa membebani thread
+      if (now - _lastProcessTime < 100) {
+        _isProcessing = false;
+        return;
+      }
+      _lastProcessTime = now;
 
-    // JIKA BERHASIL:
-    _scanPulse.stop();
-    HapticFeedback.mediumImpact();
-    setState(() => _status = _ScanStatus.success);
+      final inputImage = _inputImageFromCameraImage(image);
+      if (inputImage == null) {
+        _isProcessing = false;
+        return;
+      }
 
-    // Jika pendaftaran, simpan metrik ke SharedPreferences
-    if (widget.isEnrollment && result.detectedMetrics != null) {
-      await FaceBiometricService.instance.saveEnrolledFace(
-        metrics: result.detectedMetrics!,
-        userName: widget.userName,
-        userEmail: widget.userEmail,
-        password: widget.savedPassword,
+      final luminance = _calculateLuminanceFromImage(image);
+      final result = await FaceBiometricService.instance.analyzeInputImage(
+        inputImage: inputImage,
+        isEnrollment: widget.isEnrollment,
+        luminance: luminance,
       );
-    }
 
-    // Callback sukses setelah selebrasi
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    widget.onSuccess();
-  }
+      if (!mounted || !_isStreaming) {
+        _isProcessing = false;
+        return;
+      }
 
-  /// Tombol Ulangi Pemindaian
-  void _retryScan() {
-    _startScanProcess();
-  }
-
-  String get _statusLabel {
-    switch (_status) {
-      case _ScanStatus.initializing:
-        return 'Menginisialisasi sensor kamera depan...';
-      case _ScanStatus.aligning:
-        return 'Posisikan wajah Anda tepat di dalam lingkaran...';
-      case _ScanStatus.analyzing:
-        return widget.isEnrollment
-            ? 'Menganalisis pencahayaan & kontur wajah...'
-            : 'Menganalisis & memverifikasi identitas wajah...';
-      case _ScanStatus.success:
-        return widget.isEnrollment
-            ? 'Face ID Berhasil Didaftarkan! ✨'
-            : 'Face ID Terverifikasi! Selamat Datang ✨';
-      case _ScanStatus.error:
-        if (_errorCategory == 'LIGHTING') {
-          return 'Pencahayaan Tidak Memadai ⚠️';
-        } else if (_errorCategory == 'NO_FACE') {
-          return 'Wajah Tidak Terdeteksi ⚠️';
-        } else if (_errorCategory == 'MISMATCH') {
-          return 'Wajah Tidak Cocok! Akses Ditolak 🚫';
-        } else if (_errorCategory == 'MULTIPLE_FACES') {
-          return 'Terlalu Banyak Wajah ⚠️';
+      // 1. Wajah belum terdeteksi di frame ini
+      if (!result.isFaceDetected) {
+        _mismatchCount = 0;
+        if (_statusMessage != 'Arahkan wajah ke kamera') {
+          setState(() => _statusMessage = 'Arahkan wajah ke kamera');
         }
-        return 'Verifikasi Wajah Gagal ⚠️';
+        _isProcessing = false;
+        return;
+      }
+
+      // 2. Terlalu banyak wajah
+      if (!result.isSingleFace) {
+        if (_statusMessage != 'Posisikan hanya satu wajah di sensor') {
+          setState(() => _statusMessage = 'Posisikan hanya satu wajah di sensor');
+        }
+        _isProcessing = false;
+        return;
+      }
+
+      // 3. Wajah Valid Ditemukan!
+      if (widget.isEnrollment) {
+        // PENDAFTARAN SUKSES
+        await _stopCameraStream();
+
+        if (result.detectedMetrics != null) {
+          await FaceBiometricService.instance.saveEnrolledFace(
+            metrics: result.detectedMetrics!,
+            userName: widget.userName,
+            userEmail: widget.userEmail,
+            password: widget.savedPassword,
+          );
+        }
+
+        // Suara klik & haptic HANYA saat wajah berhasil dideteksi!
+        SystemSound.play(SystemSoundType.click);
+        HapticFeedback.mediumImpact();
+
+        setState(() {
+          _status = _ScanStatus.success;
+          _statusMessage = 'Face ID Berhasil Didaftarkan';
+        });
+
+        await Future.delayed(const Duration(milliseconds: 550));
+        if (mounted) widget.onSuccess();
+        return;
+      } else {
+        // AUTENTIKASI / LOGIN
+        if (result.isFaceMatched) {
+          await _stopCameraStream();
+
+          // Suara klik & haptic HANYA saat wajah berhasil dideteksi!
+          SystemSound.play(SystemSoundType.click);
+          HapticFeedback.mediumImpact();
+
+          setState(() {
+            _status = _ScanStatus.success;
+            _statusMessage = 'Wajah Terverifikasi';
+          });
+
+          await Future.delayed(const Duration(milliseconds: 550));
+          if (mounted) widget.onSuccess();
+          return;
+        } else {
+          _mismatchCount++;
+          // Toleransi hingga 8 frame (~800ms) sebelum memvonis tidak cocok
+          if (_mismatchCount >= 8) {
+            await _stopCameraStream();
+            HapticFeedback.heavyImpact();
+            setState(() {
+              _status = _ScanStatus.error;
+              _statusMessage = 'Wajah Tidak Cocok';
+              _errorMessage =
+                  'Wajah yang terdeteksi tidak cocok dengan profil biometrik yang didaftarkan pada akun ini.';
+            });
+            return;
+          } else {
+            if (_statusMessage != 'Memverifikasi identitas...') {
+              setState(() => _statusMessage = 'Memverifikasi identitas...');
+            }
+          }
+        }
+      }
+    } catch (_) {
+    } finally {
+      _isProcessing = false;
     }
   }
 
-  IconData get _statusIcon {
-    switch (_status) {
-      case _ScanStatus.initializing:
-        return Icons.sensors_rounded;
-      case _ScanStatus.aligning:
-        return Icons.face_retouching_natural_rounded;
-      case _ScanStatus.analyzing:
-        return Icons.security_rounded;
-      case _ScanStatus.success:
-        return Icons.verified_user_rounded;
-      case _ScanStatus.error:
-        if (_errorCategory == 'LIGHTING') return Icons.nightlight_round;
-        if (_errorCategory == 'MISMATCH') return Icons.no_accounts_rounded;
-        return Icons.warning_amber_rounded;
+  /// Mengonversi CameraImage menjadi ML Kit InputImage tanpa I/O file
+  InputImage? _inputImageFromCameraImage(CameraImage image) {
+    if (_cameraController == null || _frontCamera == null) return null;
+
+    final camera = _frontCamera!;
+    final sensorOrientation = camera.sensorOrientation;
+    InputImageRotation? rotation;
+    if (Platform.isIOS) {
+      rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
+    } else if (Platform.isAndroid) {
+      var rotationCompensation =
+          _orientations[_cameraController!.value.deviceOrientation] ?? 0;
+      if (camera.lensDirection == CameraLensDirection.front) {
+        rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
+      } else {
+        rotationCompensation =
+            (sensorOrientation - rotationCompensation + 360) % 360;
+      }
+      rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
     }
+    rotation ??= InputImageRotation.rotation0deg;
+
+    final format = InputImageFormatValue.fromRawValue(image.format.raw);
+
+    // Ambil byte buffer dari plane kamera
+    Uint8List bytes;
+    if (image.planes.length == 1) {
+      bytes = image.planes.first.bytes;
+    } else {
+      final WriteBuffer allBytes = WriteBuffer();
+      for (final Plane p in image.planes) {
+        allBytes.putUint8List(p.bytes);
+      }
+      bytes = allBytes.done().buffer.asUint8List();
+    }
+
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format ??
+            (Platform.isAndroid
+                ? InputImageFormat.nv21
+                : InputImageFormat.bgra8888),
+        bytesPerRow: image.planes.first.bytesPerRow,
+      ),
+    );
   }
 
-  Color get _statusColor {
-    switch (_status) {
-      case _ScanStatus.success:
-        return AppColors.green;
-      case _ScanStatus.analyzing:
-        return AppColors.saffron;
-      case _ScanStatus.aligning:
-        return AppColors.orange;
-      case _ScanStatus.error:
-        return AppColors.red;
-      case _ScanStatus.initializing:
-        return AppColors.textMuted;
+  /// Estimasi Luminance Langsung dari Plane Y (Ringan & Cepat, 0ms)
+  double _calculateLuminanceFromImage(CameraImage image) {
+    if (image.planes.isEmpty) return 100.0;
+    final bytes = image.planes[0].bytes;
+    if (bytes.isEmpty) return 100.0;
+
+    int sum = 0;
+    final step = (bytes.length / 80).floor().clamp(1, 1000);
+    int count = 0;
+    for (int i = 0; i < bytes.length; i += step) {
+      sum += bytes[i];
+      count++;
     }
+    return count > 0 ? (sum / count).toDouble() : 100.0;
+  }
+
+  void _retryScan() {
+    _startCameraStream();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 26),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
       decoration: const BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
-            Container(
-              width: 44,
-              height: 4.5,
-              decoration: BoxDecoration(
-                color: AppColors.line,
-                borderRadius: BorderRadius.circular(4),
+            // Handle bar minimalis
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Top Header: Badge Face ID & Close Button
+            // Header: Judul & Tombol Tutup
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSubtle,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.line),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: _statusColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
                       Text(
                         widget.isEnrollment
-                            ? 'PENDAFTARAN APPLE FACE ID'
-                            : 'AUTENTIKASI APPLE FACE ID',
+                            ? 'Daftarkan Face ID'
+                            : 'Masuk dengan Face ID',
                         style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.charcoal,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.isEnrollment
+                            ? 'Arahkan wajah Anda ke dalam lingkaran kamera'
+                            : 'Tatap kamera depan untuk memverifikasi akun Anda',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: AppColors.textMuted,
-                    size: 22,
+                InkWell(
+                  onTap: () => Navigator.of(context).pop(),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.line, width: 0.8),
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: AppColors.textMuted,
+                    ),
                   ),
-                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
 
-            const SizedBox(height: 10),
-            Text(
-              widget.isEnrollment
-                  ? 'Daftarkan Wajah Anda'
-                  : 'Masuk Cepat dengan Face ID',
-              textAlign: TextAlign.center,
-              style: AppText.display(20),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.isEnrollment
-                  ? 'Posisikan wajah Anda pada lingkaran sensor dalam pencahayaan yang cukup untuk mendaftarkan Face ID.'
-                  : 'Tatap kamera depan untuk memvalidasi identitas biometrik Anda secara aman.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textMuted,
-                height: 1.4,
-              ),
-            ),
+            const SizedBox(height: 22),
+
+            // Viewport Kamera Pemindai (Minimalis, Bersih, Profesional)
+            _buildCameraViewport(),
 
             const SizedBox(height: 18),
 
-            // Reticle Kamera Pemindai Wajah Real-Time
-            _buildLiveCameraReticle(),
+            // Status Pill Dinamis
+            _buildStatusPill(),
 
-            const SizedBox(height: 16),
-
-            // Status Chip Dinamis
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8.5),
+            // Informasi Akun Pengguna (Clean & Reassuring)
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: _status == _ScanStatus.error
-                      ? AppColors.red.withValues(alpha: 0.4)
-                      : AppColors.line,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.line.withValues(alpha: 0.6)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(_statusIcon, color: _statusColor, size: 16),
+                  const Icon(
+                    Icons.shield_outlined,
+                    size: 15,
+                    color: AppColors.slateBlue,
+                  ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      _statusLabel,
-                      style: TextStyle(
+                      '${widget.userName} • ${widget.userEmail}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
                         fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: _status == _ScanStatus.error
-                            ? AppColors.red
-                            : AppColors.textDark,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.charcoal,
                       ),
                     ),
                   ),
@@ -403,433 +490,267 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
               ),
             ),
 
-            // Kotak Pesan Kesalahan Detail jika Gagal
-            if (_status == _ScanStatus.error && _errorMessage != null) ...[
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _errorCategory == 'LIGHTING'
-                      ? AppColors.tint(AppColors.orange, 0.12)
-                      : AppColors.tint(AppColors.red, 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: _errorCategory == 'LIGHTING'
-                        ? AppColors.tint(AppColors.orange, 0.35)
-                        : AppColors.tint(AppColors.red, 0.35),
+            // Detail Pesan Error & Tombol Tindakan
+            if (_status == _ScanStatus.error) ...[
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 14),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                    height: 1.4,
                   ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      _errorCategory == 'LIGHTING'
-                          ? Icons.nightlight_round
-                          : Icons.error_outline_rounded,
-                      size: 20,
-                      color: _errorCategory == 'LIGHTING'
-                          ? AppColors.orange
-                          : AppColors.red,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 1.4,
-                          fontWeight: FontWeight.w600,
-                          color: _errorCategory == 'LIGHTING'
-                              ? AppColors.charcoal
-                              : AppColors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              // Tombol Ulangi Pemindaian
+              ],
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 height: 46,
                 child: ElevatedButton.icon(
-                  onPressed: _isAnalyzing ? null : _retryScan,
+                  onPressed: _retryScan,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.orange,
+                    backgroundColor: AppColors.charcoal,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
                     elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text(
-                    'Ulangi Pemindaian',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                    'Coba Lagi',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'Gunakan Kata Sandi',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 14),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'Batal / Gunakan Kata Sandi',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ),
             ],
-
-            const SizedBox(height: 14),
-
-            // Identitas Akun Pengguna
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.line),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.tint(AppColors.orange, 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      widget.userName.isNotEmpty
-                          ? widget.userName[0].toUpperCase()
-                          : 'F',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.orange,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.userName,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.userEmail,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    _status == _ScanStatus.error
-                        ? Icons.gpp_bad_rounded
-                        : Icons.face_unlock_rounded,
-                    size: 20,
-                    color: _status == _ScanStatus.error
-                        ? AppColors.red
-                        : AppColors.green,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // Tombol Batal
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Batal / Gunakan Kata Sandi',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  /// Reticle Pemindai Kamera Depan Real-Time
-  Widget _buildLiveCameraReticle() {
+  /// Viewport Kamera Bulat Bersih & Ring Sensor
+  Widget _buildCameraViewport() {
     final isSuccess = _status == _ScanStatus.success;
     final isError = _status == _ScanStatus.error;
 
     return AnimatedBuilder(
-      animation: _scanPulse,
+      animation: _pulseController,
       builder: (context, _) {
-        final t = _scanPulse.value;
+        final t = _pulseController.value;
 
-        return SizedBox(
-          width: 220,
-          height: 220,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Gelombang radar luar berdenyut
-              if (!isSuccess && !isError)
-                Container(
-                  width: 204 + (16 * t),
-                  height: 204 + (16 * t),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.tint(AppColors.orange, 0.28 * (1.0 - t)),
-                      width: 1.5,
-                    ),
-                  ),
+        Color borderColor;
+        double borderWidth = 2.5;
+
+        if (isSuccess) {
+          borderColor = AppColors.green;
+          borderWidth = 3.0;
+        } else if (isError) {
+          borderColor = AppColors.red;
+          borderWidth = 2.5;
+        } else {
+          borderColor = Color.lerp(
+            AppColors.orange.withValues(alpha: 0.45),
+            AppColors.orange,
+            t,
+          )!;
+        }
+
+        return Container(
+          width: 176,
+          height: 176,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: borderWidth),
+            boxShadow: [
+              if (isSuccess)
+                BoxShadow(
+                  color: AppColors.green.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                )
+              else if (!isError)
+                BoxShadow(
+                  color: AppColors.orange.withValues(alpha: 0.12 * t),
+                  blurRadius: 12,
+                  spreadRadius: 1,
                 ),
-
-              // Cincin tengah
-              Container(
-                width: 184,
-                height: 184,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSuccess
-                      ? AppColors.tint(AppColors.green, 0.15)
-                      : (isError
-                          ? AppColors.tint(AppColors.red, 0.12)
-                          : AppColors.tint(AppColors.yellow, 0.2)),
-                  border: Border.all(
-                    color: isSuccess
-                        ? AppColors.green
-                        : (isError
-                            ? AppColors.red
-                            : AppColors.tint(AppColors.orange, 0.45)),
-                    width: 1.5,
-                  ),
-                ),
-              ),
-
-              // Wadah Kamera / Sensor Utama (Diameter 150 px)
-              Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.black,
-                  border: Border.all(
-                    color: isSuccess
-                        ? AppColors.green
-                        : (isError ? AppColors.red : AppColors.orange),
-                    width: 2.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isSuccess
-                          ? AppColors.tint(AppColors.green, 0.35 + 0.2 * t)
-                          : (isError
-                              ? AppColors.tint(AppColors.red, 0.35)
-                              : AppColors.tint(AppColors.orange, 0.35 + 0.2 * t)),
-                      blurRadius: isError ? 12 : 20 + 8 * t,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Feed Kamera Depan Nyata
-                      if (_isCameraReady && _cameraController != null)
-                        FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width:
-                                _cameraController!.value.previewSize?.height ??
-                                    150,
-                            height:
-                                _cameraController!.value.previewSize?.width ??
-                                    150,
-                            child: CameraPreview(_cameraController!),
-                          ),
-                        )
-                      else
-                        // Fallback jika kamera belum siap
-                        Container(
-                          color: AppColors.charcoal,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.orange,
-                              strokeWidth: 2.5,
-                            ),
-                          ),
-                        ),
-
-                      // Filter warna HUD di atas kamera
-                      Container(
-                        color: isSuccess
-                            ? AppColors.green.withValues(alpha: 0.3)
-                            : (isError
-                                ? AppColors.red.withValues(alpha: 0.3)
-                                : Colors.black.withValues(alpha: 0.12)),
-                      ),
-
-                      // Sudut Reticle Face ID (Targeting Corners)
-                      CustomPaint(
-                        painter: _FaceReticlePainter(
-                          color: isSuccess
-                              ? AppColors.green
-                              : (isError ? AppColors.red : AppColors.saffron),
-                        ),
-                      ),
-
-                      // Laser Pemindai Bergerak Vertikal
-                      if (!isSuccess && !isError)
-                        Positioned(
-                          top: 15 + (120 * t),
-                          left: 10,
-                          right: 10,
-                          child: Container(
-                            height: 2.5,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  AppColors.saffron,
-                                  Colors.white,
-                                  AppColors.orange,
-                                  Colors.transparent,
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.orange.withValues(alpha: 0.85),
-                                  blurRadius: 8,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      // Ikon Sukses Terverifikasi
-                      if (isSuccess)
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.green.withValues(alpha: 0.85),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check_rounded,
-                              size: 42,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-
-                      // Ikon Error jika Wajah Gagal / Tidak Cocok
-                      if (isError)
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.red.withValues(alpha: 0.85),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              _errorCategory == 'LIGHTING'
-                                  ? Icons.nightlight_round
-                                  : Icons.close_rounded,
-                              size: 42,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
             ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: ClipOval(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Feed Kamera Depan
+                  if (_isCameraReady && _cameraController != null)
+                    FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width:
+                            _cameraController!.value.previewSize?.height ?? 168,
+                        height:
+                            _cameraController!.value.previewSize?.width ?? 168,
+                        child: CameraPreview(_cameraController!),
+                      ),
+                    )
+                  else
+                    Container(
+                      color: AppColors.background,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: AppColors.orange,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Overlay Sukses Terverifikasi
+                  if (isSuccess)
+                    Container(
+                      color: AppColors.green.withValues(alpha: 0.4),
+                      child: const Center(
+                        child: Icon(
+                          Icons.check_rounded,
+                          size: 48,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+
+                  // Overlay Error
+                  if (isError)
+                    Container(
+                      color: AppColors.red.withValues(alpha: 0.25),
+                      child: const Center(
+                        child: Icon(
+                          Icons.error_outline_rounded,
+                          size: 42,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         );
       },
     );
   }
-}
 
-/// Painter untuk menggambar sudut-sudut framing Apple Face ID
-class _FaceReticlePainter extends CustomPainter {
-  final Color color;
+  /// Pill Status Feedback
+  Widget _buildStatusPill() {
+    IconData icon;
+    Color iconColor;
+    Color textColor;
+    bool showSpinner = false;
 
-  _FaceReticlePainter({required this.color});
+    switch (_status) {
+      case _ScanStatus.initializing:
+      case _ScanStatus.scanning:
+        showSpinner = true;
+        icon = Icons.camera_front_rounded;
+        iconColor = AppColors.orange;
+        textColor = AppColors.charcoal;
+        break;
+      case _ScanStatus.success:
+        icon = Icons.check_circle_rounded;
+        iconColor = AppColors.green;
+        textColor = AppColors.green;
+        break;
+      case _ScanStatus.error:
+        icon = Icons.info_outline_rounded;
+        iconColor = AppColors.red;
+        textColor = AppColors.red;
+        break;
+    }
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    const cornerLength = 16.0;
-    const padding = 18.0;
-
-    // Top-Left
-    canvas.drawLine(
-      const Offset(padding, padding + cornerLength),
-      const Offset(padding, padding),
-      paint,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: _status == _ScanStatus.error
+            ? AppColors.tint(AppColors.red, 0.08)
+            : (_status == _ScanStatus.success
+                ? AppColors.tint(AppColors.green, 0.1)
+                : AppColors.background),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _status == _ScanStatus.error
+              ? AppColors.tint(AppColors.red, 0.3)
+              : (_status == _ScanStatus.success
+                  ? AppColors.tint(AppColors.green, 0.3)
+                  : AppColors.line),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showSpinner) ...[
+            const SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.8,
+                color: AppColors.orange,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ] else ...[
+            Icon(icon, size: 15, color: iconColor),
+            const SizedBox(width: 7),
+          ],
+          Flexible(
+            child: Text(
+              _statusMessage,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
-    canvas.drawLine(
-      const Offset(padding, padding),
-      const Offset(padding + cornerLength, padding),
-      paint,
-    );
-
-    // Top-Right
-    canvas.drawLine(
-      Offset(size.width - padding - cornerLength, padding),
-      Offset(size.width - padding, padding),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width - padding, padding),
-      Offset(size.width - padding, padding + cornerLength),
-      paint,
-    );
-
-    // Bottom-Left
-    canvas.drawLine(
-      Offset(padding, size.height - padding - cornerLength),
-      Offset(padding, size.height - padding),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(padding, size.height - padding),
-      Offset(padding + cornerLength, size.height - padding),
-      paint,
-    );
-
-    // Bottom-Right
-    canvas.drawLine(
-      Offset(size.width - padding - cornerLength, size.height - padding),
-      Offset(size.width - padding, size.height - padding),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width - padding, size.height - padding),
-      Offset(size.width - padding, size.height - padding - cornerLength),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _FaceReticlePainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }

@@ -607,27 +607,22 @@ class _LoginPageState extends State<LoginPage> {
                             );
                           }
                         },
-                        customBorder: const CircleBorder(),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.line, width: 1),
+                        borderRadius: BorderRadius.circular(8),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6.0),
+                          child: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 20,
+                            color: AppColors.charcoal,
                           ),
-                          child: const Icon(Icons.arrow_back_rounded, size: 18),
                         ),
                       ),
                       const FoodieHeaderLogo(),
                     ],
                   ),
                   const SizedBox(height: 28),
-                  Text('Masuk Akun', style: AppText.display(26)),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Jelajahi warisan kuliner autentik Nusantara.',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                  Center(
+                    child: Text('Masuk', style: AppText.display(26)),
                   ),
                   const SizedBox(height: 24),
                   AppTextField(
@@ -692,7 +687,6 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 22),
                   PrimaryButton(
                     label: 'Masuk',
-          
                     loading: _loading,
                     onPressed: _submit,
                   ),
@@ -701,53 +695,6 @@ class _LoginPageState extends State<LoginPage> {
                     label: 'Masuk dengan Face ID',
                     icon: Icons.face_retouching_natural_rounded,
                     onPressed: _loginWithFaceId,
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      const Expanded(child: Divider(color: AppColors.line)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          'ATAU MASUK DENGAN',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                      const Expanded(child: Divider(color: AppColors.line)),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SocialButton(
-                          label: 'Google SSO',
-                          leading: const Icon(
-                            Icons.g_mobiledata_rounded,
-                            size: 24,
-                            color: AppColors.red,
-                          ),
-                          onPressed: () => _goHome('Dimas Dananjaya'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: SocialButton(
-                          label: 'Apple Face ID',
-                          leading: const Icon(
-                            Icons.face_unlock_rounded,
-                            size: 20,
-                            color: AppColors.greenDark,
-                          ),
-                          onPressed: _loginWithFaceId,
-                        ),
-                      ),
-                    ],
                   ),
                   const SizedBox(height: 22),
                   Center(
