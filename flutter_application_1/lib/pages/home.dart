@@ -37,6 +37,7 @@ class _HomePageState extends State<HomePage> {
   double? _userLng;
   Profile? _profile;
   String? _customAvatarUrl;
+  late String _currentName;
   StreamSubscription<void>? _profileSub;
 
   static const _items = [
@@ -50,6 +51,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _currentName = widget.name;
     _loadProfile();
     _profileSub = SupabaseService.instance.onProfileChanged.listen((_) {
       if (mounted) _loadProfile();
@@ -61,8 +63,13 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       setState(() {
         _profile = p;
-        if (p?.avatarUrl != null && p!.avatarUrl!.isNotEmpty) {
+        if (p?.displayName != null && p!.displayName.trim().isNotEmpty) {
+          _currentName = p.displayName.trim();
+        }
+        if (p?.avatarUrl != null && p!.avatarUrl!.trim().isNotEmpty) {
           _customAvatarUrl = p.avatarUrl;
+        } else {
+          _customAvatarUrl = null;
         }
       });
     }
@@ -81,6 +88,9 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => _index = i);
+    if (i == 0) {
+      _loadProfile();
+    }
   }
 
   void _selectCategoryExplore(String category) {
@@ -104,7 +114,7 @@ class _HomePageState extends State<HomePage> {
           index: _index,
           children: [
             HomeTab(
-              name: widget.name,
+              name: _currentName,
               onSeeAll: () => _select(1),
               onCategorySelected: _selectCategoryExplore,
               onOpenRestaurant: (r) => Navigator.of(context).push(
@@ -118,7 +128,7 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             ExploreTab(
-              name: widget.name,
+              name: _currentName,
               initialCategory: _exploreCategory,
               userLat: _userLat,
               userLng: _userLng,
@@ -126,17 +136,32 @@ class _HomePageState extends State<HomePage> {
             const SizedBox.shrink(),   // slot "Decide" (dibuka sebagai sheet)
             const AiTab(),
             ProfileTab(
-              name: widget.name,
+              name: _currentName,
               fromRegister: widget.fromRegister,
               biometricOn: widget.biometricOn,
-              onAvatarChanged: (url) {
+              onNameChanged: (newName) {
                 setState(() {
-                  _customAvatarUrl = url;
+                  _currentName = newName;
+                  if (_profile != null) {
+                    _profile = Profile(
+                      id: _profile!.id,
+                      displayName: newName,
+                      avatarUrl: _profile!.avatarUrl,
+                      points: _profile!.points,
+                      createdAt: _profile!.createdAt,
+                    );
+                  }
+                });
+              },
+              onAvatarChanged: (url) {
+                final clean = (url != null && url.trim().isNotEmpty) ? url.trim() : null;
+                setState(() {
+                  _customAvatarUrl = clean;
                   if (_profile != null) {
                     _profile = Profile(
                       id: _profile!.id,
                       displayName: _profile!.displayName,
-                      avatarUrl: url,
+                      avatarUrl: clean,
                       points: _profile!.points,
                       createdAt: _profile!.createdAt,
                     );

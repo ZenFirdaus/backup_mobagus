@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/restaurant.dart';
@@ -301,14 +303,41 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  void _shareRestaurant() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Tautan ${_r.name} disalin ke papan klip!'),
-        backgroundColor: AppColors.greenDark,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Future<void> _shareRestaurant() async {
+    final text = 'Yuk cobain kuliner ini bareng-bareng! 🍽️✨\n\n'
+        '*${_r.name}*\n'
+        '🏷️ Kategori: ${_r.category}\n'
+        '⭐ Rating: ${_r.rating.toStringAsFixed(1)} / 5.0\n'
+        '💰 Kisaran Harga: ${_r.priceRange}\n'
+        '📍 Alamat: ${_r.address}\n'
+        '🗺️ Buka di Google Maps: https://www.google.com/maps/search/?api=1&query=${_r.lat},${_r.lng}\n\n'
+        'Ditemukan melalui aplikasi FOODIE Mataraman.';
+
+    try {
+      final box = context.findRenderObject() as RenderBox?;
+      final sharePositionOrigin = box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null;
+
+      // ignore: deprecated_member_use
+      await Share.share(
+        text,
+        subject: 'Rekomendasi Kuliner: ${_r.name}',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } catch (_) {
+      // Fallback: salin ke clipboard jika platform tidak memunculkan dialog native
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Informasi ${_r.name} berhasil disalin ke papan klip!'),
+            backgroundColor: AppColors.greenDark,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showScheduleReminderDialog() async {
@@ -865,11 +894,6 @@ class _DetailPageState extends State<DetailPage> {
               onTap: () => Navigator.of(context).maybePop(),
             ),
             const Spacer(),
-            _circleButton(
-              Icons.share_outlined,
-              onTap: _shareRestaurant,
-            ),
-            const SizedBox(width: 8),
             _circleButton(
               _isFavorite ? Icons.favorite : Icons.favorite_border,
               color: _isFavorite ? AppColors.red : AppColors.textDark,

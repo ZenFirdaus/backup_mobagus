@@ -70,7 +70,12 @@ class _HomeTabState extends State<HomeTab> {
     _load();
     // Auto-detect lokasi GPS pengguna saat aplikasi dibuka
     LocationService.instance.fetchGpsLocation();
-    _profileSub = _svc.onProfileChanged.listen((_) => _load());
+    _profileSub = _svc.onProfileChanged.listen((_) {
+      if (mounted) {
+        _isLoadingData = false;
+        _load();
+      }
+    });
   }
 
   void _onLocationUpdated() {
@@ -89,6 +94,26 @@ class _HomeTabState extends State<HomeTab> {
   void _onAiProfileUpdated() {
     if (!mounted) return;
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.name != widget.name) {
+      if (_profile != null) {
+        setState(() {
+          _profile = Profile(
+            id: _profile!.id,
+            displayName: widget.name,
+            avatarUrl: _profile!.avatarUrl,
+            points: _profile!.points,
+            createdAt: _profile!.createdAt,
+          );
+        });
+      } else {
+        setState(() {});
+      }
+    }
   }
 
   @override
@@ -219,8 +244,12 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    final fullName = (_profile?.displayName ?? widget.name).trim();
-    final first = fullName.isEmpty ? 'Foodie' : fullName.split(' ').first;
+    final activeName = widget.name.trim().isNotEmpty
+        ? widget.name.trim()
+        : (_profile?.displayName != null && _profile!.displayName.trim().isNotEmpty)
+            ? _profile!.displayName.trim()
+            : 'Foodie';
+    final first = activeName.split(' ').first;
 
     return ColoredBox(
       color: AppColors.background,

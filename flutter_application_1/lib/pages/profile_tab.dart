@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,7 +29,8 @@ class ProfileTab extends StatefulWidget {
   final String name;
   final bool fromRegister;
   final bool biometricOn;
-  final void Function(String url)? onAvatarChanged;
+  final void Function(String? url)? onAvatarChanged;
+  final void Function(String name)? onNameChanged;
 
   const ProfileTab({
     super.key,
@@ -38,6 +38,7 @@ class ProfileTab extends StatefulWidget {
     this.fromRegister = false,
     this.biometricOn = false,
     this.onAvatarChanged,
+    this.onNameChanged,
   });
 
   @override
@@ -128,6 +129,26 @@ class _ProfileTabState extends State<ProfileTab>
       });
       _load();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.name != widget.name) {
+      if (_profile != null) {
+        setState(() {
+          _profile = Profile(
+            id: _profile!.id,
+            displayName: widget.name,
+            avatarUrl: _profile!.avatarUrl,
+            points: _profile!.points,
+            createdAt: _profile!.createdAt,
+          );
+        });
+      } else {
+        setState(() {});
+      }
+    }
   }
 
   @override
@@ -545,54 +566,154 @@ class _ProfileTabState extends State<ProfileTab>
 
                 // ── Avatar area ──
                 Center(
-                  child: GestureDetector(
-                    onTap: () async {
-                      // Tunjukkan pilihan: URL foto atau hapus foto
-                      await _editAvatarDialog(setSheet, (url) {
-                        tempAvatarUrl = url;
-                      });
-                    },
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: const BoxDecoration(
-                            color: AppColors.orange,
-                            shape: BoxShape.circle,
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: AvatarImage(
-                            url: tempAvatarUrl,
-                            size: 80,
-                            fallbackText: nameCtrl.text.isNotEmpty
-                                ? nameCtrl.text
-                                : 'F',
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: AppColors.charcoal,
-                              shape: BoxShape.circle,
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          if (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty) {
+                            final act = await showModalBottomSheet<String>(
+                              context: context,
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                              ),
+                              builder: (sheetCtx) => Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 40, height: 4,
+                                      margin: const EdgeInsets.only(bottom: 20),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.line,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    Text('Foto Profil', style: AppText.display(18)),
+                                    const SizedBox(height: 20),
+                                    _actionTile(
+                                      sheetCtx,
+                                      Icons.photo_library_rounded,
+                                      'Pilih Foto Baru dari Galeri',
+                                      AppColors.orange,
+                                      'gallery',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _actionTile(
+                                      sheetCtx,
+                                      Icons.delete_outline_rounded,
+                                      'Hapus Foto Profil',
+                                      AppColors.red,
+                                      'delete',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+
+                            if (act == 'gallery') {
+                              await _pickAvatarFromGallery((url) {
+                                tempAvatarUrl = url;
+                                setSheet(() {});
+                              });
+                            } else if (act == 'delete') {
+                              tempAvatarUrl = null;
+                              setSheet(() {});
+                            }
+                          } else {
+                            await _pickAvatarFromGallery((url) {
+                              tempAvatarUrl = url;
+                              setSheet(() {});
+                            });
+                          }
+                        },
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 84,
+                              height: 84,
+                              decoration: const BoxDecoration(
+                                color: AppColors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: AvatarImage(
+                                url: tempAvatarUrl,
+                                size: 84,
+                                fallbackText: nameCtrl.text.isNotEmpty
+                                    ? nameCtrl.text
+                                    : 'F',
+                              ),
                             ),
-                            child: const Icon(Icons.camera_alt_rounded,
-                                size: 14, color: Colors.white),
-                          ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.orange,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.photo_library_rounded,
+                                    size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Center(
-                  child: Text(
-                    'Ketuk untuk ubah foto profil',
-                    style:
-                        TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.orange,
+                              side: const BorderSide(color: AppColors.orange),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.photo_library_rounded, size: 16),
+                            label: Text(
+                              (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty)
+                                  ? 'Ganti (Galeri)'
+                                  : 'Pilih dari Galeri',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                            ),
+                            onPressed: () async {
+                              await _pickAvatarFromGallery((url) {
+                                tempAvatarUrl = url;
+                                setSheet(() {});
+                              });
+                            },
+                          ),
+                          if (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.red,
+                                side: const BorderSide(color: AppColors.red),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              ),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                              label: const Text(
+                                'Hapus Foto',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                              onPressed: () {
+                                tempAvatarUrl = null;
+                                setSheet(() {});
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -655,24 +776,30 @@ class _ProfileTabState extends State<ProfileTab>
                       if (newName.isEmpty) return;
                       Navigator.pop(ctx);
 
-                      if (tempAvatarUrl != null && tempAvatarUrl!.isNotEmpty) {
-                        widget.onAvatarChanged?.call(tempAvatarUrl!);
-                        setState(() {
-                          _profile = Profile(
-                            id: _profile?.id ?? SupabaseService.instance.userId ?? 'curator_user',
-                            displayName: newName,
-                            avatarUrl: tempAvatarUrl,
-                            points: _profile?.points ?? 100,
-                            createdAt: _profile?.createdAt ?? DateTime.now(),
-                          );
-                        });
-                      }
+                      final cleanAvatar = (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty)
+                          ? tempAvatarUrl!.trim()
+                          : null;
 
+                      // 1. Update UI langsung tanpa delay
+                      setState(() {
+                        _profile = Profile(
+                          id: _profile?.id ?? SupabaseService.instance.userId ?? 'curator_user',
+                          displayName: newName,
+                          avatarUrl: cleanAvatar,
+                          points: _profile?.points ?? 100,
+                          createdAt: _profile?.createdAt ?? DateTime.now(),
+                        );
+                      });
+                      widget.onNameChanged?.call(newName);
+                      widget.onAvatarChanged?.call(cleanAvatar);
+
+                      // 2. Simpan permanen ke SharedPreferences & Supabase
                       await SupabaseService.instance.upsertProfile(
                         displayName: newName,
-                        avatarUrl: tempAvatarUrl,
+                        avatarUrl: cleanAvatar,
                       );
                       await _load();
+
                       if (mounted) {
                         ScaffoldMessenger.of(context)
                           ..hideCurrentSnackBar()
@@ -700,87 +827,20 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
-  Future<void> _editAvatarDialog(
-    StateSetter setSheet,
-    void Function(String?) onUrlChanged,
-  ) async {
-    // Tampilkan pilihan: Galeri, Kamera, atau Hapus Foto
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: AppColors.line,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text('Ubah Foto Profil', style: AppText.display(18)),
-            const SizedBox(height: 20),
-            _actionTile(
-              ctx, Icons.photo_library_rounded,
-              'Pilih dari Galeri', AppColors.orange, 'gallery',
-            ),
-            const SizedBox(height: 10),
-            _actionTile(
-              ctx, Icons.camera_alt_rounded,
-              'Ambil Foto dari Kamera', AppColors.charcoal, 'camera',
-            ),
-            const SizedBox(height: 10),
-            _actionTile(
-              ctx, Icons.delete_outline_rounded,
-              'Hapus Foto Profil', AppColors.red, 'delete',
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (action == null || !mounted) return;
-
-    if (action == 'delete') {
-      onUrlChanged(null);
-      await SupabaseService.instance.upsertProfile(
-        displayName: _profile?.displayName ?? widget.name,
-        avatarUrl: '',
-      );
-      await _load();
-      try {
-        setSheet(() {});
-      } catch (_) {}
-      return;
-    }
-
-    final uid = SupabaseService.instance.userId ?? 'curator_user';
-
-    // Ambil gambar dari galeri atau kamera
+  Future<void> _pickAvatarFromGallery(void Function(String?) onPicked) async {
     final picker = ImagePicker();
     XFile? picked;
     try {
       picked = await picker.pickImage(
-        source: action == 'camera' ? ImageSource.camera : ImageSource.gallery,
-        imageQuality: 80,
+        source: ImageSource.gallery,
+        imageQuality: 85,
         maxWidth: 800,
       );
     } catch (e) {
       if (mounted) {
-        final isWebCamera = kIsWeb && action == 'camera';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              isWebCamera
-                  ? 'Kamera tidak didukung di browser ini. Silakan gunakan opsi "Pilih dari Galeri".'
-                  : 'Gagal mengakses ${action == 'camera' ? 'kamera' : 'galeri'}. Pastikan izin telah diberikan di Pengaturan perangkat: ${e.toString().split(':').first}',
-            ),
+            content: Text('Gagal mengakses galeri: ${e.toString().split(':').first}'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -790,7 +850,6 @@ class _ProfileTabState extends State<ProfileTab>
 
     if (picked == null || !mounted) return;
 
-    // Tampilkan loading
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Row(
@@ -802,18 +861,18 @@ class _ProfileTabState extends State<ProfileTab>
               ),
             ),
             SizedBox(width: 12),
-            Text('Memproses foto profil...'),
+            Text('Memproses foto dari galeri...'),
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 10),
+        duration: Duration(seconds: 4),
         backgroundColor: AppColors.charcoal,
       ),
     );
 
+    final uid = SupabaseService.instance.userId ?? 'curator_user';
     String? uploadedUrl;
     try {
-      // Baca byte secara cross-platform (kompatibel Web/Chrome dan Mobile)
       final bytes = await picked.readAsBytes();
       String ext = 'jpg';
       if (picked.name.contains('.')) {
@@ -827,7 +886,6 @@ class _ProfileTabState extends State<ProfileTab>
       final filePath = '$uid/profile.$ext';
       final supabase = Supabase.instance.client;
 
-      // Coba upload ke Supabase Storage bucket 'avatars'
       try {
         await supabase.storage.from('avatars').uploadBinary(
           filePath,
@@ -838,12 +896,10 @@ class _ProfileTabState extends State<ProfileTab>
           ),
         );
 
-        // Ambil public URL
         uploadedUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
         uploadedUrl = '$uploadedUrl?t=${DateTime.now().millisecondsSinceEpoch}';
       } catch (storageErr) {
         debugPrint('Supabase storage upload fallback to base64: $storageErr');
-        // Fallback simpan offline/lokal jika bucket belum disiapkan
         final b64 = base64Encode(bytes);
         uploadedUrl = 'data:$mimeType;base64,$b64';
       }
@@ -864,36 +920,7 @@ class _ProfileTabState extends State<ProfileTab>
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    onUrlChanged(uploadedUrl);
-    widget.onAvatarChanged?.call(uploadedUrl);
-    setState(() {
-      _profile = Profile(
-        id: _profile?.id ?? uid,
-        displayName: _profile?.displayName ?? widget.name,
-        avatarUrl: uploadedUrl,
-        points: _profile?.points ?? 100,
-        createdAt: _profile?.createdAt ?? DateTime.now(),
-      );
-    });
-
-    await SupabaseService.instance.upsertProfile(
-        displayName: _profile?.displayName ?? widget.name,
-        avatarUrl: uploadedUrl,
-      );
-      await _load();
-      try {
-        setSheet(() {});
-      } catch (_) {}
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Foto profil berhasil diperbarui ✨'),
-            backgroundColor: AppColors.greenDark,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+    onPicked(uploadedUrl);
   }
 
   Widget _actionTile(

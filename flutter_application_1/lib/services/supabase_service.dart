@@ -244,13 +244,23 @@ class SupabaseService {
 
   Future<Profile?> getProfile() async {
     final uid = userId;
+    final keyUid = uid ?? 'guest';
+    String? localName;
     String? localAvatar;
+    bool isAvatarDeleted = false;
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      localAvatar = uid != null ? prefs.getString('foodie_avatar_$uid') : null;
+      localName = prefs.getString('foodie_name_$keyUid') ??
+          prefs.getString('foodie_current_display_name') ??
+          prefs.getString('foodie_last_user_name');
+      localAvatar = prefs.getString('foodie_avatar_$keyUid');
+      isAvatarDeleted = prefs.getBool('foodie_avatar_deleted_$keyUid') ?? false;
     } catch (_) {}
 
-    final metaAvatar = currentUser?.userMetadata?['avatar_url'] as String?;
+    final metaAvatar = isAvatarDeleted
+        ? null
+        : (currentUser?.userMetadata?['avatar_url'] as String?);
 
     if (uid != null) {
       try {
@@ -261,16 +271,24 @@ class SupabaseService {
             .maybeSingle();
         if (res != null) {
           final p = Profile.fromJson(res);
-          final effectiveAvatar = (p.avatarUrl != null && p.avatarUrl!.isNotEmpty)
-              ? p.avatarUrl
+          final effectiveAvatar = isAvatarDeleted
+              ? null
               : (localAvatar != null && localAvatar.isNotEmpty)
                   ? localAvatar
-                  : metaAvatar;
+                  : (p.avatarUrl != null && p.avatarUrl!.isNotEmpty)
+                      ? p.avatarUrl
+                      : metaAvatar;
+
+          // PRIORITASKAN localName jika pengguna telah mengedit namanya di perangkat
+          final effectiveName = (localName != null && localName.trim().isNotEmpty)
+              ? localName.trim()
+              : p.displayName.trim().isNotEmpty
+                  ? p.displayName.trim()
+                  : (currentUser?.userMetadata?['name'] as String? ?? curatorName);
+
           return Profile(
             id: p.id,
-            displayName: p.displayName.isNotEmpty
-                ? p.displayName
-                : (currentUser?.userMetadata?['name'] as String? ?? curatorName),
+            displayName: effectiveName,
             avatarUrl: effectiveAvatar,
             points: p.points + _localBonusPoints,
             createdAt: p.createdAt,
@@ -281,11 +299,20 @@ class SupabaseService {
       }
     }
 
-    final name = currentUser?.userMetadata?['name'] as String? ?? curatorName;
+    final effectiveName = (localName != null && localName.trim().isNotEmpty)
+        ? localName.trim()
+        : (currentUser?.userMetadata?['name'] as String? ?? curatorName);
+
+    final effectiveAvatar = isAvatarDeleted
+        ? null
+        : (localAvatar != null && localAvatar.isNotEmpty)
+            ? localAvatar
+            : metaAvatar;
+
     return Profile(
       id: uid ?? 'curator_user',
-      displayName: name,
-      avatarUrl: localAvatar ?? metaAvatar,
+      displayName: effectiveName,
+      avatarUrl: effectiveAvatar,
       points: 100 + _localBonusPoints + (_localCheckins.length * 50),
       createdAt: DateTime.now(),
     );
@@ -296,24 +323,38 @@ class SupabaseService {
     String? avatarUrl,
   }) async {
     final uid = userId;
+    final keyUid = uid ?? 'guest';
+    curatorName = displayName;
+
+    // 1. Simpan di SharedPreferences lokal secara persisten di berbagai key
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('foodie_name_$keyUid', displayName);
+      await prefs.setString('foodie_current_display_name', displayName);
+      await prefs.setString('foodie_last_user_name', displayName);
+
+      if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
+        await prefs.setString('foodie_avatar_$keyUid', avatarUrl.trim());
+        await prefs.setBool('foodie_avatar_deleted_$keyUid', false);
+      } else {
+        await prefs.remove('foodie_avatar_$keyUid');
+        await prefs.setBool('foodie_avatar_deleted_$keyUid', true);
+      }
+    } catch (_) {}
+
+    // Jika user adalah guest murni
     if (uid == null) {
-      guestName = displayName;
+      _profileChangedController.add(null);
       return;
     }
 
-    // 1. Simpan di SharedPreferences lokal
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('foodie_avatar_$uid', avatarUrl);
-      } catch (_) {}
-    }
-
-    // 2. Simpan di Supabase Auth user metadata (selalu bisa tanpa syarat tabel Postgres)
+    // 2. Simpan di Supabase Auth user metadata
     try {
       final data = <String, dynamic>{'name': displayName};
-      if (avatarUrl != null && avatarUrl.isNotEmpty) {
-        data['avatar_url'] = avatarUrl;
+      if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
+        data['avatar_url'] = avatarUrl.trim();
+      } else {
+        data['avatar_url'] = '';
       }
       await _client.auth.updateUser(UserAttributes(data: data));
     } catch (e) {
@@ -325,15 +366,13 @@ class SupabaseService {
       final payload = <String, dynamic>{
         'id': uid,
         'display_name': displayName,
+        'avatar_url': (avatarUrl != null && avatarUrl.trim().isNotEmpty)
+            ? avatarUrl.trim()
+            : null,
       };
-      if (avatarUrl != null) {
-        payload['avatar_url'] = avatarUrl;
-      }
       await _client.from('profiles').upsert(payload, onConflict: 'id');
     } catch (e) {
       debugPrint('Supabase profiles.upsert with avatar_url error: $e');
-      // Jika kolom avatar_url belum dibuat di tabel profiles,
-      // tetap simpan display_name
       try {
         await _client.from('profiles').upsert({
           'id': uid,
