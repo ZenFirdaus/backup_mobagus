@@ -511,19 +511,8 @@ class _AiProfilePageState extends State<AiProfilePage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.charcoal, Color(0xFF2C2C2E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.charcoal.withValues(alpha: 0.18),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: AppColors.greenDark,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,7 +522,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.orange.withValues(alpha: 0.20),
+                  color: AppColors.orange.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
@@ -559,7 +548,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
                     Text(
                       'Kelengkapan Data: $progress%',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.75),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -571,10 +560,10 @@ class _AiProfilePageState extends State<AiProfilePage> {
           ),
           const SizedBox(height: 14),
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: progress / 100.0,
-              minHeight: 7,
+              minHeight: 6,
               backgroundColor: Colors.white.withValues(alpha: 0.15),
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.orange),
             ),
@@ -583,7 +572,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
           Text(
             'Data ini digunakan untuk menyesuaikan rekomendasi kuliner, rentang harga, dan tempat makan terdekat untuk Anda.',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.75),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 11.5,
               height: 1.45,
             ),
@@ -603,14 +592,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -639,7 +621,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 14),
-            child: Divider(height: 1, color: AppColors.line),
+            child: Divider(height: 1, color: Color(0xFFF1EFEA)),
           ),
           ...children,
         ],
@@ -695,8 +677,8 @@ class _AiProfilePageState extends State<AiProfilePage> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.tint(AppColors.orange, 0.12)
-              : const Color(0xFFF8F9FA),
+              ? AppColors.greenDark
+              : const Color(0xFFF4F5F7),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -712,8 +694,8 @@ class _AiProfilePageState extends State<AiProfilePage> {
               label,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected ? AppColors.orange : AppColors.charcoal,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected ? Colors.white : AppColors.charcoal,
               ),
             ),
           ],
@@ -742,15 +724,15 @@ class _AiProfilePageState extends State<AiProfilePage> {
           onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
         ),
         filled: true,
-        fillColor: const Color(0xFFF8F9FA),
+        fillColor: const Color(0xFFF4F5F7),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -784,15 +766,15 @@ class _AiProfilePageState extends State<AiProfilePage> {
               )
             : null,
         filled: true,
-        fillColor: const Color(0xFFF8F9FA),
+        fillColor: const Color(0xFFF4F5F7),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -811,7 +793,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
+        color: const Color(0xFFF4F5F7),
         borderRadius: BorderRadius.circular(14),
       ),
       child: DropdownButtonHideUnderline(
@@ -851,6 +833,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
         return FilterChip(
           label: Text(taste),
           selected: isSelected,
+          showCheckmark: false,
           onSelected: (selected) {
             setState(() {
               if (selected) {
@@ -862,17 +845,14 @@ class _AiProfilePageState extends State<AiProfilePage> {
           },
           labelStyle: TextStyle(
             fontSize: 12.5,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
             color: isSelected ? Colors.white : AppColors.charcoal,
           ),
-          backgroundColor: const Color(0xFFF4F4F6),
+          backgroundColor: const Color(0xFFF4F5F7),
           selectedColor: AppColors.orange,
-          checkmarkColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isSelected ? AppColors.orange : AppColors.line,
-            ),
+            side: BorderSide.none,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         );
@@ -889,6 +869,7 @@ class _AiProfilePageState extends State<AiProfilePage> {
         return FilterChip(
           label: Text(place),
           selected: isSelected,
+          showCheckmark: false,
           onSelected: (selected) {
             setState(() {
               if (selected) {
@@ -900,17 +881,14 @@ class _AiProfilePageState extends State<AiProfilePage> {
           },
           labelStyle: TextStyle(
             fontSize: 12.5,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
             color: isSelected ? Colors.white : AppColors.charcoal,
           ),
-          backgroundColor: const Color(0xFFF4F4F6),
+          backgroundColor: const Color(0xFFF4F5F7),
           selectedColor: AppColors.orange,
-          checkmarkColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isSelected ? AppColors.orange : AppColors.line,
-            ),
+            side: BorderSide.none,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         );
@@ -921,13 +899,13 @@ class _AiProfilePageState extends State<AiProfilePage> {
   Widget _saveButton() {
     return SizedBox(
       width: double.infinity,
-      height: 52,
+      height: 50,
       child: ElevatedButton(
         onPressed: _saving ? null : _save,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.orange,
           foregroundColor: Colors.white,
-          elevation: 2,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -941,20 +919,13 @@ class _AiProfilePageState extends State<AiProfilePage> {
                   color: Colors.white,
                 ),
               )
-            : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_rounded, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Terapkan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
+            : const Text(
+                'Terapkan',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
               ),
       ),
     );

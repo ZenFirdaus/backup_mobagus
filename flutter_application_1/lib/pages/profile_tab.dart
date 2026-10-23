@@ -25,6 +25,7 @@ import 'favorites_page.dart';
 import 'game_page.dart';
 import 'intro.dart';
 import 'saran_kesan_page.dart';
+import '../widgets/modern_time_picker.dart';
 
 class ProfileTab extends StatefulWidget {
   final String name;
@@ -356,10 +357,10 @@ class _ProfileTabState extends State<ProfileTab>
 
     if (!mounted) return;
 
-    final pickedTime = await showTimePicker(
-      context: context,
+    final pickedTime = await showModernTimePicker(
+      context,
       initialTime: TimeOfDay(hour: _mealHour, minute: _mealMinute),
-      helpText: 'PILIH JAM PENGINGAT MAKAN',
+      title: 'Pilih Jam Pengingat Makan',
     );
 
     if (pickedTime == null) return;
@@ -1848,15 +1849,7 @@ class _ProfileTabState extends State<ProfileTab>
   }
 
   Widget _iconBox(IconData icon) {
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F3EE),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, size: 18, color: AppColors.greenDark),
-    );
+    return Icon(icon, size: 21, color: AppColors.greenDark);
   }
 
   Widget _tile(IconData icon, String title,
@@ -1923,29 +1916,16 @@ class _ProfileTabState extends State<ProfileTab>
         height: 48,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.red,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x05000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.logout_rounded, size: 18, color: AppColors.red),
-            SizedBox(width: 8),
-            Text(
-              'Keluar Akun',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.red),
-            ),
-          ],
+        child: const Text(
+          'Keluar Akun',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
         ),
       ),
     );

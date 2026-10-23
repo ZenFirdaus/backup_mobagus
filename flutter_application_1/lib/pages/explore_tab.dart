@@ -53,7 +53,6 @@ class _ExploreTabState extends State<ExploreTab> {
   String? _category;
   String? _selectedCity; // Filter kota/wilayah: null = Semua
   bool _budgetOn = false;
-  bool _mapView = false;
   bool _loading = true;
   _Sort _sort = _Sort.terdekat; // default: terdekat dari lokasi user
 
@@ -227,8 +226,6 @@ class _ExploreTabState extends State<ExploreTab> {
                     child: CircularProgressIndicator(color: AppColors.orange),
                   ),
                 )
-              else if (_mapView)
-                _mapPlaceholder()
               else if (_items.isEmpty)
                 _emptyState()
               else
@@ -470,51 +467,7 @@ class _ExploreTabState extends State<ExploreTab> {
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        Container(
-          height: 48,
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              _toggleBtn(
-                Icons.view_agenda_rounded,
-                !_mapView,
-                () => setState(() => _mapView = false),
-              ),
-              _toggleBtn(
-                Icons.map_rounded,
-                _mapView,
-                () => setState(() => _mapView = true),
-              ),
-            ],
-          ),
-        ),
       ],
-    );
-  }
-
-  Widget _toggleBtn(IconData icon, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        width: 34,
-        decoration: BoxDecoration(
-          color: active
-              ? AppColors.tint(AppColors.orange, 0.25)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          size: 19,
-          color: active ? AppColors.red : AppColors.greenDark,
-        ),
-      ),
     );
   }
 
@@ -1067,25 +1020,6 @@ class _ExploreTabState extends State<ExploreTab> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _mapPlaceholder() {
-    return Container(
-      height: 320,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.tint(AppColors.greenDark, 0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.map_rounded, size: 40, color: AppColors.greenDark),
-          const SizedBox(height: 8),
-          Text('Tampilan peta segera hadir', style: AppText.display(15)),
-        ],
-      ),
     );
   }
 

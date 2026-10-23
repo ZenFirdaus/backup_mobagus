@@ -186,7 +186,7 @@ class SoftButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.surfaceSubtle,
           foregroundColor: AppColors.textDark,
-          side: const BorderSide(color: AppColors.line, width: 1),
+          side: BorderSide.none,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

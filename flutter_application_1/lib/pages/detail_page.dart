@@ -14,6 +14,7 @@ import '../services/hive_service.dart';
 import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/buttons.dart';
+import '../widgets/modern_time_picker.dart';
 
 class DetailPage extends StatefulWidget {
   final Restaurant restaurant;
@@ -504,9 +505,10 @@ class _DetailPageState extends State<DetailPage> {
                     Expanded(
                       child: InkWell(
                         onTap: () async {
-                          final picked = await showTimePicker(
-                            context: ctx,
+                          final picked = await showModernTimePicker(
+                            ctx,
                             initialTime: selectedTime,
+                            title: 'Pilih Jam Kunjungan',
                           );
                           if (picked != null) {
                             setModalState(() => selectedTime = picked);
