@@ -11,11 +11,14 @@ class FoodieLogo {
   /// Icon mark saja, warna putih/krem — untuk background gelap/oranye
   static const String markWhite = 'assets/logo/logo putih.png';
 
-  /// Wordmark "foodie" + sendok, warna oranye — untuk background terang
-  static const String textOrange = 'assets/logo/logo teks orange.png';
+  /// Wordmark "foodie" + sendok, warna oranye (NEW) — untuk background terang
+  static const String textOrange = 'assets/logo/logo teks orange new.png';
 
-  /// Wordmark "foodie" + sendok, warna putih/krem — untuk background gelap/oranye
-  static const String textWhite = 'assets/logo/logo teks putih.png';
+  /// Wordmark "foodie" + sendok, warna putih/krem (NEW) — untuk background gelap/oranye
+  static const String textWhite = 'assets/logo/logo teks putih new.png';
+
+  /// Master App Icon (logo putih dengan background orange)
+  static const String appIcon = 'assets/logo/app_icon.png';
 }
 
 /// Widget logo FOODIE yang dapat digunakan ulang di seluruh aplikasi.

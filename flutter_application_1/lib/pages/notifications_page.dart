@@ -152,16 +152,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
       id: 7777,
       title: 'Halo dari FOODIE!',
       body:
-          'Sistem notifikasi pengingat kuliner berhasil diuji coba dengan lancar.',
+          'Sistem notifikasi pengingat kuliner berhasil aktif dan siap memberi jadwal santap tepat waktu.',
+      force: true,
     );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Notifikasi telah dikirim ke bilah status HP Anda.'),
-          backgroundColor: AppColors.greenDark,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
+      NotificationService.showInAppBanner(
+        context,
+        title: 'Halo dari FOODIE!',
+        body: 'Notifikasi sistem berhasil dikirim ke bilah status HP Anda.',
+        icon: Icons.notifications_active_rounded,
       );
     }
   }
@@ -268,52 +267,46 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  /// Banner Uji Coba untuk Demonstrasi
+  /// Card Pengujian Sistem Notifikasi
   Widget _demoTestCard() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.greenDark, 0.12),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.orange.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.notifications_active_rounded,
-              color: AppColors.greenDark,
+              color: AppColors.orange,
               size: 20,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Uji Coba Notifikasi',
+                  'Uji Coba Sistem Notifikasi',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textDark,
                   ),
                 ),
+                SizedBox(height: 1),
                 Text(
                   'Kirim tes notifikasi ke bilah status HP',
-                  style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -322,7 +315,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.greenDark,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -331,7 +324,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             onPressed: _testInstantNotification,
             child: const Text(
               'Tes Sekarang',
-              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -350,26 +343,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () => setState(() => _selectedFilter = i),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
-                  color: active ? AppColors.greenDark : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x05000000),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                  color: active ? AppColors.greenDark : const Color(0xFFF4F5F7),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   filters[i],
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: active ? Colors.white : AppColors.textMuted,
+                    fontSize: 11.5,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                    color: active ? Colors.white : AppColors.charcoal,
                   ),
                 ),
               ),
@@ -472,14 +459,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: item.type == _NotifType.visitReminder
-                        ? AppColors.tint(AppColors.red, 0.1)
-                        : AppColors.tint(AppColors.yellow, 0.5),
+                        ? const Color(0xFFFDE8E7)
+                        : const Color(0xFFF4F5F7),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: item.type == _NotifType.visitReminder
-                          ? AppColors.tint(AppColors.red, 0.3)
-                          : AppColors.tint(AppColors.orange, 0.3),
-                    ),
                   ),
                   child: Text(
                     item.actionLabel!,

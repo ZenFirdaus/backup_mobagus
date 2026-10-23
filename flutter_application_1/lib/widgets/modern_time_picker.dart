@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
-import 'package:flutter_application_1/theme/app_colors.dart';
+import '../props/app_colors.dart';
 
 /// Menampilkan pemilih waktu modern tanpa dial jam lingkaran (anti AI-slop).
 /// Menggunakan Cupertino time wheel dengan preset cepat & preview digital.

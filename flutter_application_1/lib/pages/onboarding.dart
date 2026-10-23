@@ -19,11 +19,26 @@ class OnboardingPage extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(flex: 3),
-              // Logo teks oranye FOODIE di tengah
               Center(
-                child: FoodieLogoWidget(
-                  variant: FoodieLogoVariant.textOrange,
-                  width: 220,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const FoodieLogoWidget(
+                      variant: FoodieLogoVariant.textOrange,
+                      width: 280,
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Temukan Rasa, Jelajahi Cerita',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slateBlue,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(flex: 4),
@@ -36,7 +51,7 @@ class OnboardingPage extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const RegisterPage()),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.paprika,
+                    backgroundColor: const Color(0xFFFF751F),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(

@@ -15,6 +15,7 @@ import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/buttons.dart';
 import '../widgets/modern_time_picker.dart';
+import '../widgets/modern_date_picker.dart';
 
 class DetailPage extends StatefulWidget {
   final Restaurant restaurant;
@@ -456,12 +457,13 @@ class _DetailPageState extends State<DetailPage> {
                     Expanded(
                       child: InkWell(
                         onTap: () async {
-                          final picked = await showDatePicker(
-                            context: ctx,
+                          final picked = await showModernDatePicker(
+                            ctx,
                             initialDate: selectedDate,
                             firstDate: DateTime.now(),
                             lastDate:
                                 DateTime.now().add(const Duration(days: 90)),
+                            title: 'Pilih Tanggal Rencana',
                           );
                           if (picked != null) {
                             setModalState(() => selectedDate = picked);
@@ -646,7 +648,15 @@ class _DetailPageState extends State<DetailPage> {
                             selectedTime.minute,
                           );
 
-                          if (scheduledAt.isBefore(DateTime.now())) {
+                          final now = DateTime.now();
+                          final isCurrentOrFuture = scheduledAt.isAfter(now) ||
+                              (scheduledAt.year == now.year &&
+                                  scheduledAt.month == now.month &&
+                                  scheduledAt.day == now.day &&
+                                  scheduledAt.hour == now.hour &&
+                                  scheduledAt.minute == now.minute);
+
+                          if (!isCurrentOrFuture && scheduledAt.isBefore(now)) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
                               const SnackBar(
                                 content:
@@ -681,15 +691,11 @@ class _DetailPageState extends State<DetailPage> {
                           if (ctx.mounted) Navigator.pop(ctx);
 
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Pengingat berhasil diatur: ${_r.name} pada $dateStr $timeStr! 🔔',
-                                ),
-                                backgroundColor: AppColors.greenDark,
-                                behavior: SnackBarBehavior.floating,
-                                duration: const Duration(seconds: 3),
-                              ),
+                            NotificationService.showInAppBanner(
+                              context,
+                              title: 'Pengingat Kunjungan Dijadwalkan',
+                              body: '${_r.name} • $dateStr pukul $timeStr WIB',
+                              icon: Icons.notifications_active_rounded,
                             );
                           }
                         },

@@ -293,16 +293,14 @@ class _ProfileTabState extends State<ProfileTab>
 
   Future<void> _showMealReminderPicker() async {
     if (!_notif) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Aktifkan notifikasi terlebih dahulu untuk mengatur jadwal makan',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
+      setState(() => _notif = true);
+      await HiveService.instance.setNotificationsEnabled(true);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('foodie_notifications_enabled', true);
+      await NotificationService.instance.requestPermissions();
     }
+
+    if (!mounted) return;
 
     if (_mealIsSet) {
       final action = await showDialog<String>(
@@ -377,38 +375,37 @@ class _ProfileTabState extends State<ProfileTab>
     }
 
     setState(() {
+      _notif = true;
       _mealIsSet = true;
       _mealHour = pickedTime.hour;
       _mealMinute = pickedTime.minute;
       _mealLabel = newLabel;
     });
 
+    await HiveService.instance.setNotificationsEnabled(true);
     await HiveService.instance.saveMealReminderPreference(
-      enabled: _notif,
+      enabled: true,
       isSet: true,
       hour: pickedTime.hour,
       minute: pickedTime.minute,
       label: newLabel,
     );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('foodie_notifications_enabled', true);
 
-    if (_notif) {
-      await NotificationService.instance.scheduleDailyMealReminder(
-        hour: pickedTime.hour,
-        minute: pickedTime.minute,
-        label: newLabel,
-      );
-    }
+    await NotificationService.instance.requestPermissions();
+    await NotificationService.instance.scheduleDailyMealReminder(
+      hour: pickedTime.hour,
+      minute: pickedTime.minute,
+      label: newLabel,
+    );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Pengingat berhasil diatur: $newLabel pukul ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')} WIB ⏰',
-          ),
-          backgroundColor: AppColors.greenDark,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
+      NotificationService.showInAppBanner(
+        context,
+        title: 'Pengingat Makan Diatur',
+        body: '$newLabel • Pukul ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')} WIB',
+        icon: Icons.schedule_rounded,
       );
     }
   }

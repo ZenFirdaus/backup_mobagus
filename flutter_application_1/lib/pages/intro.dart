@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../props/app_colors.dart';
 import '../widgets/foodie_logo.dart';
 import 'onboarding.dart';
 
@@ -52,7 +51,7 @@ class _IntroPageState extends State<IntroPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.paprika,
+      backgroundColor: const Color(0xFFFF751F),
       body: FadeTransition(
         opacity: _fade,
         child: Center(
@@ -60,10 +59,10 @@ class _IntroPageState extends State<IntroPage>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(flex: 3),
-              // Logo teks putih dari assets
-              FoodieLogoWidget(
+              // Logo teks putih baru dari assets
+              const FoodieLogoWidget(
                 variant: FoodieLogoVariant.textWhite,
-                width: 350,
+                width: 280,
               ),
               const Spacer(flex: 3),
               // Loading indicator tipis di bawah
