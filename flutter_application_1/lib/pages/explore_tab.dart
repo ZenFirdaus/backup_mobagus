@@ -39,7 +39,15 @@ class ExploreTab extends StatefulWidget {
   /// Koordinat user untuk sort terdekat (dikirim dari HomePage).
   final double? userLat;
   final double? userLng;
-  const ExploreTab({super.key, this.name = '', this.initialCategory, this.userLat, this.userLng});
+  final VoidCallback? onBackToHome;
+  const ExploreTab({
+    super.key,
+    this.name = '',
+    this.initialCategory,
+    this.userLat,
+    this.userLng,
+    this.onBackToHome,
+  });
 
   @override
   State<ExploreTab> createState() => _ExploreTabState();
@@ -269,21 +277,39 @@ class _ExploreTabState extends State<ExploreTab> {
 
   // ---------- Header ----------
   Widget _header() {
-    final initial = widget.name.isNotEmpty ? widget.name[0].toUpperCase() : 'F';
     return Row(
       children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: AppColors.greenDark,
-          child: Text(
-            initial,
-            style: const TextStyle(
-              color: AppColors.yellow,
-              fontWeight: FontWeight.w800,
+        GestureDetector(
+          onTap: () {
+            if (widget.onBackToHome != null) {
+              widget.onBackToHome!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.line, width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 18,
+              color: AppColors.charcoal,
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

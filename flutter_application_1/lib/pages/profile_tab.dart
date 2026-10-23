@@ -1711,10 +1711,8 @@ class _ProfileTabState extends State<ProfileTab>
     return Row(
       children: [
         _stat('${_stats['favorites']}', 'Favorit'),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         _stat('${_stats['reviews']}', 'Ulasan'),
-        const SizedBox(width: 10),
-        _stat('${_stats['checkins']}', 'Check-in'),
       ],
     );
   }
@@ -1754,7 +1752,7 @@ class _ProfileTabState extends State<ProfileTab>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Tebak Kuliner Jogja',
+                    'Game Tebak Kuliner',
                     style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,

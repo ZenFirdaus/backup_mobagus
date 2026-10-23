@@ -132,6 +132,7 @@ class _HomePageState extends State<HomePage> {
               initialCategory: _exploreCategory,
               userLat: _userLat,
               userLng: _userLng,
+              onBackToHome: () => _select(0),
             ),
             const SizedBox.shrink(),   // slot "Decide" (dibuka sebagai sheet)
             const AiTab(),

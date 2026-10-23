@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../widgets/auth_widgets.dart';
-import '../widgets/buttons.dart';
 
 class ConverterPage extends StatefulWidget {
   const ConverterPage({super.key});
@@ -24,14 +21,12 @@ class _ConverterPageState extends State<ConverterPage>
   Timer? _clock;
   DateTime _now = DateTime.now().toUtc();
 
-  static const double _usdRate = 15923;
-  static const double _myrRate = 3614;
-
-  static const List<_Benchmark> _benchmarks = [
-    _Benchmark('Gudeg', 45000),
-    _Benchmark('Soto', 12000),
-    _Benchmark('Kopi Joss', 8000),
-  ];
+  // Kurs Mata Uang Terkini (IDR)
+  static const double _usdRate = 18107; // 1 USD = Rp 18.107
+  static const double _myrRate = 4432;  // 1 MYR = Rp 4.432
+  static const double _sgdRate = 14162; // 1 SGD = Rp 14.162
+  static const double _jpyRate = 115;   // 1 JPY = Rp 115
+  static const double _cnyRate = 2711;  // 1 CNY = Rp 2.711
 
   static const List<_MealPreset> _meals = [
     _MealPreset('Sarapan', 6, 0),
@@ -156,6 +151,10 @@ class _ConverterPageState extends State<ConverterPage>
   Widget _currencyTab() {
     final usd = _idr / _usdRate;
     final myr = _idr / _myrRate;
+    final sgd = _idr / _sgdRate;
+    final jpy = _idr / _jpyRate;
+    final cny = _idr / _cnyRate;
+
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
@@ -229,27 +228,39 @@ class _ConverterPageState extends State<ConverterPage>
         ),
         const SizedBox(height: 16),
         _conversionResult(
-          'USD',
-          Icons.attach_money,
+          'USD - Dollar Amerika Serikat',
+          Icons.attach_money_rounded,
           _formatCurrency(usd, '\$'),
           '1 USD = ${_formatRp(_usdRate)}',
         ),
         const SizedBox(height: 10),
         _conversionResult(
-          'MYR',
-          Icons.currency_exchange,
+          'MYR - Ringgit Malaysia',
+          Icons.currency_exchange_rounded,
           _formatCurrency(myr, 'RM'),
           '1 MYR = ${_formatRp(_myrRate)}',
         ),
-        const SizedBox(height: 24),
-        Text('Patokan Kuliner', style: AppText.display(16)),
-        const SizedBox(height: 4),
-        const Text(
-          'Berapa harga makanan khas dalam mata uang asing?',
-          style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+        const SizedBox(height: 10),
+        _conversionResult(
+          'SGD - Dollar Singapura',
+          Icons.monetization_on_outlined,
+          _formatCurrency(sgd, 'S\$'),
+          '1 SGD = ${_formatRp(_sgdRate)}',
         ),
-        const SizedBox(height: 12),
-        ..._benchmarks.map(_benchmarkCard),
+        const SizedBox(height: 10),
+        _conversionResult(
+          'JPY - Yen Jepang',
+          Icons.currency_yen_rounded,
+          _formatCurrency(jpy, '¥'),
+          '1 JPY = ${_formatRp(_jpyRate)}',
+        ),
+        const SizedBox(height: 10),
+        _conversionResult(
+          'CNY - Yuan China',
+          Icons.currency_yuan_rounded,
+          _formatCurrency(cny, 'CN¥'),
+          '1 CNY = ${_formatRp(_cnyRate)}',
+        ),
       ],
     );
   }
@@ -318,86 +329,6 @@ class _ConverterPageState extends State<ConverterPage>
     );
   }
 
-  Widget _benchmarkCard(_Benchmark b) {
-    final usd = b.priceIdr / _usdRate;
-    final myr = b.priceIdr / _myrRate;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.orange, 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.restaurant, size: 20,
-                color: AppColors.orange),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  b.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '~${_formatRp(b.priceIdr)}',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.greenDark,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _formatCurrency(usd, '\$'),
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _formatCurrency(myr, 'RM'),
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _timezoneTab() {
     return ListView(
@@ -419,25 +350,6 @@ class _ConverterPageState extends State<ConverterPage>
         ),
         const SizedBox(height: 12),
         ..._meals.map(_mealScheduleCard),
-        const SizedBox(height: 16),
-        PrimaryButton(
-          label: 'Simpan Preferensi Zona Wisatawan',
-          icon: Icons.bookmark_added_rounded,
-          onPressed: () async {
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('foodie_tz_pref', 'WIB_GMT');
-            } catch (_) {}
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Preferensi zona waktu wisatawan berhasil disimpan.'),
-                backgroundColor: AppColors.charcoal,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        ),
       ],
     );
   }
@@ -623,11 +535,6 @@ class _ConverterPageState extends State<ConverterPage>
   }
 }
 
-class _Benchmark {
-  final String name;
-  final double priceIdr;
-  const _Benchmark(this.name, this.priceIdr);
-}
 
 class _MealPreset {
   final String name;
