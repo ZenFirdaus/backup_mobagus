@@ -34,7 +34,7 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  static const int _codeLength = 6;
+  static const int _codeLength = 8;
   static const int _resendSeconds = 60;
 
   // Form Controllers
@@ -225,16 +225,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         ),
       );
     } on AuthException catch (e) {
+      debugPrint('AUTH EXCEPTION RAW: ${e.message} | code: ${e.statusCode}');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = _parseAuthError(e.message);
+        _errorMessage = 'Error Server: "${e.message}" (Kode: ${e.statusCode})';
       });
     } catch (e) {
+      debugPrint('GENERAL EXCEPTION RAW: $e');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = _parseAuthError(e.toString());
+        _errorMessage = 'Error: $e';
       });
     }
   }
@@ -286,10 +288,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Future<void> _verifyOtpCode() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
-    final token = _otpController.text.trim();
-    if (token.length != _codeLength) {
+    final token = _otpController.text.trim().replaceAll(' ', '');
+    if (token.length != _codeLength && token.length != 6) {
       setState(() {
-        _errorMessage = 'Harap masukkan 6-digit kode verifikasi dari email.';
+        _errorMessage = 'Harap masukkan 8-digit kode verifikasi dari email.';
       });
       return;
     }
@@ -302,6 +304,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     try {
       bool verified = false;
+      String? lastError;
 
       // 1. Coba verifikasi dengan OtpType.recovery
       try {
@@ -313,7 +316,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         if (res.user != null || res.session != null) {
           verified = true;
         }
-      } catch (_) {}
+      } catch (e) {
+        lastError = e is AuthException ? e.message : e.toString();
+        debugPrint('VERIFY OTP RECOVERY ERROR: $e');
+      }
 
       // 2. Coba verifikasi dengan OtpType.email jika template project menggunakan email OTP
       if (!verified) {
@@ -326,15 +332,35 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           if (res.user != null || res.session != null) {
             verified = true;
           }
-        } catch (_) {}
+        } catch (e) {
+          lastError = e is AuthException ? e.message : e.toString();
+          debugPrint('VERIFY OTP EMAIL ERROR: $e');
+        }
+      }
+
+      // 3. Coba verifikasi dengan OtpType.magiclink
+      if (!verified) {
+        try {
+          final res = await Supabase.instance.client.auth.verifyOTP(
+            email: email,
+            token: token,
+            type: OtpType.magiclink,
+          );
+          if (res.user != null || res.session != null) {
+            verified = true;
+          }
+        } catch (e) {
+          debugPrint('VERIFY OTP MAGICLINK ERROR: $e');
+        }
       }
 
       if (!verified) {
         if (!mounted) return;
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              'Kode verifikasi salah atau telah kedaluwarsa. Periksa kembali email Anda.';
+          _errorMessage = lastError != null
+              ? 'Gagal Verifikasi: $lastError (Pastikan memakai kode dari email terbaru yang baru masuk).'
+              : 'Kode verifikasi salah atau telah kedaluwarsa. Periksa kembali email Anda.';
         });
         return;
       }
@@ -591,7 +617,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           const SizedBox(height: 8),
 
           const Text(
-            'Masukkan email yang terdaftar pada akun Anda. Kami akan mengirimkan 6 digit kode verifikasi untuk mengatur ulang kata sandi.',
+            'Masukkan email yang terdaftar pada akun Anda. Kami akan mengirimkan kode verifikasi untuk mengatur ulang kata sandi.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -687,7 +713,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
             children: [
               const TextSpan(
-                text: 'Kode verifikasi 6 digit telah dikirimkan ke email ',
+                text: 'Kode verifikasi telah dikirimkan ke email ',
               ),
               TextSpan(
                 text: _emailController.text.trim(),
@@ -708,7 +734,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            'KODE VERIFIKASI (6 DIGIT)',
+            'KODE VERIFIKASI',
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
@@ -992,8 +1018,8 @@ class _OtpDigitBox extends StatelessWidget {
     final filled = char.isNotEmpty;
 
     return Container(
-      width: 44,
-      height: 50,
+      width: 36,
+      height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white,

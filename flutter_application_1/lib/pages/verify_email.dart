@@ -26,12 +26,13 @@ class VerifyEmailPage extends StatefulWidget {
 }
 
 class _VerifyEmailPageState extends State<VerifyEmailPage> {
-  static const int _codeLength = 6;
+  static const int _codeLength = 8;
   static const int _resendSeconds = 60;
 
   final _code = TextEditingController();
   final _focus = FocusNode();
   Timer? _timer;
+  StreamSubscription<AuthState>? _authSubscription;
   int _seconds = _resendSeconds;
   bool _loading = false;
 
@@ -39,10 +40,22 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   void initState() {
     super.initState();
     _startTimer();
+    _listenToAuthChange();
+  }
+
+  void _listenToAuthChange() {
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.session != null || data.event == AuthChangeEvent.signedIn) {
+        if (!mounted) return;
+        _goNext();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _timer?.cancel();
     _code.dispose();
     _focus.dispose();
@@ -104,8 +117,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
 
   Future<void> _verify() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final token = _code.text.trim();
-    if (token.length != _codeLength) return;
+    final token = _code.text.trim().replaceAll(' ', '');
+    if (token.length != _codeLength && token.length != 6) return;
     setState(() => _loading = true);
 
     bool verified = false;
@@ -220,7 +233,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 Text('Verifikasi Email', style: AppText.display(24)),
                 const SizedBox(height: 8),
                 const Text(
-                  'Masukkan 6 digit kode keamanan yang dikirim ke:',
+                  'Masukkan kode keamanan yang dikirim ke:',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -347,8 +360,8 @@ class _OtpBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final filled = char.isNotEmpty;
     return Container(
-      width: 44,
-      height: 50,
+      width: 36,
+      height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white,
