@@ -429,7 +429,24 @@ class SupabaseService {
         query = query.lte('price_min', maxPrice);
       }
       if (category != null && category.isNotEmpty) {
-        query = query.ilike('category', '%$category%');
+        final lower = category.trim().toLowerCase();
+        if (lower == 'fast food' || lower == 'fast_food') {
+          query = query.or('category.ilike.%fast_food%,category.ilike.%fast food%,category.ilike.%cepat saji%');
+        } else if (lower == 'food court' || lower == 'food_court') {
+          query = query.or('category.ilike.%food_court%,category.ilike.%food court%,category.ilike.%court%,category.ilike.%sentra%');
+        } else if (lower == 'cafe' || lower == 'kafe') {
+          query = query.or('category.ilike.%cafe%,category.ilike.%kafe%,category.ilike.%coffee%');
+        } else if (lower == 'restoran' || lower == 'restaurant') {
+          query = query.or('category.ilike.%resto%,category.ilike.%restaurant%,category.ilike.%rumah makan%,category.ilike.%gudeg%');
+        } else if (lower == 'warung tradisional' || lower == 'warung') {
+          query = query.or('category.ilike.%warung%,category.ilike.%tradisional%,category.ilike.%soto%,category.ilike.%mie%,category.ilike.%bakmi%,category.ilike.%sate%');
+        } else if (lower == 'angkringan') {
+          query = query.or('category.ilike.%angkringan%');
+        } else {
+          final catClean = category.replaceAll('_', ' ');
+          final catUnderscore = category.replaceAll(' ', '_');
+          query = query.or('category.ilike.%$catClean%,category.ilike.%$catUnderscore%');
+        }
       }
 
       PostgrestTransformBuilder<PostgrestList> ordered;
@@ -459,10 +476,52 @@ class SupabaseService {
       filtered = filtered.where((r) => r.priceMin <= maxPrice).toList();
     }
     if (category != null && category.isNotEmpty) {
-      filtered = filtered
-          .where((r) =>
-              r.category.toLowerCase().contains(category.toLowerCase()))
-          .toList();
+      final catNorm = category.toLowerCase().replaceAll('_', ' ').trim();
+      filtered = filtered.where((r) {
+        final rCat = r.category.toLowerCase().replaceAll('_', ' ').trim();
+        final rName = r.name.toLowerCase();
+        final rDesc = (r.description ?? '').toLowerCase();
+
+        if (catNorm == 'fast food' || catNorm == 'cepat saji') {
+          return rCat.contains('fast') ||
+              rCat.contains('cepat') ||
+              rName.contains('burger') ||
+              rName.contains('chicken') ||
+              rName.contains('pizza') ||
+              rDesc.contains('cepat saji') ||
+              rDesc.contains('fast food');
+        }
+        if (catNorm == 'food court') {
+          return rCat.contains('court') ||
+              rCat.contains('sentra') ||
+              rName.contains('food court') ||
+              rDesc.contains('food court');
+        }
+        if (catNorm == 'cafe' || catNorm == 'kafe') {
+          return rCat.contains('cafe') ||
+              rCat.contains('kafe') ||
+              rCat.contains('coffee') ||
+              rCat.contains('kopi');
+        }
+        if (catNorm == 'restoran' || catNorm == 'restaurant') {
+          return rCat.contains('resto') ||
+              rCat.contains('restaurant') ||
+              rCat.contains('rumah makan') ||
+              rCat.contains('gudeg');
+        }
+        if (catNorm == 'warung tradisional' || catNorm == 'warung') {
+          return rCat.contains('warung') ||
+              rCat.contains('tradisional') ||
+              rCat.contains('soto') ||
+              rCat.contains('bakmi') ||
+              rCat.contains('mie') ||
+              rCat.contains('sate');
+        }
+        if (catNorm == 'angkringan') {
+          return rCat.contains('angkringan');
+        }
+        return rCat.contains(catNorm) || catNorm.contains(rCat);
+      }).toList();
     }
     if (sortBy == 'termurah') {
       filtered.sort((a, b) => a.priceMin.compareTo(b.priceMin));
@@ -480,36 +539,8 @@ class SupabaseService {
   }
 
   Future<List<String>> getCategories() async {
-    try {
-      // 1. Coba ambil dari tabel categories
-      final res = await _client.from('categories').select();
-      if (res.isNotEmpty) {
-        final list = res.map((m) {
-          return (m['name'] ?? m['slug'] ?? m['category'] ?? '').toString();
-        }).where((s) => s.isNotEmpty).toList();
-        if (list.isNotEmpty) return list;
-      }
-    } catch (_) {}
-
-    try {
-      // 2. Ambil kategori unik langsung dari data restaurants yang ada di Supabase
-      final res = await _client.from('restaurants').select('category');
-      if (res.isNotEmpty) {
-        final set = <String>{};
-        for (final row in res) {
-          final cat = (row['category'] as String?)?.trim();
-          if (cat != null && cat.isNotEmpty) {
-            set.add(cat);
-          }
-        }
-        if (set.isNotEmpty) {
-          final sorted = set.toList()..sort();
-          return sorted;
-        }
-      }
-    } catch (_) {}
-
-    return kDefaultCategories;
+    // Hanya kategori bentuk tempat (Restoran, Cafe, Fast Food, Food Court, Warung Tradisional, Angkringan)
+    return List<String>.from(kDefaultCategories);
   }
 
   // ─── FOODS ───

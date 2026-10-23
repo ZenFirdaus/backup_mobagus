@@ -60,16 +60,14 @@ class _AiProfilePageState extends State<AiProfilePage> {
     'Apartemen',
   ];
 
-  // Pilihan kategori tempat makan sesuai yang ada di tab Explore
+  // Pilihan kategori tempat makan sesuai yang ada di tab Explore (bentuk tempat)
   static const _placeTypeOptions = [
-    'Rumah Makan / Restoran',
+    'Restoran',
     'Cafe',
     'Fast Food',
     'Food Court',
-    'Warung Tradisional / Angkringan',
-    'Gudeg',
-    'Soto',
-    'Bakmi Jawa',
+    'Warung Tradisional',
+    'Angkringan',
   ];
 
   static const _tasteOptions = [

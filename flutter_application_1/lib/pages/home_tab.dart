@@ -200,42 +200,36 @@ class _HomeTabState extends State<HomeTab> {
   IconData _iconFor(String c) {
     // Normalisasi: lowercase + ganti underscore/tanda hubung → spasi
     final s = c.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
-    // fast_food / fast food / cepat saji
     if (s.contains('fast food') || s.contains('fastfood') || s.contains('fast') || s.contains('cepat')) {
       return Icons.fastfood_rounded;
     }
-    // food_court / food court / sentra kuliner
     if (s.contains('food court') || s.contains('foodcourt') || s.contains('court') || s.contains('sentra')) {
       return Icons.storefront_rounded;
     }
-    // cafe / kafe / coffee / kopi / minuman
-    if (s.contains('cafe') || s.contains('kafe') || s.contains('coffee') ||
-        s.contains('kopi') || s.contains('minuman')) {
+    if (s.contains('cafe') || s.contains('kafe') || s.contains('coffee') || s.contains('kopi')) {
       return Icons.local_cafe_rounded;
     }
-    // restoran / restaurant / warung / rumah makan
-    if (s.contains('resto') || s.contains('restaurant') || s.contains('warung') ||
-        s.contains('rumah makan')) {
+    if (s.contains('angkringan')) {
+      return Icons.outdoor_grill_rounded;
+    }
+    if (s.contains('warung')) {
+      return Icons.store_mall_directory_rounded;
+    }
+    if (s.contains('resto') || s.contains('restaurant') || s.contains('rumah makan')) {
       return Icons.restaurant_rounded;
     }
-    // bakery / roti / bakpia
-    if (s.contains('bakery') || s.contains('roti') || s.contains('bakpia')) {
-      return Icons.bakery_dining_rounded;
-    }
-    // dessert / jajan / es / jus
-    if (s.contains('jajan') || s.contains('dessert') || s.contains('jus') || s.contains(' es ')) {
-      return Icons.icecream_rounded;
-    }
-    return Icons.ramen_dining_rounded;
+    return Icons.restaurant_menu_rounded;
   }
 
   /// Format label kategori agar rapi (misal fast_food -> Fast Food)
   String _formatCategoryLabel(String c) {
     final lower = c.trim().toLowerCase();
-    if (lower == 'fast_food') return 'Fast Food';
-    if (lower == 'food_court') return 'Food Court';
-    if (lower == 'cafe') return 'Cafe';
-    if (lower == 'restoran') return 'Restoran';
+    if (lower == 'fast_food' || lower == 'fast food') return 'Fast Food';
+    if (lower == 'food_court' || lower == 'food court') return 'Food Court';
+    if (lower == 'cafe' || lower == 'kafe') return 'Cafe';
+    if (lower == 'restoran' || lower == 'restaurant') return 'Restoran';
+    if (lower == 'warung_tradisional' || lower == 'warung tradisional' || lower == 'warung') return 'Warung Tradisional';
+    if (lower == 'angkringan') return 'Angkringan';
     return c.replaceAll('_', ' ').split(' ').map((w) {
       if (w.isEmpty) return '';
       return w[0].toUpperCase() + w.substring(1);

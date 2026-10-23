@@ -6,7 +6,7 @@ final kDefaultRestaurants = <Restaurant>[
   Restaurant(
     id: 'resto_1',
     name: 'Gudeg Yu Djum Wijilan',
-    category: 'Gudeg',
+    category: 'Restoran',
     address: 'Jl. Wijilan No. 167, Panembahan, Kraton, Yogyakarta',
     province: 'DIY',
     lat: -7.8004,
@@ -22,14 +22,14 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.9,
     reviewCount: 1284,
     description:
-        'Warung gudeg legendaris yang telah berdiri sejak 1950-an dengan resep turun-temurun. '
+        'Restoran gudeg legendaris yang telah berdiri sejak 1950-an dengan resep turun-temurun. '
         'Krecek pedasnya yang khas dan areh santannya yang kental menjadi daya tarik utama '
         'wisatawan kuliner Keraton. Berlokasi di kampung Wijilan yang terkenal sebagai sentra gudeg Jogja.',
   ),
   Restaurant(
     id: 'resto_2',
     name: 'Mangut Lele Asap Mbah Marto',
-    category: 'Kuliner Tradisional',
+    category: 'Warung Tradisional',
     address: 'Dusun Tiwir, Sewon, Bantul, DIY',
     province: 'DIY',
     lat: -7.8383,
@@ -45,14 +45,14 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.8,
     reviewCount: 876,
     description:
-        'Lele asap kayu klampok khas Bantul disiram kuah santan cabai rawit yang pedas gurih. '
+        'Warung lele asap kayu klampok khas Bantul disiram kuah santan cabai rawit yang pedas gurih. '
         'Dimasak di dapur pawon tradisional dengan kayu bakar pilihan setiap harinya. '
         'Mbah Marto telah mewariskan resep rahasia ini kepada generasi ketiga keluarganya.',
   ),
   Restaurant(
     id: 'resto_3',
     name: 'Soto Bathok Mbah Katro',
-    category: 'Soto',
+    category: 'Warung Tradisional',
     address: 'Jl. Candi Sambisari, Kalasan, Sleman, DIY',
     province: 'DIY',
     lat: -7.7555,
@@ -68,14 +68,13 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.7,
     reviewCount: 542,
     description:
-        'Soto kuah bening segar disajikan dalam batok kelapa asli yang unik dan estetik. '
-        'Irisan daging sapi empuk dengan tempe garit renyah menjadi sajian sarapan favorit warga Kalasan. '
-        'Viral di media sosial karena cara penyajiannya yang orisinal dan instagramable.',
+        'Warung saung tradisional di tepi sawah Sambisari yang menyajikan soto kuah bening segar dalam batok kelapa asli. '
+        'Irisan daging sapi empuk dengan tempe garit renyah menjadi sajian sarapan favorit warga Kalasan.',
   ),
   Restaurant(
     id: 'resto_4',
     name: 'Bakmi Jawa Mbah Gito',
-    category: 'Bakmi Jawa',
+    category: 'Restoran',
     address: 'Jl. Kemasan, Kotagede, Yogyakarta',
     province: 'DIY',
     lat: -7.8168,
@@ -91,9 +90,8 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.8,
     reviewCount: 934,
     description:
-        'Bakmi Jawa arang kayu paling legendaris di Kotagede. '
-        'Kuah kaldu ayam kampung kental dengan telur bebek rebus menjadi ciri khas yang tak terlupakan. '
-        'Sudah berdiri lebih dari 40 tahun, antrian panjang setiap malam adalah bukti nyata kelezatannya.',
+        'Restoran bakmi Jawa arang bernuansa rumah kayu etnik paling legendaris di Kotagede. '
+        'Kuah kaldu ayam kampung kental dengan telur bebek rebus menjadi ciri khas yang tak terlupakan.',
   ),
   Restaurant(
     id: 'resto_5',
@@ -114,14 +112,13 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.7,
     reviewCount: 2103,
     description:
-        'Kopi tubruk robusta yang dicelupkan arang kayu membara menghasilkan aroma karamel smoky '
-        'khas angkringan Stasiun Tugu. Spot ikonik wisata malam Jogja sejak 1960-an. '
-        'Dipercaya mampu menetralisir asam lambung berkat reaksi kimia arang panas dengan kopi.',
+        'Angkringan ikonik wisata malam Jogja sejak 1960-an di dekat Stasiun Tugu. '
+        'Kopi tubruk robusta yang dicelupkan arang kayu membara menghasilkan aroma karamel smoky yang khas.',
   ),
   Restaurant(
     id: 'resto_6',
     name: 'Oseng Mercon Bu Narti',
-    category: 'Kuliner Pedas',
+    category: 'Warung Tradisional',
     address: 'Jl. KH. Ahmad Dahlan, Ngampilan, Yogyakarta',
     province: 'DIY',
     lat: -7.7951,
@@ -137,14 +134,13 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.6,
     reviewCount: 673,
     description:
-        'Oseng koyor sapi dengan racikan cabai rawit merah yang benar-benar meledak di lidah. '
-        'Hidangan pedas legendaris yang telah menjadi kebanggaan warga Jogja selama puluhan tahun. '
-        'Tingkat kepedasan bisa disesuaikan dari sedang hingga level ekstrem bagi pecinta pedas sejati.',
+        'Warung tenda malam legendaris yang menyajikan oseng koyor sapi dengan racikan cabai rawit pedas meledak. '
+        'Menjadi kebanggaan kuliner malam warga Jogja selama puluhan tahun.',
   ),
   Restaurant(
     id: 'resto_7',
     name: 'Bakmi Jawa Pak Pale',
-    category: 'Bakmi Jawa',
+    category: 'Warung Tradisional',
     address: 'Alun-alun Utara, Kraton, Yogyakarta',
     province: 'DIY',
     lat: -7.8038,
@@ -160,14 +156,13 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.7,
     reviewCount: 445,
     description:
-        'Bakmi nyemek spesial dengan bumbu bawang putih khas dapur Kraton. '
-        'Disajikan malam hari di bawah langit terbuka Alun-alun Utara dengan nuansa magis. '
-        'Kompor arang tradisional dan bahan pilihan menjadi kunci cita rasa yang sulit dilupakan.',
+        'Warung tenda bakmi Jawa nyemek dengan bumbu bawang putih khas dapur Kraton. '
+        'Disajikan malam hari di bawah pohon beringin Alun-alun Utara dengan aroma tungku arang yang khas.',
   ),
   Restaurant(
     id: 'resto_8',
     name: 'Sate Klatak Pak Pong',
-    category: 'Sate',
+    category: 'Restoran',
     address: 'Jl. Imogiri Timur, Bantul, DIY',
     province: 'DIY',
     lat: -7.8714,
@@ -183,14 +178,13 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.9,
     reviewCount: 1567,
     description:
-        'Sate kambing muda paling ikonik di DIY. Hanya dibumbui garam dan bawang, '
-        'dipanggang di atas jeruji besi sepeda yang unik, inilah yang membuat tekstur dagingnya '
-        'berbeda dari sate biasa. Cita rasa alami tanpa kecap yang khas dan tak tertandingi di Jogja.',
+        'Restoran sate kambing muda paling ikonik di Bantul. Dipanggang di atas jeruji besi sepeda '
+        'dengan bumbu garam dan kuah gulai gurih tanpa kecap yang legendaris.',
   ),
   Restaurant(
     id: 'resto_9',
     name: 'Warung Nasi Pecel Bu Wiryo',
-    category: 'Kuliner Tradisional',
+    category: 'Warung Tradisional',
     address: 'Pasar Kranggan, Jl. Tentara Rakyat, Yogyakarta',
     province: 'DIY',
     lat: -7.7942,
@@ -206,14 +200,13 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.6,
     reviewCount: 389,
     description:
-        'Nasi pecel sarapan paling legendaris di Pasar Kranggan dengan sambal kacang kental '
-        'dan pilihan lauk pauk komplet. Buka sejak dini hari, antriannya sudah mengular sebelum '
-        'pasar buka. Tempe goreng dan empal gentong menjadi pelengkap favorit pelanggan setia.',
+        'Warung pecel sarapan paling ramai di kawasan Pasar Kranggan. Sambal kacang kental dengan pilihan lauk '
+        'tempe goreng panas dan empal gurih yang menggugah selera.',
   ),
   Restaurant(
     id: 'resto_10',
     name: 'Tengkleng Gajah Bu Hj. Bejo',
-    category: 'Kuliner Tradisional',
+    category: 'Restoran',
     address: 'Jl. Brigjen Katamso No. 57, Mergangsan, Yogyakarta',
     province: 'DIY',
     lat: -7.8089,
@@ -229,14 +222,13 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.5,
     reviewCount: 298,
     description:
-        'Tengkleng kambing porsi jumbo dengan kuah rempah-rempah yang kaya dan tulang-tulang '
-        'empuk penuh sumsum lezat. Resep warisan dari Solo yang disesuaikan dengan selera Jogja. '
-        'Porsi "gajah" bisa untuk 2-3 orang, cocok untuk makan bersama keluarga.',
+        'Restoran tengkleng kambing porsi besar dengan kuah rempah gulai medhok dan tulang sumsum lezat. '
+        'Tempat makan nyaman yang cocok dikunjungi bersama rombongan dan keluarga.',
   ),
   Restaurant(
     id: 'resto_11',
     name: 'Es Dawet Ibu Titi',
-    category: 'Minuman & Jajanan',
+    category: 'Warung Tradisional',
     address: 'Malioboro, Jl. Malioboro No. 1, Gedongtengen, Yogyakarta',
     province: 'DIY',
     lat: -7.7927,
@@ -245,21 +237,20 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 12000,
     openingHours: '09:00 - 20:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=900&q=85',
     phone: '081211000890',
     website: null,
     createdAt: DateTime(2025, 1, 1),
     rating: 4.5,
     reviewCount: 756,
     description:
-        'Dawet ayu tradisional dengan cendol hijau pandan segar, santan kental gurih, '
-        'dan gula merah Jogja yang otentik. Kesegaran terbaik di sepanjang Malioboro '
-        'untuk menemani jalan-jalan wisata di pusat kota Yogyakarta.',
+        'Kedai minuman tradisional legendaris di selasar Malioboro. Dawet ayu dengan cendol pandan wangi, '
+        'santan kelapa segar, dan sirup gula kelapa asli khas Mataraman.',
   ),
   Restaurant(
     id: 'resto_12',
     name: 'Ayam Goreng Mbah Cemplung',
-    category: 'Kuliner Tradisional',
+    category: 'Restoran',
     address: 'Desa Geneng, Pendowoharjo, Sewon, Bantul, DIY',
     province: 'DIY',
     lat: -7.8451,
@@ -275,13 +266,168 @@ final kDefaultRestaurants = <Restaurant>[
     rating: 4.8,
     reviewCount: 1102,
     description:
-        'Ayam kampung goreng dengan teknik "cemplung" — digoreng langsung dalam minyak '
-        'panas menggunakan wajan tanah liat tradisional. Kulit renyah dan daging juicy '
-        'dengan bumbu kunyit-ketumbar yang meresap sempurna. Sudah terkenal sejak 1970-an.',
+        'Restoran rumah tradisional di Bantul yang terkenal dengan teknik goreng cemplung dalam kuali tanah liat. '
+        'Ayam kampung empuk berbumbu rempah gurih disajikan dengan sambal terasi dan lalapan segar.',
+  ),
+  Restaurant(
+    id: 'resto_fastfood_1',
+    name: 'Olive Fried Chicken Gejayan',
+    category: 'Fast Food',
+    address: 'Jl. Affandi No. 24, Caturtunggal, Depok, Sleman, DIY',
+    province: 'DIY',
+    lat: -7.7712,
+    lng: 110.3892,
+    priceMin: 12000,
+    priceMax: 28000,
+    openingHours: '09:00 - 21:30 WIB',
+    imageUrl:
+        'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=900&q=85',
+    phone: '081229000111',
+    website: null,
+    createdAt: DateTime(2025, 1, 1),
+    rating: 4.8,
+    reviewCount: 3421,
+    description:
+        'Fast food ayam goreng tepung lokal legendaris kebanggaan mahasiswa dan warga Jogja sejak 2011. '
+        'Kulitnya renyah krispi dengan bumbu gurih meresap dan harga yang sangat bersahabat di kantong.',
+  ),
+  Restaurant(
+    id: 'resto_foodcourt_1',
+    name: 'Food Court Pasar Kranggan (Lt. 2)',
+    category: 'Food Court',
+    address: 'Lantai 2 Pasar Kranggan, Jl. Poncowinatan, Gowongan, Jetis, Yogyakarta',
+    province: 'DIY',
+    lat: -7.7828,
+    lng: 110.3664,
+    priceMin: 15000,
+    priceMax: 45000,
+    openingHours: '10:00 - 22:00 WIB',
+    imageUrl:
+        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=900&q=85',
+    phone: '081329000222',
+    website: null,
+    createdAt: DateTime(2025, 1, 1),
+    rating: 4.7,
+    reviewCount: 1890,
+    description:
+        'Sentra kuliner modern dan food court hits di lantai atas pasar tradisional Kranggan. '
+        'Menyajikan puluhan tenant makanan dari artisan noodle, pastry, kopi, hingga kuliner nusantara.',
+  ),
+  Restaurant(
+    id: 'resto_cafe_1',
+    name: 'Klinik Kopi Kaliurang',
+    category: 'Cafe',
+    address: 'Jl. Kaliurang KM 7.8, Sinduharjo, Ngaglik, Sleman, DIY',
+    province: 'DIY',
+    lat: -7.7342,
+    lng: 110.3951,
+    priceMin: 20000,
+    priceMax: 40000,
+    openingHours: '08:00 - 20:00 WIB',
+    imageUrl:
+        'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=85',
+    phone: '081392000333',
+    website: null,
+    createdAt: DateTime(2025, 1, 1),
+    rating: 4.9,
+    reviewCount: 2450,
+    description:
+        'Kafe kopi spesialti legendaris yang mengedukasi pengunjung tentang varietas biji kopi Nusantara. '
+        'Suasana tenang dengan konsep cerita kopi di setiap seduhan.',
+  ),
+  Restaurant(
+    id: 'resto_restoran_1',
+    name: 'Bale Raos Keraton Yogyakarta',
+    category: 'Restoran',
+    address: 'Jl. Magangan Kulon No. 1, Panembahan, Kraton, Yogyakarta',
+    province: 'DIY',
+    lat: -7.8080,
+    lng: 110.3620,
+    priceMin: 35000,
+    priceMax: 90000,
+    openingHours: '10:00 - 21:00 WIB',
+    imageUrl:
+        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
+    phone: '0274415565',
+    website: null,
+    createdAt: DateTime(2025, 1, 1),
+    rating: 4.7,
+    reviewCount: 1620,
+    description:
+        'Restoran autentik yang menyajikan hidangan kesukaan Sri Sultan Hamengku Buwono terdahulu. '
+        'Suasana pendopo ningrat kraton yang anggun dengan resep kerajaan warisan Mataraman.',
   ),
 ];
 
 final kDefaultFoods = <String, List<Food>>{
+  'resto_fastfood_1': [
+    Food(
+      id: 'food_ff_1',
+      restaurantId: 'resto_fastfood_1',
+      name: 'Paket Sayap + Nasi + Es Teh',
+      description: 'Ayam goreng tepung renyah bumbu khas Olive dengan nasi pulen dan es teh',
+      price: 15000,
+      category: 'Makanan Utama',
+      imageUrl: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_ff_2',
+      restaurantId: 'resto_fastfood_1',
+      name: 'Paket Paha Atas Krispi',
+      description: 'Potongan paha atas krispi gurih dengan saus sambal khas',
+      price: 18000,
+      category: 'Makanan Utama',
+      imageUrl: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+  ],
+  'resto_foodcourt_1': [
+    Food(
+      id: 'food_fc_1',
+      restaurantId: 'resto_foodcourt_1',
+      name: 'Dry Ramen Kranggan',
+      description: 'Ramen kering gurih dengan topping chashu ayam, daun bawang, dan telur onsen',
+      price: 28000,
+      category: 'Makanan Utama',
+      imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_fc_2',
+      restaurantId: 'resto_foodcourt_1',
+      name: 'Pastry Croissant Cokelat',
+      description: 'Butter croissant renyah dengan isian cokelat Belgia lumer',
+      price: 22000,
+      category: 'Jajanan',
+      imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+  ],
+  'resto_cafe_1': [
+    Food(
+      id: 'food_cafe_1',
+      restaurantId: 'resto_cafe_1',
+      name: 'Single Origin Filter Coffee',
+      description: 'Kopi seduh manual metode V60 dengan biji arabika lokal pilihan',
+      price: 25000,
+      category: 'Minuman',
+      imageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+  ],
+  'resto_restoran_1': [
+    Food(
+      id: 'food_resto_1',
+      restaurantId: 'resto_restoran_1',
+      name: 'Bistik Jawa Keraton',
+      description: 'Daging sapi empuk dengan saus manis gurih rempah kraton dan setup sayuran',
+      price: 45000,
+      category: 'Makanan Utama',
+      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+  ],
   'resto_1': [
     Food(
       id: 'food_1_1',
@@ -968,8 +1114,6 @@ final kDefaultCategories = <String>[
   'Cafe',
   'Fast Food',
   'Food Court',
-  'Gudeg',
-  'Soto',
-  'Bakmi Jawa',
+  'Warung Tradisional',
   'Angkringan',
 ];

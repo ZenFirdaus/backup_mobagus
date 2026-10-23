@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/restaurant.dart';
+import '../models/seed_data.dart';
 import '../utils/format.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
@@ -18,10 +19,12 @@ enum _Sort { terdekat, nama, rating, termurah }
 /// Format label kategori agar rapi (misal fast_food -> Fast Food)
 String _formatCategoryLabel(String c) {
   final lower = c.trim().toLowerCase();
-  if (lower == 'fast_food') return 'Fast Food';
-  if (lower == 'food_court') return 'Food Court';
-  if (lower == 'cafe') return 'Cafe';
-  if (lower == 'restoran') return 'Restoran';
+  if (lower == 'fast_food' || lower == 'fast food') return 'Fast Food';
+  if (lower == 'food_court' || lower == 'food court') return 'Food Court';
+  if (lower == 'cafe' || lower == 'kafe') return 'Cafe';
+  if (lower == 'restoran' || lower == 'restaurant') return 'Restoran';
+  if (lower == 'warung_tradisional' || lower == 'warung tradisional' || lower == 'warung') return 'Warung Tradisional';
+  if (lower == 'angkringan') return 'Angkringan';
   return c.replaceAll('_', ' ').split(' ').map((w) {
     if (w.isEmpty) return '';
     return w[0].toUpperCase() + w.substring(1);
@@ -48,7 +51,7 @@ class _ExploreTabState extends State<ExploreTab> {
   Timer? _debounce;
 
   List<Restaurant> _items = [];
-  List<String> _categories = [];
+  List<String> _categories = List.from(kDefaultCategories);
   Set<String> _favs = {};
   String? _category;
   String? _selectedCity; // Filter kota/wilayah: null = Semua
@@ -75,7 +78,7 @@ class _ExploreTabState extends State<ExploreTab> {
     }
     _load();
     _svc.getCategories().then((c) {
-      if (mounted) setState(() => _categories = c);
+      if (mounted && c.isNotEmpty) setState(() => _categories = c);
     });
     _svc.getFavoriteIds().then((f) {
       if (mounted) setState(() => _favs = f.toSet());
@@ -902,10 +905,21 @@ class _ExploreTabState extends State<ExploreTab> {
           }),
           for (final c in _categories) ...[
             const SizedBox(width: 8),
-            _chip(_formatCategoryLabel(c), _category == c, () {
-              _category = _category == c ? null : c;
-              _load();
-            }),
+            _chip(
+              _formatCategoryLabel(c),
+              _category != null &&
+                  (_category == c ||
+                      _category!.toLowerCase().replaceAll('_', ' ') ==
+                          c.toLowerCase().replaceAll('_', ' ')),
+              () {
+                final isSelected = _category != null &&
+                    (_category == c ||
+                        _category!.toLowerCase().replaceAll('_', ' ') ==
+                            c.toLowerCase().replaceAll('_', ' '));
+                _category = isSelected ? null : c;
+                _load();
+              },
+            ),
           ],
         ],
       ),
