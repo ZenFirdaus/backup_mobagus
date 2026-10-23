@@ -8,7 +8,9 @@ class GameQuestion {
   final int correctIndex;
   final String explanation;
   final String? relatedRestaurantId;
-  final QuestionDifficulty difficulty; // Wajib: Untuk filter level
+  final QuestionDifficulty difficulty; // Untuk filter level
+  final String? imageUrl; // Foto otentik hidangan untuk soal tebak visual
+  final String? category; // Kategori soal: Tebak Foto, Resep, Mitos/Fakta, dll.
 
   const GameQuestion({
     required this.id,
@@ -19,5 +21,8 @@ class GameQuestion {
     required this.explanation,
     this.relatedRestaurantId,
     this.difficulty = QuestionDifficulty.mudah,
+    this.imageUrl,
+    this.category,
   });
 }
+

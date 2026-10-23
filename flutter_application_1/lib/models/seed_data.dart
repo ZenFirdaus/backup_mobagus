@@ -15,7 +15,7 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 45000,
     openingHours: '06:00 - 21:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1551266080-616f5d8174f1?auto=format&fit=crop&w=900&q=85',
     phone: '081227000167',
     website: 'https://gudegyudjum.com',
     createdAt: DateTime(2025, 1, 1),
@@ -61,7 +61,7 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 15000,
     openingHours: '06:00 - 14:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1762754104506-eaa04386106f?auto=format&fit=crop&w=900&q=85',
     phone: '081568000789',
     website: null,
     createdAt: DateTime(2025, 1, 1),
@@ -83,7 +83,7 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 35000,
     openingHours: '16:00 - 23:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1752924349515-761435ec22b3?auto=format&fit=crop&w=900&q=85',
     phone: '081804000321',
     website: null,
     createdAt: DateTime(2025, 1, 1),
@@ -105,7 +105,7 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 15000,
     openingHours: '18:00 - 02:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1700955004555-900a9733ee14?auto=format&fit=crop&w=900&q=85',
     phone: '081705000654',
     website: null,
     createdAt: DateTime(2025, 1, 1),
@@ -171,7 +171,7 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 55000,
     openingHours: '10:00 - 22:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1751212352288-d5811798804c?auto=format&fit=crop&w=900&q=85',
     phone: '081308000456',
     website: null,
     createdAt: DateTime(2025, 1, 1),
@@ -215,7 +215,7 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 75000,
     openingHours: '10:00 - 20:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1695658519636-5fc41203df9a?auto=format&fit=crop&w=900&q=85',
     phone: '081410000567',
     website: null,
     createdAt: DateTime(2025, 1, 1),
@@ -347,7 +347,7 @@ final kDefaultRestaurants = <Restaurant>[
     priceMax: 90000,
     openingHours: '10:00 - 21:00 WIB',
     imageUrl:
-        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85',
+        'https://images.unsplash.com/photo-1631795617958-3ddcf718d6aa?auto=format&fit=crop&w=900&q=85',
     phone: '0274415565',
     website: null,
     createdAt: DateTime(2025, 1, 1),
@@ -424,7 +424,7 @@ final kDefaultFoods = <String, List<Food>>{
       description: 'Daging sapi empuk dengan saus manis gurih rempah kraton dan setup sayuran',
       price: 45000,
       category: 'Makanan Utama',
-      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1695658519636-5fc41203df9a?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
