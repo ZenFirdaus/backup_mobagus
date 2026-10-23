@@ -69,55 +69,6 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
     return total / _feedbacks.length;
   }
 
-  String _formatTimeAgo(DateTime dt) {
-    DateTime localDt = dt.toLocal();
-    final now = DateTime.now();
-
-    // Koreksi jika waktu tercatat di masa depan (akibat salah simpan UTC +7 jam sebelumnya)
-    if (localDt.isAfter(now)) {
-      final diffFuture = localDt.difference(now);
-      if (diffFuture.inHours >= 5 && diffFuture.inHours <= 9) {
-        localDt = localDt.subtract(const Duration(hours: 7));
-      } else {
-        localDt = now;
-      }
-    }
-
-    final diff = now.difference(localDt);
-
-    // Jika selisihnya kurang dari 1 menit (misal baru saja ditekan tombol kirim)
-    if (diff.inSeconds < 60 && diff.inSeconds >= 0) {
-      return 'Baru saja';
-    }
-
-    final isToday = localDt.year == now.year &&
-        localDt.month == now.month &&
-        localDt.day == now.day;
-
-    final yesterday = now.subtract(const Duration(days: 1));
-    final isYesterday = localDt.year == yesterday.year &&
-        localDt.month == yesterday.month &&
-        localDt.day == yesterday.day;
-
-    final timeStr =
-        '${localDt.hour.toString().padLeft(2, '0')}:${localDt.minute.toString().padLeft(2, '0')} WIB';
-
-    if (isToday) {
-      if (diff.inMinutes < 60 && diff.inMinutes > 0) {
-        return '${diff.inMinutes} menit lalu';
-      }
-      return 'Hari ini, $timeStr';
-    } else if (isYesterday) {
-      return 'Kemarin, $timeStr';
-    } else {
-      const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-      ];
-      final monthName = months[localDt.month - 1];
-      return '${localDt.day} $monthName ${localDt.year}, $timeStr';
-    }
-  }
 
   void _openFeedbackBottomSheet({CourseFeedback? existing}) {
     showModalBottomSheet(
@@ -588,6 +539,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       fb.userName,
@@ -599,39 +551,25 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 6,
-                      runSpacing: 2,
-                      children: [
-                        Text(
-                          _formatTimeAgo(fb.createdAt),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.slateBlue,
+                    if (isMyFeedback) ...[
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.paprika.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Ulasan Anda',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.paprika,
                           ),
                         ),
-                        if (isMyFeedback) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: AppColors.paprika.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'Ulasan Anda',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.paprika,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ),
