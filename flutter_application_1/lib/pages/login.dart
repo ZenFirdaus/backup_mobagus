@@ -626,28 +626,6 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  const Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.lock_outline_rounded,
-                          size: 13,
-                          color: AppColors.textMuted,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Supabase Auth • TLS 1.3 End-to-End',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
