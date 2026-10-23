@@ -6,6 +6,7 @@ class Review {
   final String comment;
   final DateTime createdAt;
   final String? userName;
+  final String? userAvatar;
   final String? restaurantName;
 
   const Review({
@@ -16,12 +17,39 @@ class Review {
     required this.comment,
     required this.createdAt,
     this.userName,
+    this.userAvatar,
     this.restaurantName,
   });
+
+  Review copyWith({
+    String? id,
+    String? userId,
+    String? restaurantId,
+    int? rating,
+    String? comment,
+    DateTime? createdAt,
+    String? userName,
+    String? userAvatar,
+    String? restaurantName,
+  }) {
+    return Review(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      restaurantId: restaurantId ?? this.restaurantId,
+      rating: rating ?? this.rating,
+      comment: comment ?? this.comment,
+      createdAt: createdAt ?? this.createdAt,
+      userName: userName ?? this.userName,
+      userAvatar: userAvatar ?? this.userAvatar,
+      restaurantName: restaurantName ?? this.restaurantName,
+    );
+  }
 
   factory Review.fromJson(Map<String, dynamic> json) {
     final profile = json['profiles'] as Map<String, dynamic>?;
     final restMap = json['restaurants'] as Map<String, dynamic>?;
+    final rawName =
+        json['restaurant_name'] as String? ?? restMap?['name'] as String?;
     return Review(
       id: json['id'].toString(),
       userId: json['user_id'] as String? ?? '',
@@ -31,7 +59,10 @@ class Review {
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
       userName: json['user_name'] as String? ?? profile?['display_name'] as String?,
-      restaurantName: restMap?['name'] as String?,
+      userAvatar: json['user_avatar'] as String? ?? profile?['avatar_url'] as String?,
+      restaurantName: (rawName != null && rawName.trim().isNotEmpty)
+          ? rawName.trim()
+          : null,
     );
   }
 
@@ -43,6 +74,7 @@ class Review {
     'comment': comment,
     'created_at': createdAt.toIso8601String(),
     'user_name': userName,
+    'user_avatar': userAvatar,
     'restaurant_name': restaurantName,
   };
 }

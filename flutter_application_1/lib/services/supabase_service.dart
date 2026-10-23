@@ -197,7 +197,39 @@ class SupabaseService {
       if (reviewsRaw != null) {
         for (final item in reviewsRaw) {
           try {
-            _localReviews.add(Review.fromJson(jsonDecode(item) as Map<String, dynamic>));
+            final r = Review.fromJson(jsonDecode(item) as Map<String, dynamic>);
+            if (!_localReviews.any((x) => x.id == r.id)) {
+              _localReviews.add(r);
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Selalu cek backup ulasan perangkat & ulasan tamu agar tidak hilang saat logout/login
+      final globalRaw = prefs.getStringList('foodie_all_device_reviews');
+      if (globalRaw != null) {
+        for (final item in globalRaw) {
+          try {
+            final r = Review.fromJson(jsonDecode(item) as Map<String, dynamic>);
+            if (!_localReviews.any((x) =>
+                x.id == r.id ||
+                (x.restaurantId == r.restaurantId && x.comment == r.comment))) {
+              _localReviews.add(r);
+            }
+          } catch (_) {}
+        }
+      }
+
+      final guestRaw = prefs.getStringList('foodie_rev_guest');
+      if (guestRaw != null) {
+        for (final item in guestRaw) {
+          try {
+            final r = Review.fromJson(jsonDecode(item) as Map<String, dynamic>);
+            if (!_localReviews.any((x) =>
+                x.id == r.id ||
+                (x.restaurantId == r.restaurantId && x.comment == r.comment))) {
+              _localReviews.add(r);
+            }
           } catch (_) {}
         }
       }
@@ -246,6 +278,8 @@ class SupabaseService {
       final uid = userId ?? 'guest';
       final list = _localReviews.map((r) => jsonEncode(r.toJson())).toList();
       await prefs.setStringList('foodie_rev_$uid', list);
+      // Simpan juga ke global key perangkat agar tetap ada setelah logout
+      await prefs.setStringList('foodie_all_device_reviews', list);
     } catch (_) {}
   }
 
@@ -581,7 +615,55 @@ class SupabaseService {
   Future<List<Restaurant>> getFavoriteRestaurants() async {
     final favIds = await getFavoriteIds();
     final allRestos = await getRestaurants();
-    return allRestos.where((r) => favIds.contains(r.id)).toList();
+
+    // Petakan seluruh restoran baik dari database maupun seed data
+    final Map<String, Restaurant> restoMap = {};
+    for (final r in kDefaultRestaurants) {
+      restoMap[r.id] = r;
+      if (r.id.startsWith('resto_')) {
+        restoMap[r.id.replaceFirst('resto_', '')] = r;
+      }
+    }
+    for (final r in allRestos) {
+      restoMap[r.id] = r;
+      if (r.id.startsWith('resto_')) {
+        restoMap[r.id.replaceFirst('resto_', '')] = r;
+      } else {
+        restoMap['resto_${r.id}'] = r;
+      }
+    }
+
+    final result = <Restaurant>[];
+    final validFavIds = <String>{};
+
+    for (final favId in favIds) {
+      Restaurant? r = restoMap[favId];
+      if (r == null) {
+        r = await getRestaurant(favId);
+        if (r == null) {
+          final altId = favId.startsWith('resto_')
+              ? favId.replaceFirst('resto_', '')
+              : 'resto_$favId';
+          r = await getRestaurant(altId);
+        }
+      }
+
+      if (r != null) {
+        if (!result.any((item) => item.id == r!.id || item.name.toLowerCase() == r.name.toLowerCase())) {
+          result.add(r);
+        }
+        validFavIds.add(favId);
+      }
+    }
+
+    // Bersihkan ID phantom jika ada agar jumlah favorit selalu akurat dan sinkron
+    if (validFavIds.length != _localFavorites.length && validFavIds.isNotEmpty) {
+      _localFavorites.clear();
+      _localFavorites.addAll(validFavIds);
+      await _persistFavorites();
+    }
+
+    return result;
   }
 
   Future<bool> isFavorite(String restaurantId) async {
@@ -636,56 +718,75 @@ class SupabaseService {
 
   Future<List<Review>> getReviews(String restaurantId) async {
     List<Review> remote = [];
+    final parsedId = int.tryParse(restaurantId);
     try {
-      // Ambil reviews tanpa join (karena foreign key profiles mungkin tidak ada)
-      final res = await _client
-          .from('reviews')
-          .select('*')
-          .eq('restaurant_id', int.tryParse(restaurantId) ?? restaurantId)
-          .order('created_at', ascending: false)
-          .limit(50);
+      dynamic res;
+      try {
+        res = await _client
+            .from('reviews')
+            .select('*')
+            .or('restaurant_id.eq.${parsedId ?? -999999},restaurant_id.eq.$restaurantId')
+            .order('created_at', ascending: false)
+            .limit(50);
+      } catch (_) {
+        res = await _client
+            .from('reviews')
+            .select('*')
+            .eq('restaurant_id', parsedId ?? restaurantId)
+            .order('created_at', ascending: false)
+            .limit(50);
+      }
 
       final rawList = res as List;
 
-      // Kumpulkan semua user_id unik dari reviews yang masuk
+      // Kumpulkan user_id jika ada ulasan lama yang belum memiliki user_name
       final userIds = rawList
+          .where((e) => e['user_name'] == null || (e['user_name'] as String).isEmpty)
           .map((e) => e['user_id']?.toString())
           .where((id) => id != null && id.isNotEmpty)
           .toSet()
           .cast<String>()
           .toList();
 
-      // Ambil nama display dari tabel profiles secara terpisah
       final Map<String, String> userNames = {};
+      final Map<String, String> userAvatars = {};
       if (userIds.isNotEmpty) {
         try {
           final profileRes = await _client
               .from('profiles')
-              .select('id, display_name')
+              .select('id, display_name, avatar_url')
               .inFilter('id', userIds);
           for (final p in profileRes as List) {
             final uid = p['id']?.toString() ?? '';
             final name = p['display_name']?.toString();
+            final av = p['avatar_url']?.toString();
             if (uid.isNotEmpty && name != null && name.isNotEmpty) {
               userNames[uid] = name;
+            }
+            if (uid.isNotEmpty && av != null && av.isNotEmpty) {
+              userAvatars[uid] = av;
             }
           }
         } catch (_) {}
       }
 
-      // Gabungkan nama ke setiap review
+      // Gabungkan nama & avatar ke setiap review
       remote = rawList.map((e) {
         final uid = e['user_id']?.toString() ?? '';
         return Review.fromJson({
           ...e,
-          'user_name': userNames[uid] ?? e['user_name'],
+          'user_name': e['user_name'] ?? userNames[uid] ?? 'Kurator Rasa',
+          'user_avatar': e['user_avatar'] ?? userAvatars[uid],
         });
       }).toList();
     } catch (_) {}
 
     final defaultList = kDefaultReviews[restaurantId] ?? [];
-    final localList =
-        _localReviews.where((r) => r.restaurantId == restaurantId).toList();
+    final localList = _localReviews.where((r) =>
+        r.restaurantId == restaurantId ||
+        r.restaurantId == 'resto_$restaurantId' ||
+        (restaurantId.startsWith('resto_') &&
+            r.restaurantId == restaurantId.replaceFirst('resto_', ''))).toList();
 
     final all = [...localList, ...remote, ...defaultList];
     final seen = <String>{};
@@ -697,65 +798,122 @@ class SupabaseService {
     required int rating,
     required String comment,
   }) async {
-    final name = currentUser?.userMetadata?['name'] as String? ?? guestName;
-    final resto = await getRestaurant(restaurantId);
+    final profile = await getProfile();
+    final name = profile?.displayName.trim().isNotEmpty == true
+        ? profile!.displayName.trim()
+        : (currentUser?.userMetadata?['name'] as String? ?? guestName);
+    final avatar = profile?.avatarUrl ??
+        (currentUser?.userMetadata?['avatar_url'] as String?);
+
+    final resto = await getRestaurant(restaurantId) ??
+        kDefaultRestaurants.where((r) =>
+            r.id == restaurantId ||
+            r.id == 'resto_$restaurantId' ||
+            (restaurantId.startsWith('resto_') &&
+                r.id == restaurantId.replaceFirst('resto_', ''))).firstOrNull;
+
+    final resolvedRestoName = resto?.name ?? 'Tempat Kuliner';
     final uuid = _generateUuid();
+    final uid = userId;
+
     final rev = Review(
       id: 'rev_local_$uuid',
-      userId: userId ?? 'guest',
+      userId: uid ?? 'guest',
       restaurantId: restaurantId,
       rating: rating,
       comment: comment,
       createdAt: DateTime.now(),
       userName: name,
-      restaurantName: resto?.name,
+      userAvatar: avatar,
+      restaurantName: resolvedRestoName,
     );
+
     _localReviews.insert(0, rev);
     _localBonusPoints += 20;
-    _persistReviews();
-    _persistPoints();
+    await _persistReviews();
+    await _persistPoints();
 
     _reviewAddedController.add(rev);
     _reviewsChangedController.add(restaurantId);
     _profileChangedController.add(null);
 
-    final uid = userId;
     if (uid != null && uid != 'guest') {
-      try {
-        await _client.from('reviews').insert({
-          'client_uuid': uuid,
-          'user_id': uid,
-          'restaurant_id': int.tryParse(restaurantId) ?? restaurantId,
-          'rating': rating,
-          'comment': comment,
-        });
-      } catch (e1) {
-        try {
-          // Fallback bila kolom teks di Supabase adalah 'content'
-          await _client.from('reviews').insert({
-            'client_uuid': uuid,
-            'user_id': uid,
-            'restaurant_id': int.tryParse(restaurantId) ?? restaurantId,
-            'rating': rating,
-            'content': comment,
-          });
-        } catch (e2) {
-          try {
-            // Fallback bila kolom client_uuid tidak ada
-            await _client.from('reviews').insert({
-              'user_id': uid,
-              'restaurant_id': int.tryParse(restaurantId) ?? restaurantId,
-              'rating': rating,
-              'content': comment,
-            });
-          } catch (e3) {
-            debugPrint('Reviews insert to Supabase: $e3');
-          }
-        }
-      }
+      await _insertReviewToSupabase(
+        uuid: uuid,
+        uid: uid,
+        restaurantId: restaurantId,
+        rating: rating,
+        comment: comment,
+        userName: name,
+        userAvatar: avatar,
+      );
     }
 
     return rev;
+  }
+
+  Future<void> _insertReviewToSupabase({
+    required String uuid,
+    required String uid,
+    required String restaurantId,
+    required int rating,
+    required String comment,
+    String? userName,
+    String? userAvatar,
+  }) async {
+    final parsedId = int.tryParse(restaurantId);
+    // 1. Try with user_name, user_avatar, comment + parsed numeric id
+    try {
+      final payload = <String, dynamic>{
+        'client_uuid': uuid,
+        'user_id': uid,
+        'restaurant_id': parsedId ?? restaurantId,
+        'rating': rating,
+        'comment': comment,
+      };
+      if (userName != null && userName.isNotEmpty) payload['user_name'] = userName;
+      if (userAvatar != null && userAvatar.isNotEmpty) payload['user_avatar'] = userAvatar;
+      await _client.from('reviews').insert(payload);
+      return;
+    } catch (_) {}
+
+    // 2. Try with user_name, user_avatar, content + parsed numeric id
+    try {
+      final payload = <String, dynamic>{
+        'client_uuid': uuid,
+        'user_id': uid,
+        'restaurant_id': parsedId ?? restaurantId,
+        'rating': rating,
+        'content': comment,
+      };
+      if (userName != null && userName.isNotEmpty) payload['user_name'] = userName;
+      if (userAvatar != null && userAvatar.isNotEmpty) payload['user_avatar'] = userAvatar;
+      await _client.from('reviews').insert(payload);
+      return;
+    } catch (_) {}
+
+    // 3. Fallback without user_name/avatar if schema columns were missing
+    try {
+      await _client.from('reviews').insert({
+        'client_uuid': uuid,
+        'user_id': uid,
+        'restaurant_id': parsedId ?? restaurantId,
+        'rating': rating,
+        'comment': comment,
+      });
+      return;
+    } catch (_) {}
+
+    // 4. Try with content + raw restaurantId
+    try {
+      await _client.from('reviews').insert({
+        'user_id': uid,
+        'restaurant_id': restaurantId,
+        'rating': rating,
+        'content': comment,
+      });
+      return;
+    } catch (_) {}
   }
 
   // ─── CHECKINS ───
@@ -918,10 +1076,23 @@ class SupabaseService {
   Future<List<Review>> getUserReviews() async {
     if (!_initialized) await initStorage();
     final uid = userId;
-    // Gabungkan ulasan lokal milik user ini
-    final local = _localReviews
-        .where((r) => r.userId == (uid ?? 'guest'))
-        .toList();
+
+    // Gabungkan ulasan lokal pada perangkat ini & pastikan nama restoran selalu terisi
+    final local = <Review>[];
+    for (final r in _localReviews) {
+      if (uid == null || uid == 'guest' || r.userId == uid || r.userId == 'guest' || r.userId.isEmpty) {
+        String? rName = r.restaurantName;
+        if (rName == null || rName.isEmpty || rName == r.restaurantId) {
+          final found = kDefaultRestaurants.where((x) =>
+              x.id == r.restaurantId ||
+              x.id == 'resto_${r.restaurantId}' ||
+              (r.restaurantId.startsWith('resto_') &&
+                  x.id == r.restaurantId.replaceFirst('resto_', ''))).firstOrNull;
+          rName = found?.name ?? 'Tempat Kuliner';
+        }
+        local.add(r.copyWith(restaurantName: rName));
+      }
+    }
 
     if (uid != null && uid != 'guest') {
       try {
@@ -946,33 +1117,42 @@ class SupabaseService {
         for (final item in (res as List)) {
           final map = Map<String, dynamic>.from(item as Map);
           final rev = Review.fromJson(map);
-          if (rev.restaurantName == null || rev.restaurantName!.isEmpty) {
-            final resto = await getRestaurant(rev.restaurantId);
-            remote.add(Review(
-              id: rev.id,
-              userId: rev.userId,
-              restaurantId: rev.restaurantId,
-              rating: rev.rating,
-              comment: rev.comment,
-              createdAt: rev.createdAt,
-              userName: rev.userName,
-              restaurantName: resto?.name,
-            ));
-          } else {
-            remote.add(rev);
+          String? name = rev.restaurantName;
+          if (name == null || name.isEmpty || name == rev.restaurantId) {
+            final resto = await getRestaurant(rev.restaurantId) ??
+                kDefaultRestaurants.where((x) =>
+                    x.id == rev.restaurantId ||
+                    x.id == 'resto_${rev.restaurantId}' ||
+                    (rev.restaurantId.startsWith('resto_') &&
+                        x.id == rev.restaurantId.replaceFirst('resto_', ''))).firstOrNull;
+            name = resto?.name ?? 'Tempat Kuliner';
           }
+          remote.add(rev.copyWith(restaurantName: name));
         }
 
+        // Sinkronkan ulasan remote ke cache lokal jika belum ada
         for (final r in remote) {
           final exists = _localReviews.any((l) =>
               l.id == r.id ||
-              (l.restaurantId == r.restaurantId &&
-                  l.userId == r.userId &&
-                  l.comment == r.comment));
+              (l.restaurantId == r.restaurantId && l.comment == r.comment));
           if (!exists) {
             _localReviews.add(r);
           }
         }
+
+        // Migrasikan ulasan lokal guest ke akun pengguna di Supabase
+        for (final l in local) {
+          if (l.userId == 'guest' || l.userId.isEmpty) {
+            _insertReviewToSupabase(
+              uuid: _generateUuid(),
+              uid: uid,
+              restaurantId: l.restaurantId,
+              rating: l.rating,
+              comment: l.comment,
+            ).catchError((_) {});
+          }
+        }
+
         await _persistReviews();
 
         final all = [...local, ...remote];
@@ -1227,24 +1407,19 @@ class SupabaseService {
 
   Future<Map<String, int>> getUserStats() async {
     if (!_initialized) await initStorage();
-    int favCount = _localFavorites.length;
+    final favList = await getFavoriteRestaurants();
+    int favCount = favList.length;
     int checkinCount = _localCheckins.length;
-    int reviewCount = _localReviews.length;
+
+    final userRevs = await getUserReviews();
+    int reviewCount = userRevs.length;
 
     final uid = userId;
     if (uid != null && uid != 'guest') {
       try {
-        final favs = await _client
-            .from('favorites')
-            .select('restaurant_id')
-            .eq('user_id', uid);
         final checks =
             await _client.from('checkins').select('id').eq('user_id', uid);
-        final revs =
-            await _client.from('reviews').select('id').eq('user_id', uid);
-        favCount = math.max(favCount, (favs as List).length);
         checkinCount = math.max(checkinCount, (checks as List).length);
-        reviewCount = math.max(reviewCount, (revs as List).length);
       } catch (_) {}
     }
 

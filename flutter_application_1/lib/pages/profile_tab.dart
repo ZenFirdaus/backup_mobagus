@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/profile.dart';
 import '../models/review.dart';
+import '../models/seed_data.dart';
 import '../models/user_ai_profile.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
@@ -1074,11 +1075,15 @@ class _ProfileTabState extends State<ProfileTab>
                       _tile(
                         Icons.favorite_border,
                         'Favorit & Koleksi',
-                        trailing: '${_stats['favorites']}',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const FavoritesPage()),
-                        ),
+                        trailing: '${_stats['favorites'] ?? 0}',
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const FavoritesPage()),
+                          );
+                          _load();
+                          _loadHistory();
+                        },
                       ),
                       _tile(
                         Icons.emoji_events_rounded,
@@ -1354,7 +1359,20 @@ class _ProfileTabState extends State<ProfileTab>
                 size: 18, color: AppColors.orange),
           ),
           title: Text(
-            rev.restaurantName ?? rev.restaurantId,
+            (rev.restaurantName != null &&
+                    rev.restaurantName!.isNotEmpty &&
+                    rev.restaurantName != rev.restaurantId)
+                ? rev.restaurantName!
+                : (kDefaultRestaurants
+                        .where((r) =>
+                            r.id == rev.restaurantId ||
+                            r.id == 'resto_${rev.restaurantId}' ||
+                            (rev.restaurantId.startsWith('resto_') &&
+                                r.id ==
+                                    rev.restaurantId.replaceFirst('resto_', '')))
+                        .firstOrNull
+                        ?.name ??
+                    'Tempat Kuliner'),
             style: const TextStyle(
                 fontSize: 12.5, fontWeight: FontWeight.w700),
             maxLines: 1,
@@ -1363,6 +1381,7 @@ class _ProfileTabState extends State<ProfileTab>
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 3),
               Row(
                 children: List.generate(
                   5,
@@ -1370,15 +1389,16 @@ class _ProfileTabState extends State<ProfileTab>
                     j < rev.rating
                         ? Icons.star_rounded
                         : Icons.star_outline_rounded,
-                    size: 12,
+                    size: 13,
                     color: AppColors.orange,
                   ),
                 ),
               ),
+              const SizedBox(height: 3),
               Text(
-                rev.comment,
-                style:
-                    const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                rev.comment.isNotEmpty ? rev.comment : 'Tidak ada ulasan tertulis',
+                style: const TextStyle(
+                    fontSize: 11.5, color: AppColors.textDark, height: 1.3),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1386,12 +1406,22 @@ class _ProfileTabState extends State<ProfileTab>
           ),
           onTap: () async {
             final resto = await SupabaseService.instance
-                .getRestaurant(rev.restaurantId);
+                    .getRestaurant(rev.restaurantId) ??
+                kDefaultRestaurants
+                    .where((r) =>
+                        r.id == rev.restaurantId ||
+                        r.id == 'resto_${rev.restaurantId}' ||
+                        (rev.restaurantId.startsWith('resto_') &&
+                            r.id ==
+                                rev.restaurantId.replaceFirst('resto_', '')))
+                    .firstOrNull;
             if (resto != null && mounted) {
-              Navigator.of(context).push(
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                     builder: (_) => DetailPage(restaurant: resto)),
               );
+              _load();
+              _loadHistory();
             }
           },
         ),
@@ -1710,9 +1740,9 @@ class _ProfileTabState extends State<ProfileTab>
   Widget _statsRow() {
     return Row(
       children: [
-        _stat('${_stats['favorites']}', 'Favorit'),
+        _stat('${_stats['favorites'] ?? 0}', 'Favorit'),
         const SizedBox(width: 12),
-        _stat('${_stats['reviews']}', 'Ulasan'),
+        _stat('${_stats['reviews'] ?? 0}', 'Ulasan'),
       ],
     );
   }

@@ -1600,19 +1600,43 @@ class _DetailPageState extends State<DetailPage> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: colors[colorIdx],
-                child: Text(
-                  (r.userName != null && r.userName!.isNotEmpty)
-                      ? r.userName![0].toUpperCase()
-                      : 'K',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colors[colorIdx],
                 ),
+                clipBehavior: Clip.antiAlias,
+                child: (r.userAvatar != null && r.userAvatar!.trim().isNotEmpty)
+                    ? Image.network(
+                        r.userAvatar!.trim(),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Center(
+                          child: Text(
+                            (r.userName != null && r.userName!.isNotEmpty)
+                                ? r.userName![0].toUpperCase()
+                                : 'K',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          (r.userName != null && r.userName!.isNotEmpty)
+                              ? r.userName![0].toUpperCase()
+                              : 'K',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
