@@ -19,7 +19,6 @@ import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/face_id_scanner_sheet.dart';
-import 'achievements_page.dart';
 import 'ai_profile_page.dart';
 import 'converter_page.dart';
 import 'detail_page.dart';
@@ -1192,7 +1191,7 @@ class _ProfileTabState extends State<ProfileTab>
                       _tile(
                         Icons.storefront_rounded,
                         'Toko Border & Rewards',
-                        trailing: '20 Border',
+                        trailing: '${_profile?.points ?? 0} Poin',
                         onTap: () async {
                           await Navigator.of(context).push(
                             MaterialPageRoute(
@@ -1214,15 +1213,6 @@ class _ProfileTabState extends State<ProfileTab>
                           _load();
                           _loadHistory();
                         },
-                      ),
-                      _tile(
-                        Icons.emoji_events_rounded,
-                        'Pencapaian & Poin',
-                        trailing: '${_profile?.points ?? 0} Poin',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const AchievementsPage()),
-                        ),
                       ),
                     ]),
                     const SizedBox(height: 16),
@@ -1912,7 +1902,7 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                   SizedBox(height: 2),
                   Text(
-                    '2 Game: Kuis Rasa Mataraman & Detektif Kuliner',
+                    '3 Game: Kuis Rasa Mataraman, Kulinerdle & Detektif Kuliner',
                     style:
                         TextStyle(fontSize: 11, color: AppColors.textMuted),
                   ),

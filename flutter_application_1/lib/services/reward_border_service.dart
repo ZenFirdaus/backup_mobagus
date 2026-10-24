@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -264,7 +265,24 @@ class RewardBorderService {
       debugPrint('Blockchain recording error: $e');
     }
 
-    // 4. Sinkronkan ke SupabaseService lokal & notifikasi stream ke seluruh aplikasi
+    // 4. Catat mutasi pengurangan poin secara lokal
+    try {
+      final pTx = PointTransaction(
+        id: 'tx_buy_${DateTime.now().millisecondsSinceEpoch}',
+        userId: uid,
+        amount: -border.pricePoints,
+        transactionType: 'border_purchase',
+        referenceId: borderId,
+        idempotencyKey: idempotencyKey,
+        metadata: {'border_name': border.name},
+        createdAt: DateTime.now(),
+      );
+      await _saveLocalPointTx(uid, pTx);
+    } catch (e) {
+      debugPrint('Record point tx error: $e');
+    }
+
+    // 5. Sinkronkan ke SupabaseService lokal & notifikasi stream ke seluruh aplikasi
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('foodie_points_$uid', _localPoints);
@@ -390,12 +408,62 @@ class RewardBorderService {
     return awarded;
   }
 
-  /// Mengambil riwayat mutasi poin pengguna
+  /// Mengambil mutasi poin dari penyimpanan lokal
+  Future<List<PointTransaction>> _getLocalPointTxs(String uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = [
+        'foodie_point_txs_$uid',
+        if (uid != 'local_user') 'foodie_point_txs_local_user',
+      ];
+      final Map<String, PointTransaction> map = {};
+      for (final k in keys) {
+        final list = prefs.getStringList(k) ?? [];
+        for (final raw in list) {
+          try {
+            final tx = PointTransaction.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+            map[tx.id] = tx;
+          } catch (_) {}
+        }
+      }
+      return map.values.toList();
+    } catch (e) {
+      debugPrint('Read local point txs error: $e');
+      return [];
+    }
+  }
+
+  /// Menyimpan mutasi poin ke penyimpanan lokal
+  Future<void> _saveLocalPointTx(String uid, PointTransaction tx) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'foodie_point_txs_$uid';
+      final existing = await _getLocalPointTxs(uid);
+      existing.removeWhere((item) => item.id == tx.id || item.idempotencyKey == tx.idempotencyKey);
+      existing.insert(0, tx);
+      await prefs.setStringList(
+        key,
+        existing.map((item) => jsonEncode(item.toJson())).toList(),
+      );
+    } catch (e) {
+      debugPrint('Save local point tx error: $e');
+    }
+  }
+
+  /// Mengambil riwayat mutasi poin pengguna (gabungan lokal, Supabase, dan auto-recovery)
   Future<List<PointTransaction>> getPointTransactions() async {
     final client = Supabase.instance.client;
-    final uid = client.auth.currentUser?.id;
+    final uid = client.auth.currentUser?.id ?? 'local_user';
+    final Map<String, PointTransaction> map = {};
 
-    if (uid != null) {
+    // 1. Ambil dari lokal SharedPreferences
+    final localList = await _getLocalPointTxs(uid);
+    for (final tx in localList) {
+      map[tx.id] = tx;
+    }
+
+    // 2. Ambil dari Supabase jika ada koneksi
+    if (client.auth.currentUser != null) {
       try {
         final res = await client
             .from('point_transactions')
@@ -404,25 +472,71 @@ class RewardBorderService {
             .order('created_at', ascending: false)
             .limit(30);
 
-        return (res as List)
-            .map((item) => PointTransaction.fromJson(item as Map<String, dynamic>))
-            .toList();
+        for (final item in (res as List)) {
+          final tx = PointTransaction.fromJson(item as Map<String, dynamic>);
+          map[tx.id] = tx;
+          await _saveLocalPointTx(uid, tx);
+        }
       } catch (e) {
         debugPrint('Fetch point_transactions error: $e');
       }
     }
 
-    // Default sample riwayat untuk demonstrasi awal jika belum ada data server
-    return [
-      PointTransaction(
+    // 3. Auto-recovery: Pastikan setiap border yang sudah dimiliki pengguna tercatat di riwayat poin
+    try {
+      final borders = await getBorders();
+      final prefs = await SharedPreferences.getInstance();
+      final owned = <String>{};
+      for (final key in prefs.getKeys()) {
+        if (key.startsWith('foodie_owned_borders_')) {
+          final list = prefs.getStringList(key);
+          if (list != null) owned.addAll(list);
+        }
+      }
+
+      for (final bid in owned) {
+        final hasBorderTx = map.values.any((tx) =>
+            tx.transactionType == 'border_purchase' &&
+            (tx.referenceId == bid || tx.metadata['border_name'] == bid));
+        if (!hasBorderTx) {
+          final borderObj = borders.where((b) => b.id == bid).firstOrNull;
+          final borderName = borderObj?.name ?? bid.replaceAll('border_', '').replaceAll('_', ' ');
+          final price = borderObj?.pricePoints ?? 200;
+          final autoTx = PointTransaction(
+            id: 'tx_buy_auto_$bid',
+            userId: uid,
+            amount: -price,
+            transactionType: 'border_purchase',
+            referenceId: bid,
+            idempotencyKey: 'recovery_ptx_$bid',
+            metadata: {'border_name': borderName},
+            createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
+          );
+          map[autoTx.id] = autoTx;
+          await _saveLocalPointTx(uid, autoTx);
+        }
+      }
+    } catch (e) {
+      debugPrint('Auto-recovery point tx error: $e');
+    }
+
+    // 4. Default jika masih kosong sama sekali
+    if (map.isEmpty) {
+      final welcomeTx = PointTransaction(
         id: 'tx_welcome',
-        userId: uid ?? 'local',
+        userId: uid,
         amount: 100,
-        transactionType: 'bonus',
+        transactionType: 'game_reward',
+        referenceId: null,
         idempotencyKey: 'welcome_bonus',
-        metadata: {'reason': 'Bonus Sambutan Kurator FOODIE'},
+        metadata: {'game_name': 'Bonus Kurator'},
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
+      );
+      map[welcomeTx.id] = welcomeTx;
+    }
+
+    final list = map.values.toList();
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 }

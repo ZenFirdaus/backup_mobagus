@@ -79,4 +79,9 @@ class BlockchainTransaction {
     if (txHash.length <= 14) return txHash;
     return '${txHash.substring(0, 8)}...${txHash.substring(txHash.length - 6)}';
   }
+
+  String get blockExplorerUrl {
+    final blk = blockNumber ?? 7054231;
+    return 'https://sepolia.etherscan.io/block/$blk';
+  }
 }

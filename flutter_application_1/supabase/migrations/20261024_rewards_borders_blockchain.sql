@@ -132,10 +132,14 @@ DROP POLICY IF EXISTS "Users can view own points" ON public.user_points;
 CREATE POLICY "Users can view own points" 
 ON public.user_points FOR SELECT USING (auth.uid() = user_id);
 
--- 3. point_transactions: Pengguna hanya dapat melihat riwayat transaksinya sendiri
+-- 3. point_transactions: Pengguna dapat melihat dan mencatat riwayat transaksinya sendiri
 DROP POLICY IF EXISTS "Users can view own point transactions" ON public.point_transactions;
 CREATE POLICY "Users can view own point transactions" 
 ON public.point_transactions FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own point transactions" ON public.point_transactions;
+CREATE POLICY "Users can insert own point transactions" 
+ON public.point_transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- 4. user_rewards: Siapapun dapat melihat border aktif orang lain (untuk avatar review), owner dapat manage
 DROP POLICY IF EXISTS "Public can view equipped rewards" ON public.user_rewards;
@@ -151,10 +155,14 @@ DROP POLICY IF EXISTS "Users can view own redemptions" ON public.reward_redempti
 CREATE POLICY "Users can view own redemptions" 
 ON public.reward_redemptions FOR SELECT USING (auth.uid() = user_id);
 
--- 6. blockchain_transactions: Publik dapat memverifikasi bukti on-chain
+-- 6. blockchain_transactions: Publik dapat memverifikasi bukti on-chain, user dapat insert bukti minting
 DROP POLICY IF EXISTS "Public can view blockchain proofs" ON public.blockchain_transactions;
 CREATE POLICY "Public can view blockchain proofs" 
 ON public.blockchain_transactions FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can insert own blockchain tx" ON public.blockchain_transactions;
+CREATE POLICY "Users can insert own blockchain tx" 
+ON public.blockchain_transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- ==============================================================================
 -- DATABASE FUNCTIONS / STORED PROCEDURES (RPC ATOMIK)

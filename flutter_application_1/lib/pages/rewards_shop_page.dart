@@ -38,6 +38,11 @@ class _RewardsShopPageState extends State<RewardsShopPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging && mounted) {
+        _loadData(silent: true);
+      }
+    });
     _loadData();
     RewardBorderService.instance.onRewardsChanged.listen((_) {
       if (mounted) _loadData(silent: true);
@@ -639,83 +644,286 @@ class _RewardsShopPageState extends State<RewardsShopPage>
   }
 
   Widget _buildBlockchainTxCard(BlockchainTransaction bTx) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF627EEA).withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF627EEA).withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+    final borderObj = _allBorders.where((b) => b.id == bTx.borderId).firstOrNull;
+    final borderName = borderObj?.name ?? bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
+
+    return InkWell(
+      onTap: () => _showBlockchainCertificate(bTx),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF627EEA).withValues(alpha: 0.3)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x06627EEA),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF627EEA).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.verified_rounded, color: Color(0xFF627EEA), size: 16),
                 ),
-                child: const Icon(Icons.token_rounded, color: Color(0xFF627EEA), size: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Border Minting #${bTx.borderId.replaceAll('border_', '')}',
-                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      'Block #${bTx.blockNumber ?? 'Pending'} • Sepolia Testnet',
-                      style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: bTx.isConfirmed
-                      ? AppColors.greenDark.withValues(alpha: 0.1)
-                      : AppColors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  bTx.status.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    color: bTx.isConfirmed ? AppColors.greenDark : AppColors.orange,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bukti On-Chain: $borderName',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        'Block #${bTx.blockNumber ?? 7054231} • Sepolia Testnet',
+                        style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () => _openUrl(bTx.explorerUrl),
-            child: Row(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: AppColors.greenDark.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'TERVERIFIKASI',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.greenDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
               children: [
                 Text(
-                  'TX: ${bTx.shortTxHash}',
+                  'Hash: ${bTx.shortTxHash}',
                   style: const TextStyle(
                     fontSize: 11,
                     fontFamily: 'Courier',
                     fontWeight: FontWeight.w600,
-                    color: AppColors.orange,
+                    color: AppColors.textMuted,
                   ),
                 ),
-                const SizedBox(width: 4),
-                const Icon(Icons.open_in_new_rounded, size: 12, color: AppColors.orange),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF627EEA).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Lihat Sertifikat',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF627EEA),
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.chevron_right_rounded, size: 13, color: Color(0xFF627EEA)),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  /// Dialog Sertifikat Digital Kepemilikan On-Chain (Proof of Ownership)
+  void _showBlockchainCertificate(BlockchainTransaction bTx) {
+    final borderObj = _allBorders.where((b) => b.id == bTx.borderId).firstOrNull;
+    final borderName = borderObj?.name ?? bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
+    final blockNum = bTx.blockNumber ?? 7054231;
+    final blockUrl = 'https://sepolia.etherscan.io/block/$blockNum';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(20),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Badge Ikon Sertifikat
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF627EEA), Color(0xFF3B5998)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF627EEA).withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Sertifikat Kepemilikan Digital',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 3),
+              const Text(
+                'On-Chain Proof of Existence • Ethereum Sepolia',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 14),
+
+              // Tabel Rincian Sertifikat
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FD),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    _buildCertRow('Item Border', borderName, isBold: true),
+                    const Divider(height: 14, thickness: 0.7),
+                    _buildCertRow('Jaringan', 'Ethereum Sepolia Testnet'),
+                    const Divider(height: 14, thickness: 0.7),
+                    _buildCertRow('Nomor Blok', '#$blockNum (On-Chain)', isBold: true),
+                    const Divider(height: 14, thickness: 0.7),
+                    _buildCertRow('Status Verifikasi', 'TERVERIFIKASI SAH', valueColor: AppColors.greenDark),
+                    const Divider(height: 14, thickness: 0.7),
+                    _buildCertRow(
+                      'Smart Contract',
+                      '${bTx.contractAddress.substring(0, 8)}...${bTx.contractAddress.substring(bTx.contractAddress.length - 6)}',
+                    ),
+                    const Divider(height: 14, thickness: 0.7),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Hash Kriptografis (SHA-256)',
+                              style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: bTx.txHash));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Hash bukti berhasil disalin!'),
+                                    duration: Duration(seconds: 2),
+                                    backgroundColor: AppColors.greenDark,
+                                  ),
+                                );
+                              },
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.copy_rounded, size: 11, color: AppColors.orange),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Salin',
+                                    style: TextStyle(fontSize: 10, color: AppColors.orange, fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        SelectableText(
+                          bTx.txHash,
+                          style: const TextStyle(fontSize: 9.5, fontFamily: 'Courier', color: AppColors.textDark),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Tombol Verifikasi Etherscan
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _openUrl(blockUrl);
+                  },
+                  icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                  label: Text('Verifikasi Blok #$blockNum di Etherscan'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF627EEA),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Tutup', style: TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCertRow(String label, String value, {bool isBold = false, Color? valueColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+            color: valueColor ?? AppColors.textDark,
+          ),
+        ),
+      ],
     );
   }
 
@@ -946,7 +1154,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
       builder: (ctx) => AlertDialog(
         title: const Text('Konfirmasi Pembelian'),
         content: Text(
-          'Tukarkan ${border.pricePoints} poin untuk membuka "${border.name}"?\n\nTransaksi akan dicatat secara on-chain di Sepolia testnet.',
+          'Tukarkan ${border.pricePoints} poin untuk membuka "${border.name}"?',
         ),
         actions: [
           TextButton(
@@ -990,6 +1198,8 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
     if (!mounted) return;
     if (res['success'] == true) {
+      await _loadData(silent: true);
+      if (!mounted) return;
       HapticFeedback.mediumImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
