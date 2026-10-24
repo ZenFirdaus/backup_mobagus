@@ -426,9 +426,10 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Handle bar minimalis
             Center(
               child: Container(
@@ -604,8 +605,9 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// Viewport Kamera Bulat Bersih & Ring Sensor
   Widget _buildCameraViewport() {

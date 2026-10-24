@@ -11,8 +11,10 @@ import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/buttons.dart';
+import '../widgets/detective_game_view.dart';
 import 'detail_page.dart';
 
+enum _GameMode { menu, quiz, detective }
 enum _GameView { levelSelect, playing, levelSummary, gameOver }
 
 class LevelConfig {
@@ -125,12 +127,18 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePageState extends State<GamePage> {
+  _GameMode _gameMode = _GameMode.menu;
   _GameView _currentView = _GameView.levelSelect;
 
   // Level progression
   int _unlockedLevel = 1;
   final Map<int, int> _levelStars = {}; // level -> 1..3 stars
   int _selectedLevel = 1;
+
+  // Detective progress overview for menu hub
+  int _detectiveUnlocked = 1;
+  int _detectiveCompletedCount = 0;
+  int _detectiveLives = 3;
 
   // Active game session
   int _totalScore = 0;
@@ -178,11 +186,19 @@ class _GamePageState extends State<GamePage> {
         starsMap[i] = prefs.getInt('foodie_game_stars_$i') ?? 0;
       }
 
+      // Load detective status
+      final detUnlocked = prefs.getInt('foodie_detective_unlocked') ?? 1;
+      final detCompleted = prefs.getStringList('foodie_detective_completed') ?? [];
+      final detLives = prefs.getInt('detective_lives') ?? 3;
+
       if (mounted) {
         setState(() {
           _totalScore = totalScore;
           _unlockedLevel = unlocked.clamp(1, kLevelsConfig.length);
           _levelStars.addAll(starsMap);
+          _detectiveUnlocked = detUnlocked;
+          _detectiveCompletedCount = detCompleted.length;
+          _detectiveLives = detLives;
         });
       }
     } catch (_) {}
@@ -490,6 +506,25 @@ class _GamePageState extends State<GamePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_gameMode == _GameMode.menu) {
+      return Scaffold(
+        body: PageBackground(
+          child: _buildMiniGamesMenu(),
+        ),
+      );
+    }
+
+    if (_gameMode == _GameMode.detective) {
+      return Scaffold(
+        body: DetectiveGameView(
+          onBackToMain: () {
+            _loadProgress();
+            setState(() => _gameMode = _GameMode.menu);
+          },
+        ),
+      );
+    }
+
     return Scaffold(
       body: PageBackground(
         child: switch (_currentView) {
@@ -498,6 +533,264 @@ class _GamePageState extends State<GamePage> {
           _GameView.levelSummary => _buildLevelSummary(),
           _GameView.gameOver => _buildGameOver(),
         },
+      ),
+    );
+  }
+
+  // ==========================================
+  // VIEW 0: MINI GAMES HUB MENU (2 PILIHAN GAME)
+  // ==========================================
+  Widget _buildMiniGamesMenu() {
+    int totalStarsEarned = 0;
+    for (final s in _levelStars.values) {
+      totalStarsEarned += s;
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+      children: [
+        // App bar row
+        Row(
+          children: [
+            InkWell(
+              onTap: () => Navigator.of(context).maybePop(),
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_back,
+                  size: 20,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Mini Games Kuliner', style: AppText.display(18)),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Pilih game untuk menguji wawasan & kemampuan rasa Anda',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+
+        // Player Stats Overview Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.line),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildMiniStat(Icons.star_rounded, AppColors.orange, '$totalStarsEarned', 'Bintang Kuis'),
+              Container(width: 1, height: 32, color: AppColors.line),
+              _buildMiniStat(Icons.assignment_turned_in_rounded, AppColors.green, '$_detectiveCompletedCount/15', 'Kasus Selesai'),
+              Container(width: 1, height: 32, color: AppColors.line),
+              _buildMiniStat(Icons.favorite_rounded, AppColors.tomato, '$_detectiveLives/3', 'Stamina Hati'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // GAME CARD 1: KUIS RASA MATARAMAN
+        _buildGameCard(
+          title: 'Kuis Rasa Mataraman',
+          badgeText: 'KUIS TRIVIA',
+          badgeColor: AppColors.orange,
+          imageUrl: 'https://images.unsplash.com/photo-1551266080-616f5d8174f1?auto=format&fit=crop&w=800&q=80',
+          infoText: 'Tingkat $_unlockedLevel/6 • $totalStarsEarned Bintang',
+          buttonText: 'Mainkan Kuis',
+          buttonColor: AppColors.orange,
+          onTap: () => setState(() => _gameMode = _GameMode.quiz),
+        ),
+        const SizedBox(height: 16),
+
+        // GAME CARD 2: DETEKTIF RASA JOGJA
+        _buildGameCard(
+          title: 'Detektif Rasa: Pilih Jalanmu',
+          badgeText: 'INVESTIGASI KASUS',
+          badgeColor: AppColors.charcoal,
+          imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+          infoText: 'Kasus $_detectiveUnlocked/15 • Checkpoint Lvl 5, 10, 15',
+          buttonText: 'Mulai Investigasi',
+          buttonColor: AppColors.charcoal,
+          onTap: () => setState(() => _gameMode = _GameMode.detective),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMiniStat(IconData icon, Color color, String value, String label) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 4),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.charcoal),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGameCard({
+    required String title,
+    required String badgeText,
+    required Color badgeColor,
+    required String imageUrl,
+    required String infoText,
+    required String buttonText,
+    required Color buttonColor,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Gambar menu besar di atas
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Image.network(
+                  imageUrl,
+                  height: 145,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 145,
+                    color: AppColors.surfaceSubtle,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.restaurant_rounded, size: 36, color: AppColors.textMuted),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: badgeColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            badgeText,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: badgeColor,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceSubtle,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.line),
+                          ),
+                          child: Text(
+                            infoText,
+                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.charcoal),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.charcoal,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: buttonColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        onPressed: onTap,
+                        child: Text(
+                          buttonText,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -518,7 +811,10 @@ class _GamePageState extends State<GamePage> {
         Row(
           children: [
             InkWell(
-              onTap: () => Navigator.of(context).maybePop(),
+              onTap: () {
+                _loadProgress();
+                setState(() => _gameMode = _GameMode.menu);
+              },
               customBorder: const CircleBorder(),
               child: Container(
                 width: 40,
