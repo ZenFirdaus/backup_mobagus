@@ -258,14 +258,19 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  /// Buka Google Maps dengan koordinat restoran
+  /// Buka Google Maps dengan navigasi arah ke restoran
   Future<void> _openMaps() async {
-    final uri = Uri.parse(
+    final navUri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${_r.lat},${_r.lng}',
+    );
+    final searchUri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${_r.lat},${_r.lng}',
     );
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (await canLaunchUrl(navUri)) {
+        await launchUrl(navUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(searchUri)) {
+        await launchUrl(searchUri, mode: LaunchMode.externalApplication);
       } else {
         // Fallback: buka browser
         await launchUrl(
@@ -277,7 +282,7 @@ class _DetailPageState extends State<DetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Tidak bisa membuka Maps untuk ${_r.name}'),
+            content: Text('Tidak bisa membuka navigasi untuk ${_r.name}'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1238,8 +1243,8 @@ class _DetailPageState extends State<DetailPage> {
                     size: 16, color: AppColors.red),
                 const SizedBox(width: 6),
                 Text('Lokasi & Rute', style: AppText.display(14)),
-                const SizedBox(width: 8),
-                // Tombol Toggle Rute
+                const Spacer(),
+                // Tombol Toggle Rute In-App
                 InkWell(
                   onTap: () {
                     if (_showRoute) {
@@ -1258,7 +1263,7 @@ class _DetailPageState extends State<DetailPage> {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: _showRoute
                           ? const Color(0xFF2563EB).withValues(alpha: 0.12)
@@ -1284,35 +1289,6 @@ class _DetailPageState extends State<DetailPage> {
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             color: _showRoute ? const Color(0xFF2563EB) : AppColors.charcoal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                InkWell(
-                  onTap: _openMaps,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.tint(AppColors.greenDark, 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.open_in_new_rounded,
-                            size: 12, color: AppColors.greenDark),
-                        SizedBox(width: 4),
-                        Text(
-                          'Google Maps',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.greenDark,
                           ),
                         ),
                       ],
