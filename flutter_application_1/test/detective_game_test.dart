@@ -95,7 +95,7 @@ void main() {
   group('Kulinerdle (Wordle Nusantara) Engine Tests', () {
     test('target words contain GUDEG, BAKSO, KOYOR, PECEL with fun facts', () {
       final words = kKulinerdleTargetWords.map((e) => e.word).toList();
-      expect(words, containsAll(['GUDEG', 'BAKSO', 'KOYOR', 'PECEL']));
+      expect(words, containsAll(['GUDEG', 'BAKSO', 'KOYOR', 'PECEL', 'TELUR', 'CUCUR', 'TIMUN']));
 
       final gudeg = kKulinerdleTargetWords.firstWhere((e) => e.word == 'GUDEG');
       expect(gudeg.funFact, contains('Gudeg'));
@@ -124,12 +124,55 @@ void main() {
       expect(wordC.word.length, 5);
     });
 
-    test('validates 5-letter dictionary contains food words', () {
-      expect(kKulinerdleValidWords.contains('GUDEG'), isTrue);
-      expect(kKulinerdleValidWords.contains('RAWON'), isTrue);
-      expect(kKulinerdleValidWords.contains('BAKSO'), isTrue);
-      expect(kKulinerdleValidWords.contains('TEMPE'), isTrue);
+    test('validates 5-letter dictionary contains food words for letter elimination while target words stay Nusantara', () {
+      // Target words stay strictly authentic Nusantara
+      for (final t in kKulinerdleTargetWords) {
+        expect(t.word.length, 5);
+        expect(kKulinerdleValidWords.contains(t.word), isTrue);
+        expect(RegExp(r'^[A-Z]{5}$').hasMatch(t.word), isTrue);
+      }
+      expect(kKulinerdleTargetWords.any((t) => t.word == 'PIZZA'), isFalse);
+      expect(kKulinerdleTargetWords.any((t) => t.word == 'BURGR'), isFalse);
+
+      // Guessable dictionary has expanded food & ingredients to easily eliminate letters
+      final eliminationWords = [
+        'BERAS', 'GULAA', 'ROTIK', 'PIZZA', 'STEAK', 'SUSHI',
+        'RAMEN', 'LEMON', 'MELON', 'PASTA', 'WATER', 'CREAM',
+        'MANGO', 'CHIPS', 'DONAT', 'KECAP', 'TOMAT', 'BAYAM',
+      ];
+      for (final ew in eliminationWords) {
+        expect(kKulinerdleValidWords.contains(ew), isTrue,
+            reason: '$ew should be in guessable dictionary for letter elimination');
+      }
+
+      // Every word in dictionary must be exactly 5 uppercase letters
+      for (final word in kKulinerdleValidWords) {
+        expect(word.length, 5, reason: '$word must have length 5');
+        expect(RegExp(r'^[A-Z]{5}$').hasMatch(word), isTrue,
+            reason: '$word must be 5 uppercase letters');
+      }
+
       expect(kKulinerdleValidWords.contains('ZZZZZ'), isFalse);
+    });
+
+    test('random word generator provides variety and respects exclusions', () {
+      final generatedWords = <String>{};
+      for (int i = 0; i < 30; i++) {
+        final w = getRandomKulinerdleWord();
+        expect(w.word.length, 5);
+        expect(kKulinerdleValidWords.contains(w.word), isTrue);
+        generatedWords.add(w.word);
+      }
+      // Out of 30 random draws from 55+ words, we should see significant variety (not always same word)
+      expect(generatedWords.length, greaterThan(1));
+
+      // Test exclusion list
+      final excluded = {'GUDEG', 'BAKSO', 'KOYOR', 'PECEL'};
+      for (int i = 0; i < 20; i++) {
+        final w = getRandomKulinerdleWord(null, excluded);
+        expect(excluded.contains(w.word), isFalse,
+            reason: '${w.word} should not have been selected because it is in excluded list');
+      }
     });
   });
 }

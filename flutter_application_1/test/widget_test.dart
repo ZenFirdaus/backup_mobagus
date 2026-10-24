@@ -1,8 +1,8 @@
-import 'dart:ui';
-
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter_application_1/main.dart';
+import 'package:flutter_application_1/pages/intro.dart';
 
 void main() {
   testWidgets('Halaman intro FOODIE tampil', (WidgetTester tester) async {
@@ -14,8 +14,8 @@ void main() {
 
     await tester.pumpWidget(const FoodieApp());
 
-    expect(find.text('FOODIE'), findsOneWidget);
-    expect(find.text('DIY & JAWA TENGAH'), findsOneWidget);
+    expect(find.byType(IntroPage), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     // Pompa melewati timer 3 detik di IntroPage supaya tidak ada
     // pending timer saat test selesai.

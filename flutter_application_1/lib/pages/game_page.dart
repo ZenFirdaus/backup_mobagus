@@ -187,10 +187,11 @@ class _GamePageState extends State<GamePage> {
   // GAME 2: KULINERDLE STATE
   // ───────────────────────────────────────────────────────────────────────────
   late KulinerdleWord _kulinerdleTarget;
-  bool _isDailyKulinerdle = true;
+  bool _isDailyKulinerdle = false;
   final List<String> _kulinerdleGuesses = [];
   String _kulinerdleCurrentInput = '';
   bool _kulinerdleGameOver = false;
+  final List<String> _recentKulinerdleWords = [];
   final Map<String, LetterEvaluation> _kulinerdleKeyEvaluations = {};
   int _kdPlayed = 0;
   int _kdWon = 0;
@@ -266,6 +267,11 @@ class _GamePageState extends State<GamePage> {
       _kdMaxStreak = prefs.getInt('kulinerdle_max_streak') ?? 0;
       for (int i = 1; i <= 6; i++) {
         _kdGuessDistribution[i] = prefs.getInt('kulinerdle_dist_$i') ?? 0;
+      }
+      final recentWords = prefs.getStringList('foodie_recent_kulinerdle_words');
+      if (recentWords != null && recentWords.isNotEmpty) {
+        _recentKulinerdleWords.clear();
+        _recentKulinerdleWords.addAll(recentWords);
       }
 
       // Streaks
@@ -569,17 +575,43 @@ class _GamePageState extends State<GamePage> {
   // ───────────────────────────────────────────────────────────────────────────
   // GAME 2: KULINERDLE LOGIC
   // ───────────────────────────────────────────────────────────────────────────
-  void _initKulinerdleWord({bool randomFreePlay = false}) {
+  void _initKulinerdleWord({
+    bool randomFreePlay = true,
+    bool showToast = false,
+  }) {
     setState(() {
       _isDailyKulinerdle = !randomFreePlay;
       _kulinerdleTarget = randomFreePlay
-          ? getRandomKulinerdleWord()
+          ? getRandomKulinerdleWord(null, _recentKulinerdleWords)
           : getDailyKulinerdleWord();
       _kulinerdleGuesses.clear();
       _kulinerdleCurrentInput = '';
       _kulinerdleGameOver = false;
       _kulinerdleKeyEvaluations.clear();
     });
+
+    if (randomFreePlay) {
+      if (!_recentKulinerdleWords.contains(_kulinerdleTarget.word)) {
+        _recentKulinerdleWords.add(_kulinerdleTarget.word);
+        if (_recentKulinerdleWords.length > 25) {
+          _recentKulinerdleWords.removeAt(0);
+        }
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setStringList(
+            'foodie_recent_kulinerdle_words',
+            _recentKulinerdleWords,
+          );
+        });
+      }
+    }
+
+    if (showToast) {
+      _showToast(
+        randomFreePlay
+            ? 'Kata baru diacak! Tebak masakannya 🍜'
+            : 'Beralih ke Tantangan Harian 📅',
+      );
+    }
   }
 
   void _onVirtualKeyPress(String char) {
@@ -1819,7 +1851,12 @@ class _GamePageState extends State<GamePage> {
           description: 'Tebak kata masakan khas nusantara 5 huruf dalam 6 kesempatan dengan keyboard virtual dan rekomendasi direktori.',
           stats: 'Menang: $_kdWon/$_kdPlayed • Streak: 🔥 $_kdCurrentStreak',
           ctaText: 'Mainkan Kulinerdle ➔',
-          onTap: () => setState(() => _currentView = _GameView.kulinerdle),
+          onTap: () {
+            if (_kulinerdleGameOver || _kulinerdleGuesses.isEmpty) {
+              _initKulinerdleWord(randomFreePlay: true);
+            }
+            setState(() => _currentView = _GameView.kulinerdle);
+          },
         ),
         const SizedBox(height: 14),
 
@@ -2488,25 +2525,65 @@ class _GamePageState extends State<GamePage> {
                           children: [
                             Text('KULINERDLE', style: AppText.display(15)),
                             const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 1.5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _isDailyKulinerdle
-                                    ? AppColors.green.withValues(alpha: 0.15)
-                                    : AppColors.orange.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                _isDailyKulinerdle ? 'HARIAN' : 'BEBAS',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                            InkWell(
+                              onTap: () {
+                                if (_isDailyKulinerdle) {
+                                  _initKulinerdleWord(
+                                    randomFreePlay: true,
+                                    showToast: true,
+                                  );
+                                } else {
+                                  _initKulinerdleWord(
+                                    randomFreePlay: false,
+                                    showToast: true,
+                                  );
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
                                   color: _isDailyKulinerdle
-                                      ? AppColors.green
-                                      : AppColors.orange,
+                                      ? AppColors.green.withValues(alpha: 0.15)
+                                      : AppColors.orange.withValues(
+                                          alpha: 0.15,
+                                        ),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color:
+                                        (_isDailyKulinerdle
+                                                ? AppColors.green
+                                                : AppColors.orange)
+                                            .withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _isDailyKulinerdle
+                                          ? Icons.calendar_today_rounded
+                                          : Icons.shuffle_rounded,
+                                      size: 10,
+                                      color: _isDailyKulinerdle
+                                          ? AppColors.green
+                                          : AppColors.orange,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      _isDailyKulinerdle ? 'HARIAN' : 'ACAK',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: _isDailyKulinerdle
+                                            ? AppColors.green
+                                            : AppColors.orange,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -2522,14 +2599,44 @@ class _GamePageState extends State<GamePage> {
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.refresh_rounded,
-                      color: AppColors.orange,
-                      size: 22,
+                  InkWell(
+                    onTap: () => _initKulinerdleWord(
+                      randomFreePlay: true,
+                      showToast: true,
                     ),
-                    tooltip: 'Ronde Baru Bebas',
-                    onPressed: () => _initKulinerdleWord(randomFreePlay: true),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.orange.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.casino_rounded,
+                            size: 15,
+                            color: AppColors.orange,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Acak Kata',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
