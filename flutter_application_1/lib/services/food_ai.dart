@@ -53,6 +53,15 @@ String prettyCategory(Object? raw) {
     'tea_house': 'Kedai teh',
     'canteen': 'Kantin',
     'kantin': 'Kantin',
+    'bebek': 'Bebek & Unggas',
+    'padang': 'Masakan Padang',
+    'mie_pedas': 'Mie Pedas Kekinian',
+    'seblak': 'Seblak & Baso Aci',
+    'rawon': 'Rawon & Daging Sapi',
+    'pempek': 'Pempek & Palembang',
+    'ayce': 'All You Can Eat',
+    'healthy': 'Makanan Sehat',
+    'tradisional': 'Kuliner Tradisional',
   };
   final hit = names[k];
   if (hit != null) return hit;
@@ -91,157 +100,278 @@ class _Topic {
 }
 
 final List<_Topic> _topics = [
-  _Topic('gudeg', RegExp(r'\bgudeg\b'), ['gudeg']),
-  _Topic('soto', RegExp(r'\bsoto\b'), ['soto']),
-  _Topic('bakmi & mie', RegExp(r'\b(bakmi|bakmie|mie|mi)\b'), ['bakmi', 'mie']),
-  _Topic('bakso', RegExp(r'\b(bakso|baso)\b'), ['bakso']),
-  _Topic('ayam', RegExp(r'\b(ayam|geprek)\b'), ['ayam', 'geprek']),
-  _Topic('sate', RegExp(r'\b(sate|satay)\b'), ['sate']),
-  _Topic('nasi', RegExp(r'\b(nasi|sego|rice)\b'), ['nasi']),
-  _Topic('seafood', RegExp(r'\b(seafood|ikan|lele|udang|cumi)\b'), [
-    'seafood',
-    'ikan',
-    'lele',
+  _Topic('gudeg', RegExp(r'\b(gudeg|krecek|nangka muda)\b'), [
+    'gudeg',
+    'krecek',
   ]),
-  _Topic('makanan pedas', RegExp(r'\b(pedas|pedes|sambal|seblak)\b'), [
-    'pedas',
-    'sambal',
-    'seblak',
+  _Topic('soto', RegExp(r'\b(soto|sroto|coto|saoto|tauto)\b'), ['soto']),
+  _Topic(
+    'bakmi & mie',
+    RegExp(r'\b(bakmi|bakmie|mie|mi|bakmi jawa|mie lethek|mie ongklok)\b'),
+    ['bakmi', 'mie'],
+  ),
+  _Topic('bakso', RegExp(r'\b(bakso|baso|pentol|bakso urat|bakso bakar)\b'), [
+    'bakso',
   ]),
   _Topic(
+    'ayam',
+    RegExp(
+      r'\b(ayam|geprek|ayam bakar|ayam goreng|kalasan|kremes|ayam penyet)\b',
+    ),
+    ['ayam', 'geprek'],
+  ),
+  _Topic(
+    'bebek & unggas',
+    RegExp(
+      r'\b(bebek|menthok|entok|puyuh|burung dara|bebek goreng|bebek madura|bebek sinjay|bebek bakar)\b',
+    ),
+    ['bebek', 'menthok', 'puyuh'],
+  ),
+  _Topic(
+    'sate',
+    RegExp(
+      r'\b(sate|satay|sate klatak|klathak|taichan|sate kambing|sate ayam|sate buntel)\b',
+    ),
+    ['sate'],
+  ),
+  _Topic(
+    'nasi',
+    RegExp(
+      r'\b(nasi|sego|rice|nasgor|nasi goreng|nasi liwet|nasi uduk|nasi kuning|nasi rames|nasi campur|nasi bakar|nasi berkat)\b',
+    ),
+    ['nasi', 'sego'],
+  ),
+  _Topic(
+    'masakan padang',
+    RegExp(
+      r'\b(padang|nasi padang|rendang|gulai tunjang|dendeng|ayam pop|kapau|minang|balado)\b',
+    ),
+    ['padang', 'rendang', 'gulai', 'dendeng'],
+  ),
+  _Topic(
+    'seafood',
+    RegExp(
+      r'\b(seafood|ikan|lele|udang|cumi|kepiting|gurame|nila|bawal|cakalang|kerang|pecel lele|ikan bakar)\b',
+    ),
+    ['seafood', 'ikan', 'lele', 'udang'],
+  ),
+  _Topic(
+    'makanan pedas & mercon',
+    RegExp(
+      r'\b(pedas|pedes|sambal|sambel|oseng mercon|mercon|rica|jebew|nampol|pedas mampus)\b',
+    ),
+    ['pedas', 'sambal', 'mercon'],
+  ),
+  _Topic(
+    'mie pedas & kekinian',
+    RegExp(
+      r'\b(mie gacoan|gacoan|wizzmie|mie level|mie pedas|mie pedes|mie jebew|mie setan|mie iblis|mie nyemek)\b',
+    ),
+    ['gacoan', 'mie', 'pedas'],
+  ),
+  _Topic(
+    'seblak & baso aci',
+    RegExp(
+      r'\b(seblak|baso aci|boci|cuanki|cilok kuah|makaroni basah|makaroni pedas)\b',
+    ),
+    ['seblak', 'cuanki', 'bakso'],
+  ),
+  _Topic(
+    'rawon, iga & daging',
+    RegExp(
+      r'\b(rawon|empal|empal gentong|sei sapi|sei|daging sapi|beef|bistik|sop buntut|iga sapi|iga penyet|selat solo)\b',
+    ),
+    ['rawon', 'sapi', 'iga', 'empal'],
+  ),
+  _Topic(
+    'pempek',
+    RegExp(
+      r'\b(pempek|empek|mpek|kapal selam|lenjer|adaan|cuko|tekwan|model)\b',
+    ),
+    ['pempek', 'tekwan'],
+  ),
+  _Topic(
     'kopi & nongkrong',
-    RegExp(r'\b(kopi|coffee|ngopi|nongkrong|cafe|kafe|wfh|santai)\b'),
+    RegExp(
+      r'\b(kopi|coffee|ngopi|nongkrong|cafe|kafe|wfh|santai|wfc|colokan|nongki|espresso|latte|cappuccino|manual brew)\b',
+    ),
     ['coffee', 'kopi', 'cafe'],
   ),
   _Topic(
-    'jajanan',
+    'jajanan & camilan',
     RegExp(
-      r'\b(jajan|jajanan|camilan|cemilan|snack|ngemil|siomay|gorengan|cilok)\b',
+      r'\b(jajan|jajanan|camilan|cemilan|snack|ngemil|siomay|batagor|gorengan|cilok|cireng|mendoan|geblek|tahu gejrot|pisang goreng|tahu bakso)\b',
     ),
-    ['jajan', 'siomay', 'snack'],
+    ['jajan', 'siomay', 'snack', 'gorengan'],
   ),
-  _Topic('cepat saji', RegExp(r'\b(fast ?food|cepat saji|burger|pizza)\b'), [
-    'fast_food',
-    'burger',
-    'pizza',
-  ]),
   _Topic(
-    'roti & kue',
-    RegExp(r'\b(roti|kue|bakery|donat|dessert|manis|cake)\b'),
+    'cepat saji',
+    RegExp(
+      r'\b(fast ?food|cepat saji|burger|pizza|hotdog|kentang goreng|french fries)\b',
+    ),
+    ['fast_food', 'burger', 'pizza'],
+  ),
+  _Topic(
+    'roti, pastry & kue',
+    RegExp(
+      r'\b(roti|kue|bakery|donat|dessert|manis|cake|pastry|croissant|croffle|toast|roti bakar)\b',
+    ),
     ['roti', 'bakery', 'kue', 'dessert'],
   ),
   _Topic(
-    'es & minuman',
-    RegExp(r'\b(es|minuman|boba|jus|teh|dingin|segar)\b'),
-    ['es', 'jus', 'minuman', 'teh'],
+    'es & minuman segar',
+    RegExp(
+      r'\b(es|minuman|boba|jus|teh|teh poci|es teh|dingin|segar|seger|cendol|dawet|es campur|es teler|es kelapa|smoothie|matcha|thai tea)\b',
+    ),
+    ['es', 'jus', 'minuman', 'teh', 'boba'],
   ),
-  _Topic('vegetarian', RegExp(r'\b(vegetarian|vegan|sayur)\b'), [
-    'vegetarian',
-    'vegan',
-    'sayur',
-  ]),
-  _Topic('restoran', RegExp(r'\b(restoran|resto|restaurant)\b'), [
-    'restaurant',
-    'resto',
-  ]),
-  _Topic('sarapan', RegExp(r'\b(sarapan|breakfast|bubur|lontong)\b'), [
-    'bubur',
-    'lontong',
+  _Topic(
+    'all you can eat & buffet',
+    RegExp(
+      r'\b(all you can eat|ayce|buffet|prasmanan|shabu|shabu shabu|sukiyaki|suki|steamboat|hotpot|korean bbq|kbbq)\b',
+    ),
+    ['buffet', 'shabu', 'grill', 'bbq'],
+  ),
+  _Topic(
+    'vegetarian & sayur',
+    RegExp(r'\b(vegetarian|vegan|sayur|lalapan|capcay|urap|tumis)\b'),
+    ['vegetarian', 'vegan', 'sayur'],
+  ),
+  _Topic(
+    'restoran',
+    RegExp(
+      r'\b(restoran|resto|restaurant|rumah makan|warung makan|bistro|eatery)\b',
+    ),
+    ['restaurant', 'resto'],
+  ),
+  _Topic(
     'sarapan',
-  ]),
-
-  // ------------------------- TAMBAHAN TOPIK -------------------------------
+    RegExp(
+      r'\b(sarapan|breakfast|bubur|bubur ayam|buryam|lontong|lontong sayur|lontong opor|sego berkat)\b',
+    ),
+    ['bubur', 'lontong', 'sarapan'],
+  ),
   _Topic(
     'martabak & kue cubit',
-    RegExp(r'\b(martabak|terang bulan|kue cubit|pukis|kue pancong)\b'),
+    RegExp(
+      r'\b(martabak|terang bulan|kue cubit|pukis|kue pancong|pancong|lekker|crepes)\b',
+    ),
     ['martabak', 'terang bulan', 'cubit'],
   ),
   _Topic(
     'angkringan',
     RegExp(
-      r'\b(angkringan|wedangan|wedang|hik|nasi kucing|sego kucing|kucingan)\b',
+      r'\b(angkringan|wedangan|wedang|hik|nasi kucing|sego kucing|kucingan|wedang jahe|wedang ronde|kopi joss|bajigur|wedang uwuh)\b',
     ),
     ['angkringan', 'wedang', 'kucing'],
   ),
   _Topic(
     'bakpia & oleh-oleh',
-    RegExp(r'\b(bakpia|oleh ?oleh|geplak|yangko|mochi|souvenir|buah tangan)\b'),
+    RegExp(
+      r'\b(bakpia|oleh ?oleh|geplak|yangko|mochi|souvenir|buah tangan|pia|enting)\b',
+    ),
     ['bakpia', 'oleh', 'yangko'],
   ),
   _Topic(
     'tengkleng & tongseng',
-    RegExp(r'\b(tengkleng|tongseng|gulai|kambing|sate kambing|kebab)\b'),
+    RegExp(
+      r'\b(tengkleng|tongseng|gulai|kambing|sate kambing|krengsengan|kikil)\b',
+    ),
     ['tengkleng', 'tongseng', 'gulai', 'kambing'],
   ),
   _Topic(
     'pecel & rujak',
     RegExp(
-      r'\b(pecel|rujak|gado ?gado|lotek|karedok|tahu campur|tahu tek|lontong sayur)\b',
+      r'\b(pecel|rujak|gado ?gado|lotek|karedok|tahu campur|tahu tek|tahu telur|lontong sayur)\b',
     ),
     ['pecel', 'rujak', 'gado'],
   ),
   _Topic(
     'penyetan & lalapan',
-    RegExp(r'\b(penyet|penyetan|lalap|lalapan|pecel lele)\b'),
+    RegExp(r'\b(penyet|penyetan|lalap|lalapan|pecel lele|sambal lalap)\b'),
     ['penyet', 'lalap'],
   ),
   _Topic(
     'sop & berkuah',
-    RegExp(r'\b(sop|sup|konro|iga|berkuah|kuah|hangat|anget|hujan)\b'),
+    RegExp(
+      r'\b(sop|sup|konro|iga|berkuah|kuah|hangat|anget|hujan|timlo|sayur asem|kaldu)\b',
+    ),
     ['sop', 'konro', 'kuah'],
   ),
   _Topic(
     'steak & panggang',
-    RegExp(r'\b(steak|bbq|barbeque|grill|panggang|bakaran|iga bakar|ribs?)\b'),
+    RegExp(
+      r'\b(steak|bbq|barbeque|grill|panggang|bakaran|iga bakar|ribs?|bistik)\b',
+    ),
     ['steak', 'grill', 'bbq'],
   ),
   _Topic(
     'masakan asia',
     RegExp(
-      r'\b(ramen|sushi|jepang|japanese|korea|korean|bibimbap|dimsum|dim sum|chinese|china|thai|india|asia)\b',
+      r'\b(ramen|sushi|jepang|japanese|korea|korean|bibimbap|dimsum|dim sum|chinese|china|thai|india|asia|bento|katsu|udon|tomyam)\b',
     ),
     ['ramen', 'sushi', 'dimsum', 'korea'],
   ),
   _Topic(
     'pasta & western',
-    RegExp(r'\b(pasta|spaghetti|italia|italian|western|sandwich|lasagna)\b'),
+    RegExp(
+      r'\b(pasta|spaghetti|italia|italian|western|sandwich|lasagna|mac and cheese)\b',
+    ),
     ['pasta', 'italia', 'western'],
   ),
-  _Topic('es krim', RegExp(r'\b(es krim|eskrim|ice ?cream|gelato)\b'), [
-    'ice_cream',
+  _Topic(
     'es krim',
-    'gelato',
-  ]),
+    RegExp(r'\b(es krim|eskrim|ice ?cream|gelato|sundae|froyo)\b'),
+    ['ice_cream', 'es krim', 'gelato'],
+  ),
   _Topic(
     'makanan sehat',
-    RegExp(r'\b(sehat|healthy|diet|salad|clean eating|rendah kalori)\b'),
+    RegExp(
+      r'\b(sehat|healthy|diet|salad|clean eating|rendah kalori|low calorie|tanpa minyak|jus detoks)\b',
+    ),
     ['salad', 'healthy', 'sehat'],
   ),
   _Topic(
     'kuliner khas & legendaris',
     RegExp(
-      r'\b(khas|tradisional|legendaris|lawas|jadul|klasik|autentik|asli|ikonik|turun temurun)\b',
+      r'\b(khas|tradisional|legendaris|lawas|jadul|klasik|autentik|asli|ikonik|turun temurun|khas jogja|khas solo)\b',
     ),
     ['gudeg', 'soto', 'sate', 'bakmi'],
   ),
   _Topic(
     'makan bareng keluarga',
     RegExp(
-      r'\b(keluarga|arisan|rombongan|ramean|ramai ramai|reuni|acara|syukuran|ulang tahun)\b',
+      r'\b(keluarga|arisan|rombongan|ramean|ramai ramai|reuni|acara|syukuran|ulang tahun|ramah anak|playground|kids friendly)\b',
     ),
     ['restaurant', 'food_court'],
   ),
   _Topic(
+    'suasana alam & estetik',
+    RegExp(
+      r'\b(view bagus|pemandangan|alam|sawah|gunung|rooftop|sunset|instagramable|estetik|aesthetic|foto foto|outdoor|sejuk|syahdu|adem)\b',
+    ),
+    ['cafe', 'restaurant'],
+  ),
+  _Topic(
     'suasana romantis',
-    RegExp(r'\b(romantis|kencan|candle ?light|dinner date|anniversary)\b'),
+    RegExp(
+      r'\b(romantis|kencan|candle ?light|dinner date|anniversary|tempat date|nge ?date)\b',
+    ),
     ['restaurant', 'cafe'],
   ),
   _Topic(
     'makan larut malam',
     RegExp(
-      r'\b(tengah malam|begadang|lembur|24 jam|dini hari|midnight|larut malam)\b',
+      r'\b(tengah malam|begadang|lembur|24 jam|dini hari|midnight|larut malam|kuliner malam|ronda)\b',
     ),
     ['angkringan', 'nasi', 'bakmi'],
+  ),
+  _Topic(
+    'halal & muslim friendly',
+    RegExp(
+      r'\b(halal|no pork|tanpa babi|non pork|aman muslim|muslim friendly)\b',
+    ),
+    ['ayam', 'sapi', 'nasi', 'soto'],
   ),
 ];
 
@@ -457,6 +587,55 @@ const Set<String> _stop = {
   'fine',
   'aman',
   'besar',
+  // --- tambahan v3: slang daerah, panggilan, & filler ---
+  'tenan',
+  'poll',
+  'pol',
+  'lur',
+  'mas',
+  'mbak',
+  'boss',
+  'bos',
+  'cuy',
+  'gan',
+  'rek',
+  'bro',
+  'sis',
+  'mimin',
+  'kek',
+  'gini',
+  'gitu',
+  'macam',
+  'kayak',
+  'koyo',
+  'sing',
+  'iku',
+  'iki',
+  'piye',
+  'opo',
+  'ning',
+  'neng',
+  'karo',
+  'kui',
+  'punya',
+  'bikin',
+  'bikinin',
+  'golek',
+  'nyari',
+  'hunting',
+  'santai',
+  'cozy',
+  'pewe',
+  'pw',
+  'asik',
+  'parah',
+  'gaskeun',
+  'kuy',
+  'skuy',
+  'santuy',
+  'time',
+  'nongki',
+  'kongkow',
 };
 
 final _reReset = RegExp(
@@ -472,7 +651,7 @@ final _reWho = RegExp(
   r'\b(siapa (kamu|namamu|kau|nama kamu)|kamu siapa|kamu itu apa|kamu (bot|ai|manusia))\b',
 );
 final _reHelp = RegExp(
-  r'\b(bantuan|help|bisa apa|fitur|cara pakai|cara kerja|gimana cara|panduan|tutorial)\b',
+  r'\b(bantuan|help|bisa apa|fitur|cara pakai|cara kerja|gimana cara (pakai|pake|kerja|kerjanya)|panduan|tutorial)\b',
 );
 final _reGreet = RegExp(
   r'^(halo+|hai+|hi+|hey+|hello|helo|pagi|siang|sore|malam|selamat (pagi|siang|sore|malam)|assalamualaikum|salam|permisi|tes|test)\b',
@@ -484,7 +663,7 @@ final _reRaise = RegExp(
   r'\b(naik(kan|in)? (budget|harga)|budget (naik|lebih)|tambah(in)? budget|lebih mahal|agak mahal|yang (premium|mewah|lebih bagus)|upgrade)\b',
 );
 final _reDislike = RegExp(
-  r'\b((gak|ga|nggak|ngga|tidak|bukan) (cocok|suka|mau|itu|sreg|pas)|kurang (cocok|suka|sreg|pas)|bosen|bosan|ganti|beda jenis|jenis lain|makanan lain)\b',
+  r'\b((gak|ga|nggak|ngga|tidak|bukan) (cocok|suka|mau|itu|sreg|pas)|kurang (cocok|suka|sreg|pas)|bosen|bosan|ganti (makanan|menu|opsi|pilihan|tempat|resto|jenis)|beda jenis|jenis lain|makanan lain)\b',
 );
 final _reCheaper = RegExp(
   r'\b(lebih murah|lebih hemat|yang murah(an)?|kemahalan|terlalu mahal|mahal banget)\b',
@@ -541,6 +720,16 @@ final List<RegExp> _adviceRes = [
   RegExp(
     r'\b(lapar|laper|keroncongan|kelaparan|ngidam|lagi pengen|lagi pengin|lagi pingin|pengen sesuatu|pengin sesuatu)\b',
   ),
+  // Tambahan v3 (bahasa daerah Jawa & slang populer):
+  RegExp(
+    r'\b(luwe|keluwen|weteng luwe|ngelak|ngorong|mangan opo|madhang opo|medhang opo|golek mangan|golek maem|nyari maem)\b',
+  ),
+  RegExp(
+    r'\b(rekomendasi kuliner|rekomendasi makanan|kuliner enak|kuliner hits|makanan viral|tempat makan enak|kuliner mantap|hunting kuliner)\b',
+  ),
+  RegExp(
+    r'\b(pengen ngunyah|pengen nyemil|pengen makan|butuh asupan|butuh amunisi|craving|bm makan|food craving)\b',
+  ),
 ];
 
 bool _isAdvice(String t) {
@@ -563,13 +752,13 @@ final _reSurpriseStrong = RegExp(
 );
 
 final _reGreetExtra = RegExp(
-  r'^(sugeng (enjing|siang|sonten|dalu)|kulo nuwun|punten|hallo+|halo+ kak|hai+ kak|hei+|hey+ kak|woi|oi|bro|sis|kak|assalamu ?alaikum|wa ?alaikum ?salam|salam kenal|selamat datang|good (morning|afternoon|evening)|morning|woy)\b',
+  r'^(sugeng (enjing|siang|sonten|dalu)|kulo nuwun|sampun|monggo|punten|hallo+|halo+ kak|hai+ kak|hei+|hey+ kak|woi|oi|bro|sis|kak|assalamu ?alaikum|wa ?alaikum ?salam|salam kenal|selamat datang|good (morning|afternoon|evening)|morning|woy)\b',
 );
 final _reThanksExtra = RegExp(
-  r'\b(matur nuwun|maturnuwun|tengkyu|thank ?u|thanks? (ya|banget|a lot)|tq|tks|terima kasih banyak|makasih banyak|makasih ya|mksh|makasi ya|thankyou)\b',
+  r'\b(matur nuwun|maturnuwun|suwun sanget|tengkyu|thank ?u|thanks? (ya|banget|a lot)|tq|tks|terima kasih banyak|makasih banyak|makasih ya|mksh|makasi ya|thankyou)\b',
 );
 final _reByeExtra = RegExp(
-  r'\b(sampai ketemu|sampai besok|sampai bertemu|pamit|cabut dulu|out dulu|gtg|good ?night|selamat tinggal|sampun|monggo|bye bye|babay|baibai|see you)\b',
+  r'\b(sampai ketemu|sampai besok|sampai bertemu|pamit|cabut dulu|out dulu|gtg|good ?night|selamat tinggal|sampun|monggo|bye bye|babay|baibai|see you|tidur dulu)\b',
 );
 final _reWhoExtra = RegExp(
   r'\b(namamu|nama kamu|nama lu|kamu (itu )?(robot|chatbot|asisten)|siapa yang (bikin|buat|membuat)|dibuat (oleh|sama)|kamu (dari|berasal)|kamu (pakai|pake) (apa|ai|gpt)|ini (bot|ai|chatbot) (ya|apa))\b',
@@ -584,8 +773,121 @@ final _reRaiseExtra = RegExp(
   r'\b(budget (ku |gue |gw |saya |aku )?(longgar|banyak|aman|bebas|besar|lebih)|(gak|ga|nggak|ngga|tidak) (masalah|apa apa|apa-apa|usah mikir) (mahal|harga|budget)|harga (bukan|ga|gak|nggak) (masalah|penting)|bebas harga|duit (banyak|aman)|uang (banyak|aman)|sultan|mewah|fine dining|yang mahalan|agak mahal|bayar mahal|istimewa|traktiran|ditraktir|traktir)\b',
 );
 final _reCheapExtra = RegExp(
-  r'\b(budget (ku |gue |gw |saya |aku )?(tipis|mepet|terbatas|pas pasan|pas-pasan|minim|seadanya|sedikit)|uang (saku )?(tipis|mepet|pas pasan|pas-pasan|terbatas|seadanya)|dompet (tipis|kering)|kantong (tipis|kering)|anak kos|anak kost|ngirit|nge ?irit|tanggal tua|bokek|cekak|miskin|murah meriah|ramah kantong|hemat dong|mahasiswa|pelajar|kere)\b',
+  r'\b(budget (ku |gue |gw |saya |aku )?(tipis|mepet|terbatas|pas pasan|pas-pasan|minim|seadanya|sedikit)|uang (saku )?(tipis|mepet|pas pasan|pas-pasan|terbatas|seadanya)|dompet (tipis|kering)|kantong (tipis|kering)|anak kos|anak kost|ngirit|nge ?irit|tanggal tua|bokek|cekak|miskin|murah meriah|ramah kantong|hemat dong|mahasiswa|pelajar|kere|murmer)\b',
 );
+
+// ---------------------------------------------------------------------------
+// REGEX DETEKSI DI LUAR RANAH KULINER (OUT-OF-DOMAIN ERROR HANDLING)
+// ---------------------------------------------------------------------------
+
+/// 1. Teknologi, Pemrograman, IT, Hardware, Gadget
+final _reTechOutOfDomain = RegExp(
+  r'\b(koding|coding|pemrograman|programmer|javascript|python|flutter|dart|golang|html|css|php|sql|database|github|syntax|compiler|framework|software|komputer|laptop|pc|processor|ram|vga|gpu|intel|amd|windows|linux|macos|android studio|vs code|handphone|smartphone|gadget|iphone|xiaomi|samsung|baterai bocor|blue screen|wifi lemot|router|ip address|hacker|script|source code)\b',
+  caseSensitive: false,
+);
+
+/// 2. Politik, Pemerintahan, Hukum, Pejabat Negara
+final _rePoliticsOutOfDomain = RegExp(
+  r'\b(presiden|wapres|wakil presiden|menteri|kementerian|dpr|mpr|dpd|pilpres|pemilu|pilkada|partai politik|pdi|gerindra|golkar|jokowi|prabowo|gibran|anies|ganjar|gubernur|walikota|bupati|undang ?undang|pasal hukum|pidana|perdata|korupsi|kpk|demo|demonstrasi|kebijakan pemerintah|apbn|bumn|sengketa)\b',
+  caseSensitive: false,
+);
+
+/// 3. Sains, Matematika, Akademik, Sekolah, Teori
+final _reAcademicOutOfDomain = RegExp(
+  r'\b(rumus|matematika|kalkulus|aljabar|trigonometri|fisika|kimia|biologi|gravitasi|kecepatan cahaya|tata surya|planet|galaksi|revolusi industri|perang dunia|pr sekolah|tugas sekolah|skripsi|makalah|penemu benua|siapa penemu|teori relativitas|fotosintesis|tabel periodik|integral|diferensial|hitung luas|hitung volume)\b',
+  caseSensitive: false,
+);
+
+/// 4. Otomotif, Mesin, Kendaraan
+final _reAutomotiveOutOfDomain = RegExp(
+  r'\b(ganti oli|oli mesin|bengkel motor|bengkel mobil|tambal ban|ban bocor|knalpot|kampas rem|radiator|karburator|injeksi|tune up|servis motor|servis mobil|motor mogok|mobil mogok|sparepart|spion|velg|speedometer|transmisi|kopling|avanza|innova|honda beat|vario|nmax|pcx)\b',
+  caseSensitive: false,
+);
+
+/// 5. Percintaan, Asmara, Curhat, Zodiak
+final _reRomanceOutOfDomain = RegExp(
+  r'\b(balikan sama mantan|mantan pacar|mantan|selingkuh|diselingkuhi|patah hati|putus cinta|cara nembak|nembak gebetan|tips pacaran|zodiak|horoskop|ramalan bintang|aries|taurus|gemini|cancer|leo|virgo|libra|scorpio|sagitarius|capricorn|aquarius|pisces|jodohku|siapa jodoh|puisi cinta|kata gombal|gombalan)\b',
+  caseSensitive: false,
+);
+
+/// 6. Finansial, Saham, Crypto, Pinjaman Online
+final _reFinanceOutOfDomain = RegExp(
+  r'\b(saham|ihsg|crypto|cryptocurrency|bitcoin|btc|ethereum|eth|trading|forex|pinjol|pinjaman online|reksadana|pasar modal|dividen|bursa efek|investasi emas|paylater|bunga pinjaman|kredit rumah|kpr|kartu kredit)\b',
+  caseSensitive: false,
+);
+
+/// 7. Kesehatan Medis Umum, Penyakit Berat, Obat Farmasi
+final _reMedicalOutOfDomain = RegExp(
+  r'\b(penyakit jantung|gejala diabetes|stroke|kanker|tumor|obat flu|paracetamol|amoxicillin|antibiotik|dosis obat|resep dokter|operasi usus|luka bakar|luka bernanah|infeksi saluran|rumah sakit|dokter spesialis|tensi darah|kolesterol tinggi|asam urat parah)\b',
+  caseSensitive: false,
+);
+
+/// 8. Olahraga & Hiburan / Gaming Non-Kuliner
+final _reEntertainmentOutOfDomain = RegExp(
+  r'\b(skor bola|hasil pertandingan|liga inggris|premier league|liga champion|champions league|la liga|serie a|piala dunia|world cup|timnas indonesia|mobile legends|mlbb|free fire|pubg|valorant|dota|cheat game|chord lagu|kunci gitar|lirik lagu|link nonton|anime sub indo)\b',
+  caseSensitive: false,
+);
+
+/// 9. Tugas Generatif Teks Umum / General AI
+final _reGeneralAiOutOfDomain = RegExp(
+  r'\b(terjemahkan|terjemahin|translate|buatkan puisi|bikin puisi|bikin cerpen|cerita dongeng|rangkum artikel|ringkas teks|siapa pencipta alam|apa arti hidup|siapa penemu|dimana letak negara|ibukota negara)\b',
+  caseSensitive: false,
+);
+
+/// Mendeteksi teks acak / keyboard mash / spam huruf nir-makna
+bool _isGibberish(String s) {
+  final clean = s.trim().toLowerCase();
+  if (clean.isEmpty) return false;
+
+  // Hanya karakter simbol tanpa huruf / angka
+  if (RegExp(r'^[^a-zA-Z0-9\s]+$').hasMatch(clean)) return true;
+
+  // Repetisi huruf sama berturut-turut 4x atau lebih (mis. "aaaaaaa", "zzzzz")
+  if (RegExp(r'([a-zA-Z])\1{3,}').hasMatch(clean)) return true;
+
+  // Rangkaian 5 konsonan berturut-turut tanpa vokal (mis. "dfghjk", "zxcvb")
+  if (RegExp(r'\b[bcdfghjklmnpqrstvwxyz]{5,}\b').hasMatch(clean)) return true;
+
+  // Pola keyboard mash populer
+  const mashes = [
+    'asdf',
+    'qwerty',
+    'zxcv',
+    'hjkl',
+    'qazwsx',
+    'poiuy',
+    'mnbvc',
+    'lkjhg',
+    'fdsa',
+    'ytrewq',
+    'trewq',
+    'gfdsa',
+  ];
+  if (mashes.any((k) => clean.contains(k)) && clean.length >= 6) {
+    return true;
+  }
+
+  return false;
+}
+
+/// Menentukan apakah input mengandung indikator kuliner, makanan, minuman, kafe,
+/// rasa, atau waktu makan yang sah.
+bool _hasCulinaryIntent(String t) {
+  // 1. Cocok dengan topik kuliner
+  if (_topics.any((x) => x.match.hasMatch(t))) return true;
+
+  // 2. Cocok dengan ekspresi saran / rasa lapar terbuka
+  if (_isAdvice(t)) return true;
+
+  // 3. Kata kunci seputar makanan, minuman, tempat, dan rasa
+  final foodKeywords = RegExp(
+    r'\b(makan|makanan|minum|minuman|kuliner|jajan|jajanan|cemilan|camilan|ngemil|sarapan|maksi|lunch|dinner|supper|santap|cicip|ngopi|warung|resto|restoran|kafe|cafe|kedai|angkringan|lesehan|food ?court|bistro|dapur|menu|porsi|lapar|laper|luwe|ngelak|haus|kenyang|wareg|ngidam|craving|enak|lezat|nikmat|pedas|pedes|manis|asin|gurih|segar|seger|hangat|anget|dingin|boba|kopi|nasi|mie|bakso|soto|ayam|bebek|sate|gudeg|seafood|ikan|steak|burger|pizza|roti|kue|es|jus|teh)\b',
+    caseSensitive: false,
+  );
+  if (foodKeywords.hasMatch(t)) return true;
+
+  return false;
+}
 
 class _Query {
   const _Query({
@@ -734,6 +1036,13 @@ class FoodAi {
     }
     if (!hasTopic && _reInfo.hasMatch(t)) return _info(now);
     if (words <= 3 && _reAck.hasMatch(t)) return _ack(now);
+
+    // --- Error handling out-of-domain (di luar ranah kuliner) ---
+    if (!hasTopic && !_hasCulinaryIntent(t)) {
+      final outReply = _handleOutOfDomain(t, now);
+      if (outReply != null) return outReply;
+    }
+
     return _search(t, now);
   }
 
@@ -844,6 +1153,15 @@ class FoodAi {
         price.min == null &&
         !cheapest;
     if (vague) return _clarify(now);
+
+    // Proteksi tambahan: jika kata yang dicari murni non-kuliner tanpa intensi atau harga
+    if (topics.isEmpty &&
+        !_hasCulinaryIntent(t) &&
+        price.max == null &&
+        price.min == null &&
+        !cheapest) {
+      return _outOfScopeGeneralError(now);
+    }
 
     _unclear = 0;
     final res = await _gather(q, cheapest: cheapest);
@@ -1319,6 +1637,229 @@ class FoodAi {
   }
 
   // =========================================================================
+  // Error Handling: Permintaan / Pertanyaan di Luar Ranah Kuliner
+  // =========================================================================
+
+  BotReply? _handleOutOfDomain(String t, DateTime now) {
+    if (_isGibberish(t)) return _gibberishError(now);
+    if (_reTechOutOfDomain.hasMatch(t)) return _techError(now);
+    if (_rePoliticsOutOfDomain.hasMatch(t)) return _politicsError(now);
+    if (_reAcademicOutOfDomain.hasMatch(t)) return _academicError(now);
+    if (_reAutomotiveOutOfDomain.hasMatch(t)) return _automotiveError(now);
+    if (_reRomanceOutOfDomain.hasMatch(t)) return _romanceError(now);
+    if (_reFinanceOutOfDomain.hasMatch(t)) return _financeError(now);
+    if (_reMedicalOutOfDomain.hasMatch(t)) return _medicalError(now);
+    if (_reEntertainmentOutOfDomain.hasMatch(t)) {
+      return _entertainmentError(now);
+    }
+    if (_reGeneralAiOutOfDomain.hasMatch(t)) return _generalAiError(now);
+
+    // Pertanyaan umum yang sama sekali tidak berhubungan dengan kuliner
+    final isGeneralNonFoodQuestion = RegExp(
+      r'^(siapa|apa|kenapa|mengapa|bagaimana|gimana|berapa|dimana|kapan)\b',
+    ).hasMatch(t);
+
+    if (isGeneralNonFoodQuestion) {
+      return _outOfScopeGeneralError(now);
+    }
+
+    return null;
+  }
+
+  BotReply _techError(DateTime now) {
+    final text = _say('errTech', [
+      'Waduh, kalau soal pemrograman, koding, atau teknologi di luar keahlianku nih! 💻👨‍💻\n\n'
+          'Sebagai **FOODIE AI**, spesialisasiku adalah mencarikan kuliner lezat, kafe kece, dan tempat makan asik di DIY & Jawa Tengah.\n\n'
+          'Tapi kalau lagi pusing ngoding atau nugas IT, ngopi santai atau makan camilan manis biasanya ampuh banget buat booster fokus ☕🍰. Mau kucarikan kafe buat nugas atau tempat ngemil?',
+      'Wah, urusan coding atau hardware komputer di luar ranahku! 🤖\n\n'
+          'FOODIE AI hadir khusus buat urusan perut: rekomendasi tempat makan, kafe nyaman ber-WiFi, dan kuliner mantap di Jogja & Jateng.\n\n'
+          'Biar kepalamu tetap segar, mending cari asupan enak dulu yuk! Mau kucarikan kopi atau makanan?',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('☕ Kafe buat nugas & WFC', send: 'kafe buat nugas wfc'),
+        QuickReply('🥐 Kopi & camilan', send: 'kopi dan camilan'),
+        QuickReply('🍚 Makan kenyang', send: 'makan nasi'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _politicsError(DateTime now) {
+    final text = _say('errPolitics', [
+      'Wah, kalau urusan politik, pemerintahan, atau isu pemilu bukan ranahku nih! 🏛️🗳️\n\n'
+          'Sebagai **FOODIE AI**, aku fokus 100% pada dunia kuliner lezat, tempat nongkrong, dan rekomendasi resto terbaik di DIY & Jawa Tengah.\n\n'
+          'Daripada pusing mikirin politik, mending kita isi perut dengan yang lezat-lezat yuk! Lagi pengin makan apa hari ini?',
+      'Waduh, aku asisten kuliner, jadi tidak membahas topik politik atau isu birokrasi ya! 🍽️\n\n'
+          'Kalau soal soto enak, gudeg legendaris, atau tempat ngopi asik, serahkan padaku! Mau kucarikan kuliner mantap?',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('🍲 Soto berkuah hangat', send: 'soto'),
+        QuickReply('🍛 Nasi padang mantap', send: 'nasi padang'),
+        QuickReply('🍗 Ayam geprek pedas', send: 'ayam geprek'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _academicError(DateTime now) {
+    final text = _say('errAcademic', [
+      'Aduh, kalau rumus matematika, fisika, atau tugas sekolah di luar jangkauanku nih! 📐🔬\n\n'
+          'Aku asisten kuliner yang siap memandu lidahmu ke tempat makan paling nikmat dan ramah kantong di Jogja & sekitarnya.\n\n'
+          'Belajar keras pastinya butuh asupan energi kan? Mau kucarikan makanan enak penambah stamina?',
+      'Wah, urusan sains dan hitung-hitungan rumus akademis bukan keahlianku! 📚\n\n'
+          'Keahlianku adalah menyesuaikan budget kuliner biar kamu bisa makan enak tanpa bikin kantong bolong. Mau rekomendasi makanan apa?',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('🍜 Bakmi & mie kenyang', send: 'bakmi mie'),
+        QuickReply('🥣 Sarapan & bubur', send: 'sarapan bubur'),
+        QuickReply('☕ Kopi penyemangat', send: 'kopi nongkrong'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _automotiveError(DateTime now) {
+    final text = _say('errAuto', [
+      'Waduh, kalau urusan mesin kendaraan, bengkel, atau otomotif aku kurang paham nih! 🚗🔧\n\n'
+          'Sebagai **FOODIE AI**, tugasku adalah memandu urusan perut dan selera kulinermu di wilayah DIY & Jawa Tengah.\n\n'
+          'Kalau motormu butuh bensin, perutmu juga butuh asupan lezat kan? Yuk cari kuliner mantap di sekitar sini!',
+      'Urusan sparepart dan servis mesin di luar keahlianku! 🛵\n\n'
+          'Tapi kalau perutmu yang butuh "diservis" dengan hidangan enak, serahkan padaku! Mau makan apa?',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('🍗 Ayam & bebek gurih', send: 'ayam bebek'),
+        QuickReply('🍲 Sop & kuah hangat', send: 'sop berkuah'),
+        QuickReply('🍚 Angkringan & sego kucing', send: 'angkringan'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _romanceError(DateTime now) {
+    final text = _say('errRomance', [
+      'Wah, kalau urusan asmara, zodiak, atau tips percintaan di luar keahlianku nih! 💔❤️\n\n'
+          'Sebagai **FOODIE AI**, keahlian utamaku adalah mencarikan kuliner lezat di DIY & Jawa Tengah.\n\n'
+          'Tapi konon makanan enak bisa langsung naikin mood lho! Atau kalau kamu butuh tempat romantis buat nge-date bareng si dia, aku siap carikan ✨',
+      'Urusan hati memang rumit, tapi urusan perut jangan sampai telat! 🍽️\n\n'
+          'Mau kuliner manis pelipur lara, atau tempat makan estetik dengan suasana romantis? Bilang aja!',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('✨ Tempat date romantis', send: 'suasana romantis'),
+        QuickReply('🍨 Gelato & dessert manis', send: 'es krim gelato'),
+        QuickReply('☕ Kafe syahdu & tenang', send: 'kafe santai'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _financeError(DateTime now) {
+    final text = _say('errFinance', [
+      'Kalau soal investasi saham, crypto, trading, atau urusan pinjaman di luar ranahku nih! 📈🪙\n\n'
+          'Tapi kalau urusan "investasi perut" yang hemat, lezat, dan ramah kantong di DIY & Jawa Tengah, serahkan padaku!\n\n'
+          'Sebut saja budget makanmu (misal *di bawah 20rb* atau *budget gocap*), nanti kucarikan tempat yang paling pas 💸',
+      'Wah, aku bukan penasihat keuangan atau broker crypto nih! 💰\n\n'
+          'Tapi aku jago banget mencarikan makanan murah meriah yang pas di kantong mahasiswa maupun sultan. Mau cari makan dengan budget berapa?',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('💸 Hemat di bawah 20rb', send: 'budget 20rb'),
+        QuickReply('☕ Angkringan murah meriah', send: 'angkringan murah'),
+        QuickReply('🍚 Warung makan kenyang', send: 'warung makan'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _medicalError(DateTime now) {
+    final text = _say('errMedical', [
+      'Untuk keluhan penyakit, dosis obat, atau masalah medis umum, sangat disarankan berkonsultasi langsung dengan dokter atau tenaga medis profesional ya! 🩺💊\n\n'
+          'Sebagai **FOODIE AI**, tugasku adalah merekomendasikan kuliner di DIY & Jawa Tengah.\n\n'
+          'Kalau kamu sedang mencari makanan sehat, sup hangat, atau jus segar penambah daya tahan tubuh, aku siap bantu carikan!',
+      'Aku bukan dokter, jadi tidak bisa mendiagnosis penyakit atau meresepkan obat ya! 🏥\n\n'
+          'Namun kalau tubuhmu butuh asupan berkuah hangat atau makanan bernutrisi penambah tenaga, aku punya banyak pilihannya.',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('🥗 Makanan sehat & salad', send: 'makanan sehat'),
+        QuickReply('🍲 Sop & kuah hangat', send: 'sop berkuah'),
+        QuickReply('🧃 Jus buah segar', send: 'jus segar'),
+        QuickReply('🥣 Bubur hangat', send: 'bubur sarapan'),
+      ],
+    );
+  }
+
+  BotReply _entertainmentError(DateTime now) {
+    final text = _say('errEnt', [
+      'Waduh, kalau skor pertandingan olahraga, game, atau hiburan umum aku belum update nih! 🎮⚽\n\n'
+          'Sebagai **FOODIE AI**, aku ahlinya kuliner dan kafe di Jogja & Jateng.\n\n'
+          'Tapi kalau kamu butuh camilan enak atau minuman segar buat nemenin nobar atau mabar game, aku punya banyak rekomendasi mantap!',
+      'Urusan gaming atau liga bola di luar keahlianku! 🏆\n\n'
+          'Tapi kalau camilan kriuk, pizza, atau kopi susu buat nemenin push rank, serahkan padaku! Mau kucarikan?',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('🥟 Camilan & gorengan', send: 'jajan camilan'),
+        QuickReply('🍕 Pizza & cepat saji', send: 'cepat saji'),
+        QuickReply('☕ Kopi kekinian', send: 'kopi nongkrong'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _generalAiError(DateTime now) {
+    final text = _say('errGeneralAi', [
+      'Maaf ya, aku tidak dirancang untuk tugas umum seperti penerjemahan bahasa atau penulisan kreatif non-kuliner. 🍽️\n\n'
+          'Aku adalah **FOODIE AI**, asisten khusus kuliner DIY & Jawa Tengah! Aku bisa bantu cari tempat makan enak, kafe nongkrong, makanan khas, hingga menu yang pas dengan budgetmu.\n\n'
+          'Yuk ceritakan, kamu lagi pengin makan apa hari ini?',
+      'Sebagai asisten khusus kuliner, ruang lingkupku terfokus pada makanan, minuman, dan tempat makan di wilayah DIY & Jateng! 🍜\n\n'
+          'Coba tanyakan seputar rekomendasi kuliner, budget makan, atau suasana tempat makan yang kamu cari ya.',
+    ]);
+    return BotReply(
+      text,
+      chips: [
+        QuickReply('🍚 Rekomendasi makan siang', send: 'makan siang'),
+        QuickReply('☕ Tempat nongkrong santai', send: 'ngopi nongkrong'),
+        QuickReply('💸 Kuliner hemat kantong', send: 'budget 25rb'),
+        QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
+      ],
+    );
+  }
+
+  BotReply _gibberishError(DateTime now) {
+    final text = _say('errGibberish', [
+      'Waduh, ketikanmu seperti acak atau kurang jelas nih! 😅\n\n'
+          'Yuk ceritakan kamu lagi pengin kuliner seperti apa? Kamu bisa sebut jenis makanan (mis. *soto*, *kopi*, *geprek*), budget, atau langsung pilih salah satu opsi di bawah:',
+      'Hmm, sepertinya ada salah ketik nih 🤔. Pesanmu belum bisa kupahami.\n\n'
+          'Biar gampang, kamu mau cari makanan apa hari ini? Atau pilih menu cepat berikut:',
+    ]);
+    return BotReply(text, chips: _starterChips(_dayPart(now)));
+  }
+
+  BotReply _outOfScopeGeneralError(DateTime now) {
+    final text = _say('errOutOfScope', [
+      'Hmm, pertanyaanmu sepertinya di luar ranah kuliner nih! 🍽️\n\n'
+          'Sebagai **FOODIE AI**, lingkup keahlianku adalah seputar dunia makanan, minuman, kafe, dan restoran di DIY & Jawa Tengah. Aku belum bisa menjawab topik umum di luar kuliner.\n\n'
+          'Coba tanyakan seputar makanan favoritmu, budget makan, atau suasana tempat yang kamu inginkan ya!',
+      'Wah, maaf ya! Pertanyaan tersebut di luar topik kulinarku. 🥣\n\n'
+          'FOODIE AI didedikasikan untuk membantu pecinta kuliner menemukan tempat makan terbaik di DIY & Jawa Tengah. Mau kucarikan rekomendasi kuliner lezat?',
+    ]);
+    return BotReply(text, chips: _starterChips(_dayPart(now)));
+  }
+
+  // =========================================================================
   // Helper
   // =========================================================================
 
@@ -1410,11 +1951,13 @@ class FoodAi {
   List<QuickReply> _starterChips([String? part]) {
     final meal = part == 'pagi'
         ? QuickReply('🥣 Sarapan', send: 'sarapan')
-        : QuickReply('🍚 Makan berat', send: 'makan nasi');
+        : (part == 'siang'
+              ? QuickReply('🍚 Makan siang', send: 'makan siang')
+              : QuickReply('🍛 Makan malam', send: 'makan malam'));
     return [
       meal,
       QuickReply('☕ Ngopi & nongkrong', send: 'ngopi nongkrong'),
-      QuickReply('🥟 Jajan', send: 'jajan'),
+      QuickReply('🥟 Jajan & camilan', send: 'jajan camilan'),
       QuickReply('💸 Budget 25rb', send: 'budget 25rb'),
       QuickReply('🎲 Kasih kejutan', send: 'kasih kejutan'),
     ];
@@ -1441,15 +1984,78 @@ class FoodAi {
         .toList();
   }
 
-  /// Membaca budget: "25rb", "25 ribu", "30k", "25000", "di bawah 30rb",
-  /// "diatas 40k". Angka tanpa satuan seperti "2 orang" diabaikan.
+  /// Membaca budget dengan dukungan:
+  /// - Format angka standar: "25rb", "25 ribu", "30k", "25000", "di bawah 30rb", "diatas 40k"
+  /// - Rentang harga: "15-25rb", "10k - 20k", "antara 20 sampai 35 ribu"
+  /// - Slang mata uang Indonesia: "ceban", "gocap", "noban", "seceng", "cepek", "pego", dll.
   _Price _parsePrice(String s) {
+    // 1. Cek rentang harga terlebih dahulu
+    final rangeRe = RegExp(
+      r'(\d+(?:[.,]\d+)?)\s*(?:rb|ribu|k)?\s*(?:-|–|sampai|sd|s/d|hingga)\s*(\d+(?:[.,]\d+)?)\s*(rb|ribu|ribuan|rebu|k|jt|juta)?(?![a-z])',
+      caseSensitive: false,
+    );
+    final rangeM = rangeRe.firstMatch(s);
+    if (rangeM != null) {
+      final n1 = double.tryParse(rangeM.group(1)!.replaceAll(',', '.'));
+      final n2 = double.tryParse(rangeM.group(2)!.replaceAll(',', '.'));
+      final unit = rangeM.group(3)?.toLowerCase();
+      if (n1 != null && n2 != null) {
+        double v1 = n1;
+        double v2 = n2;
+        if (unit == 'jt' || unit == 'juta') {
+          if (v1 < 1000) v1 *= 1000000;
+          if (v2 < 1000) v2 *= 1000000;
+        } else {
+          if (v1 < 1000) v1 *= 1000;
+          if (v2 < 1000) v2 *= 1000;
+        }
+        final minVal = v1 < v2 ? v1 : v2;
+        final maxVal = v1 < v2 ? v2 : v1;
+        return _Price(maxVal.round(), minVal.round());
+      }
+    }
+
+    int? maxV;
+    int? minV;
+
+    // 2. Cek slang mata uang Indonesia (ceban, gocap, dsb)
+    const slangMap = {
+      'seceng': 1000,
+      'noceng': 2000,
+      'goceng': 5000,
+      'ceban': 10000,
+      'noban': 20000,
+      'gocap': 50000,
+      'cepek': 100000,
+      'pego': 150000,
+      'nocun': 200000,
+      'gocun': 500000,
+      'sejeti': 1000000,
+      'jeti': 1000000,
+    };
+
+    for (final entry in slangMap.entries) {
+      final re = RegExp('\\b${entry.key}\\b', caseSensitive: false);
+      final m = re.firstMatch(s);
+      if (m != null) {
+        final from = m.start - 18 < 0 ? 0 : m.start - 18;
+        final before = s.substring(from, m.start);
+        final isMin = RegExp(
+          r'(di ?atas|minimal|min\b|lebih dari|>|mulai dari)',
+        ).hasMatch(before);
+        if (isMin) {
+          minV ??= entry.value;
+        } else {
+          maxV ??= entry.value;
+        }
+      }
+    }
+
+    // 3. Pola numerik umum
     final ctx = RegExp(
       r'\b(budget|harga|duit|uang|dana|bayar|maks|max|maksimal|dibawah|di bawah|kurang dari|under|sampai|paling mahal)\b',
     ).hasMatch(s);
 
-    int? maxV;
-    int? minV;
     final numRe = RegExp(
       r'(\d+(?:[.,]\d+)?)\s*(rb|ribu|ribuan|rebu|k|jt|juta)?(?![a-z])',
     );
@@ -1462,7 +2068,7 @@ class FoodAi {
       if (n == null) continue;
       if (blocked.hasMatch(s.substring(m.end))) continue;
 
-      final unit = m.group(2);
+      final unit = m.group(2)?.toLowerCase();
       double value;
       if (unit == 'jt' || unit == 'juta') {
         value = n * 1000000;
