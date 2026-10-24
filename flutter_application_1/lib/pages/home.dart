@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/profile.dart';
@@ -134,7 +135,7 @@ class _HomePageState extends State<HomePage> {
               userLng: _userLng,
               onBackToHome: () => _select(0),
             ),
-            const SizedBox.shrink(),   // slot "Decide" (dibuka sebagai sheet)
+            const SizedBox.shrink(), // slot "Decide" (dibuka sebagai sheet)
             const AiTab(),
             ProfileTab(
               name: _currentName,
@@ -155,7 +156,9 @@ class _HomePageState extends State<HomePage> {
                 });
               },
               onAvatarChanged: (url) {
-                final clean = (url != null && url.trim().isNotEmpty) ? url.trim() : null;
+                final clean = (url != null && url.trim().isNotEmpty)
+                    ? url.trim()
+                    : null;
                 setState(() {
                   _customAvatarUrl = clean;
                   if (_profile != null) {
@@ -219,7 +222,10 @@ class _BottomNav extends StatelessWidget {
               final item = items[i];
               final active = i == index;
               final isProfile = item.label == 'Profile';
-              final hasAvatar = isProfile && avatarUrl != null && avatarUrl!.trim().isNotEmpty;
+              final hasAvatar =
+                  isProfile &&
+                  avatarUrl != null &&
+                  avatarUrl!.trim().isNotEmpty;
 
               return Expanded(
                 child: GestureDetector(

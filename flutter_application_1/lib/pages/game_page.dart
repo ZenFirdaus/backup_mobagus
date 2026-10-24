@@ -4,19 +4,46 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/detective_cases_data.dart';
+import '../data/kulinerdle_data.dart';
+import '../models/detective_case.dart';
 import '../models/game_question.dart';
+import '../models/profile.dart';
 import '../models/quiz_data.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/buttons.dart';
-import '../widgets/detective_game_view.dart';
-import 'detail_page.dart';
+import 'explore_tab.dart';
 
-enum _GameMode { menu, quiz, detective }
-enum _GameView { levelSelect, playing, levelSummary, gameOver }
+enum _GameView {
+  hub,
+  // Game 1: Kuis Kuliner Mataraman
+  quizLevelSelect,
+  quizPlaying,
+  quizSummary,
+  quizGameOver,
+  // Game 2: Kulinerdle
+  kulinerdle,
+  // Game 3: Pilih Jalanmu (Detektif)
+  detectiveCaseSelect,
+  detectiveInvestigation,
+  detectiveGoodEnding,
+  detectiveBadEnding,
+}
 
+enum LetterEvaluation {
+  empty,
+  pending,
+  correct, // Hijau: Huruf & posisi tepat
+  present, // Kuning: Huruf ada, posisi keliru
+  absent, // Netral: Huruf tidak ada
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KUIS LEVEL CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────────
 class LevelConfig {
   final int level;
   final String title;
@@ -39,7 +66,7 @@ class LevelConfig {
   });
 }
 
-const kLevelsConfig = <LevelConfig>[
+const kQuizLevelsConfig = <LevelConfig>[
   LevelConfig(
     level: 1,
     title: 'Warga Baru Malioboro',
@@ -127,120 +154,228 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePageState extends State<GamePage> {
-  _GameMode _gameMode = _GameMode.menu;
-  _GameView _currentView = _GameView.levelSelect;
+  _GameView _currentView = _GameView.hub;
 
-  // Level progression
-  int _unlockedLevel = 1;
-  final Map<int, int> _levelStars = {}; // level -> 1..3 stars
-  int _selectedLevel = 1;
-
-  // Detective progress overview for menu hub
-  int _detectiveUnlocked = 1;
-  int _detectiveCompletedCount = 0;
-  int _detectiveLives = 3;
-
-  // Active game session
+  // Real Profile from App
+  Profile? _realProfile;
   int _totalScore = 0;
-  int _scoreInLevel = 0;
-  int _currentCombo = 1;
-  int _highestCombo = 1;
-  int _lives = 3;
+  int _dailyStreak = 1;
 
-  // Lifelines (1x per level)
+  // ───────────────────────────────────────────────────────────────────────────
+  // GAME 1: KUIS TRIVIA STATE
+  // ───────────────────────────────────────────────────────────────────────────
+  int _unlockedQuizLevel = 1;
+  final Map<int, int> _quizStars = {}; // level -> stars (1-3)
+  int _selectedQuizLevel = 1;
+  List<_ActiveQuestion> _quizSessionQuestions = [];
+  int _quizQuestionIndex = 0;
+  int _quizCorrectAnswers = 0;
+  int _quizScoreInLevel = 0;
+  int _quizCombo = 1;
+  int _quizHighestCombo = 1;
+  int _quizLives = 3;
   bool _usedFiftyFifty = false;
   bool _usedFreezeTime = false;
   bool _usedClue = false;
-
-  List<_ActiveQuestion> _sessionQuestions = [];
-  int _currentIndex = 0;
-  int _correctAnswers = 0;
-  int? _selectedIndex;
-  bool _answered = false;
-  int _secondsLeft = 15;
-  Timer? _timer;
-  bool _saving = false;
-
+  int? _quizSelectedIndex;
+  bool _quizAnswered = false;
+  int _quizSecondsLeft = 15;
+  Timer? _quizTimer;
   final Random _random = Random();
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // GAME 2: KULINERDLE STATE
+  // ───────────────────────────────────────────────────────────────────────────
+  late KulinerdleWord _kulinerdleTarget;
+  bool _isDailyKulinerdle = true;
+  final List<String> _kulinerdleGuesses = [];
+  String _kulinerdleCurrentInput = '';
+  bool _kulinerdleGameOver = false;
+  final Map<String, LetterEvaluation> _kulinerdleKeyEvaluations = {};
+  int _kdPlayed = 0;
+  int _kdWon = 0;
+  int _kdCurrentStreak = 0;
+  int _kdMaxStreak = 0;
+  final Map<int, int> _kdGuessDistribution = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0,
+  };
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // GAME 3: DETEKTIF KASUS STATE
+  // ───────────────────────────────────────────────────────────────────────────
+  int _unlockedDetectiveLevel = 1;
+  final Map<int, int> _detectiveStars = {};
+  int _selectedChapter = 1;
+  DetectiveCase? _activeCase;
+  int _currentSceneIndex = 0;
+  int _detectiveLives = 3;
+  int _bossHp = 100;
+  final Set<String> _gatheredClueIds = {};
+  final List<CaseClue> _gatheredClues = [];
+  final Set<int> _selectedChoiceIndicesInScene = {};
+  static const int _cooldownDurationSeconds = 180;
+  int _cooldownRemainingSeconds = 0;
+  Timer? _cooldownTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadProgress();
+    _initKulinerdleWord();
+    _loadAllData();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _quizTimer?.cancel();
+    _cooldownTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadProgress() async {
+  // ───────────────────────────────────────────────────────────────────────────
+  // DATA LOADING & PROFILE SYNC
+  // ───────────────────────────────────────────────────────────────────────────
+  Future<void> _loadAllData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final p = await SupabaseService.instance.getProfile();
       final totalScore = await SupabaseService.instance.getTotalGameScore();
-      final unlocked = prefs.getInt('foodie_game_unlocked_level') ?? 1;
 
-      final starsMap = <int, int>{};
-      for (int i = 1; i <= kLevelsConfig.length; i++) {
-        starsMap[i] = prefs.getInt('foodie_game_stars_$i') ?? 0;
+      // Quiz Progress
+      final unlockedQuiz = prefs.getInt('foodie_quiz_unlocked_level') ?? 1;
+      final qStars = <int, int>{};
+      for (int i = 1; i <= kQuizLevelsConfig.length; i++) {
+        qStars[i] = prefs.getInt('foodie_quiz_stars_$i') ?? 0;
       }
 
-      // Load detective status
-      final detUnlocked = prefs.getInt('foodie_detective_unlocked') ?? 1;
-      final detCompleted = prefs.getStringList('foodie_detective_completed') ?? [];
-      final detLives = prefs.getInt('detective_lives') ?? 3;
+      // Detective Progress
+      final unlockedDet = prefs.getInt('foodie_game_unlocked_level') ?? 1;
+      final dStars = <int, int>{};
+      for (int i = 1; i <= kDetectiveCases.length; i++) {
+        dStars[i] = prefs.getInt('foodie_game_stars_$i') ?? 0;
+      }
+
+      // Kulinerdle Stats
+      _kdPlayed = prefs.getInt('kulinerdle_played') ?? 0;
+      _kdWon = prefs.getInt('kulinerdle_won') ?? 0;
+      _kdCurrentStreak = prefs.getInt('kulinerdle_current_streak') ?? 0;
+      _kdMaxStreak = prefs.getInt('kulinerdle_max_streak') ?? 0;
+      for (int i = 1; i <= 6; i++) {
+        _kdGuessDistribution[i] = prefs.getInt('kulinerdle_dist_$i') ?? 0;
+      }
+
+      // Streaks
+      final streak = prefs.getInt('foodie_game_daily_streak') ?? 1;
+
+      // Cooldown Check
+      final cooldownEnd = prefs.getInt('foodie_game_cooldown_end') ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      int remaining = 0;
+      int initialLives = 3;
+
+      if (cooldownEnd > now) {
+        remaining = ((cooldownEnd - now) / 1000).ceil();
+        initialLives = 0;
+        _startCooldownTimer(remaining);
+      } else if (cooldownEnd > 0) {
+        await prefs.remove('foodie_game_cooldown_end');
+        initialLives = 3;
+      }
 
       if (mounted) {
         setState(() {
-          _totalScore = totalScore;
-          _unlockedLevel = unlocked.clamp(1, kLevelsConfig.length);
-          _levelStars.addAll(starsMap);
-          _detectiveUnlocked = detUnlocked;
-          _detectiveCompletedCount = detCompleted.length;
-          _detectiveLives = detLives;
+          _realProfile = p;
+          _totalScore = (p?.points != null && p!.points > totalScore)
+              ? p.points
+              : totalScore;
+          _unlockedQuizLevel = unlockedQuiz.clamp(1, kQuizLevelsConfig.length);
+          _quizStars.addAll(qStars);
+          _unlockedDetectiveLevel = unlockedDet.clamp(
+            1,
+            kDetectiveCases.length,
+          );
+          _detectiveStars.addAll(dStars);
+          _dailyStreak = streak;
+          _detectiveLives = initialLives;
+          _cooldownRemainingSeconds = remaining;
+          _selectedChapter = (((_unlockedDetectiveLevel - 1) ~/ 5) + 1).clamp(
+            1,
+            3,
+          );
         });
       }
+
+      _checkAndUpdateDailyStreak();
     } catch (_) {}
   }
 
-  Future<void> _saveProgress(int level, int stars, int pointsEarned) async {
-    setState(() => _saving = true);
+  Future<void> _checkAndUpdateDailyStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final lastActive = prefs.getString('foodie_game_last_active_date') ?? '';
+
+    if (lastActive == todayStr) return;
+
+    int currentStreak = prefs.getInt('foodie_game_daily_streak') ?? 0;
+    int maxStreak = prefs.getInt('foodie_game_max_streak') ?? 0;
+
+    if (lastActive.isNotEmpty) {
+      final lastDate = DateTime.tryParse(lastActive);
+      if (lastDate != null) {
+        final diff = DateTime(now.year, now.month, now.day)
+            .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
+            .inDays;
+        if (diff == 1) {
+          currentStreak += 1;
+        } else if (diff > 1) {
+          currentStreak = 1;
+        }
+      } else {
+        currentStreak = 1;
+      }
+    } else {
+      currentStreak = 1;
+    }
+
+    if (currentStreak > maxStreak) maxStreak = currentStreak;
+
+    await prefs.setString('foodie_game_last_active_date', todayStr);
+    await prefs.setInt('foodie_game_daily_streak', currentStreak);
+    await prefs.setInt('foodie_game_max_streak', maxStreak);
+
+    if (mounted) {
+      setState(() {
+        _dailyStreak = currentStreak;
+      });
+    }
+  }
+
+  Future<void> _addScore(int points) async {
+    if (points <= 0) return;
+    setState(() => _totalScore += points);
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Update stars if higher
-      final currentStars = _levelStars[level] ?? 0;
-      if (stars > currentStars) {
-        _levelStars[level] = stars;
-        await prefs.setInt('foodie_game_stars_$level', stars);
-      }
-
-      // Unlock next level
-      if (level >= _unlockedLevel && level < kLevelsConfig.length) {
-        _unlockedLevel = level + 1;
-        await prefs.setInt('foodie_game_unlocked_level', _unlockedLevel);
-      }
-
-      // Save points to user profile
-      if (pointsEarned > 0) {
-        await SupabaseService.instance.saveGameScore(pointsEarned);
-      }
+      await SupabaseService.instance.saveGameScore(points);
     } catch (_) {}
-    if (mounted) setState(() => _saving = false);
   }
 
-  LevelConfig _getLevelConfig(int level) {
-    return kLevelsConfig.firstWhere(
+  // ───────────────────────────────────────────────────────────────────────────
+  // GAME 1: KUIS TRIVIA LOGIC
+  // ───────────────────────────────────────────────────────────────────────────
+  LevelConfig _getQuizLevelConfig(int level) {
+    return kQuizLevelsConfig.firstWhere(
       (c) => c.level == level,
-      orElse: () => kLevelsConfig.first,
+      orElse: () => kQuizLevelsConfig.first,
     );
   }
 
-  void _startLevel(int level) {
-    final config = _getLevelConfig(level);
-
-    // Pick questions matching difficulty or nearby
+  void _startQuizLevel(int level) {
+    final config = _getQuizLevelConfig(level);
     final pool = kQuizQuestions.where((q) {
       if (config.level == 1) return q.difficulty == QuestionDifficulty.mudah;
       if (config.level <= 3) {
@@ -256,13 +391,12 @@ class _GamePageState extends State<GamePage> {
     }).toList();
 
     pool.shuffle(_random);
-
     final selected = <GameQuestion>[];
     selected.addAll(pool.take(config.questionCount));
 
-    // Fill with fallback if pool is smaller than questionCount
     if (selected.length < config.questionCount) {
-      final fallback = List<GameQuestion>.from(kQuizQuestions)..shuffle(_random);
+      final fallback = List<GameQuestion>.from(kQuizQuestions)
+        ..shuffle(_random);
       for (final q in fallback) {
         if (selected.length >= config.questionCount) break;
         if (!selected.contains(q)) selected.add(q);
@@ -270,286 +404,1152 @@ class _GamePageState extends State<GamePage> {
     }
 
     setState(() {
-      _selectedLevel = level;
-      _sessionQuestions =
-          selected.map((q) => _ActiveQuestion.from(q, _random)).toList();
-      _currentIndex = 0;
-      _correctAnswers = 0;
-      _scoreInLevel = 0;
-      _currentCombo = 1;
-      _highestCombo = 1;
-      _lives = 3;
+      _selectedQuizLevel = level;
+      _quizSessionQuestions = selected
+          .map((q) => _ActiveQuestion.from(q, _random))
+          .toList();
+      _quizQuestionIndex = 0;
+      _quizCorrectAnswers = 0;
+      _quizScoreInLevel = 0;
+      _quizCombo = 1;
+      _quizHighestCombo = 1;
+      _quizLives = 3;
       _usedFiftyFifty = false;
       _usedFreezeTime = false;
       _usedClue = false;
-      _selectedIndex = null;
-      _answered = false;
-      _currentView = _GameView.playing;
+      _quizSelectedIndex = null;
+      _quizAnswered = false;
+      _currentView = _GameView.quizPlaying;
     });
 
-    _startTimer(config.timePerQuestion);
+    _startQuizTimer(config.timePerQuestion);
   }
 
-  void _startTimer(int totalSecs) {
-    _timer?.cancel();
-    _secondsLeft = totalSecs;
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (_secondsLeft <= 1) {
+  void _startQuizTimer(int totalSecs) {
+    _quizTimer?.cancel();
+    _quizSecondsLeft = totalSecs;
+    _quizTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_quizSecondsLeft <= 1) {
         t.cancel();
-        if (!_answered) {
-          _handleTimeout();
+        if (!_quizAnswered) {
+          _handleQuizTimeout();
         }
       } else {
-        setState(() => _secondsLeft--);
+        setState(() => _quizSecondsLeft--);
       }
     });
   }
 
-  void _handleTimeout() {
+  void _handleQuizTimeout() {
     setState(() {
-      _answered = true;
-      _selectedIndex = -1; // timed out
-      _currentCombo = 1;
-      _lives--;
+      _quizAnswered = true;
+      _quizSelectedIndex = -1;
+      _quizCombo = 1;
+      _quizLives--;
     });
 
-    if (_lives <= 0) {
+    if (_quizLives <= 0) {
       Future.delayed(const Duration(milliseconds: 1200), () {
-        if (mounted) setState(() => _currentView = _GameView.gameOver);
+        if (mounted) setState(() => _currentView = _GameView.quizGameOver);
       });
     } else {
-      Future.delayed(const Duration(seconds: 2), _advanceQuestion);
+      Future.delayed(const Duration(seconds: 2), _advanceQuizQuestion);
     }
   }
 
-  void _selectOption(int index) {
-    if (_answered) return;
-    _timer?.cancel();
+  void _selectQuizOption(int index) {
+    if (_quizAnswered) return;
+    _quizTimer?.cancel();
 
-    final config = _getLevelConfig(_selectedLevel);
-    final activeQ = _sessionQuestions[_currentIndex];
+    final config = _getQuizLevelConfig(_selectedQuizLevel);
+    final activeQ = _quizSessionQuestions[_quizQuestionIndex];
     final correct = index == activeQ.correctIndex;
 
     setState(() {
-      _selectedIndex = index;
-      _answered = true;
+      _quizSelectedIndex = index;
+      _quizAnswered = true;
 
       if (correct) {
-        final earned = config.basePoints * _currentCombo;
-        _scoreInLevel += earned;
-        _totalScore += earned;
-        _correctAnswers++;
-        _currentCombo++;
-        if (_currentCombo > _highestCombo) _highestCombo = _currentCombo;
+        final earned = config.basePoints * _quizCombo;
+        _quizScoreInLevel += earned;
+        _quizCorrectAnswers++;
+        _quizCombo++;
+        if (_quizCombo > _quizHighestCombo) _quizHighestCombo = _quizCombo;
       } else {
-        _currentCombo = 1;
-        _lives--;
+        _quizCombo = 1;
+        _quizLives--;
       }
     });
 
-    if (_lives <= 0) {
+    if (_quizLives <= 0) {
       Future.delayed(const Duration(milliseconds: 1400), () {
-        if (mounted) setState(() => _currentView = _GameView.gameOver);
+        if (mounted) setState(() => _currentView = _GameView.quizGameOver);
       });
     }
   }
 
-  void _advanceQuestion() {
-    final config = _getLevelConfig(_selectedLevel);
-    if (_currentIndex < _sessionQuestions.length - 1) {
+  void _advanceQuizQuestion() {
+    final config = _getQuizLevelConfig(_selectedQuizLevel);
+    if (_quizQuestionIndex < _quizSessionQuestions.length - 1) {
       setState(() {
-        _currentIndex++;
-        _selectedIndex = null;
-        _answered = false;
+        _quizQuestionIndex++;
+        _quizSelectedIndex = null;
+        _quizAnswered = false;
       });
-      _startTimer(config.timePerQuestion);
+      _startQuizTimer(config.timePerQuestion);
     } else {
-      _timer?.cancel();
-      _handleLevelComplete();
+      _finishQuizLevel();
     }
   }
 
-  void _handleLevelComplete() {
+  Future<void> _finishQuizLevel() async {
+    final totalQ = _quizSessionQuestions.length;
+    final pct = totalQ > 0 ? (_quizCorrectAnswers / totalQ) : 0.0;
     int stars = 1;
-    if (_lives == 3) {
+    if (pct >= 0.9 && _quizLives == 3) {
       stars = 3;
-    } else if (_lives >= 2) {
+    } else if (pct >= 0.7) {
       stars = 2;
     }
 
-    _saveProgress(_selectedLevel, stars, _scoreInLevel);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final currentStars = _quizStars[_selectedQuizLevel] ?? 0;
+      if (stars > currentStars) {
+        _quizStars[_selectedQuizLevel] = stars;
+        await prefs.setInt('foodie_quiz_stars_$_selectedQuizLevel', stars);
+      }
 
-    setState(() {
-      _currentView = _GameView.levelSummary;
-    });
+      if (_selectedQuizLevel >= _unlockedQuizLevel &&
+          _selectedQuizLevel < kQuizLevelsConfig.length) {
+        _unlockedQuizLevel = _selectedQuizLevel + 1;
+        await prefs.setInt('foodie_quiz_unlocked_level', _unlockedQuizLevel);
+      }
+
+      await _addScore(_quizScoreInLevel);
+    } catch (_) {}
+
+    if (mounted) setState(() => _currentView = _GameView.quizSummary);
   }
 
-  // --- LIFELINES ---
   void _useFiftyFifty() {
-    if (_usedFiftyFifty || _answered) return;
-    final activeQ = _sessionQuestions[_currentIndex];
+    if (_usedFiftyFifty || _quizAnswered) return;
+    final activeQ = _quizSessionQuestions[_quizQuestionIndex];
     final wrongIndices = <int>[];
     for (int i = 0; i < activeQ.shuffledOptions.length; i++) {
       if (i != activeQ.correctIndex) wrongIndices.add(i);
     }
     wrongIndices.shuffle(_random);
-    final eliminated = wrongIndices.take(2).toSet();
-
     setState(() {
       _usedFiftyFifty = true;
-      activeQ.eliminatedIndices.addAll(eliminated);
+      activeQ.eliminatedIndices.addAll(wrongIndices.take(2));
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('⚡ 50:50 aktif! Dua jawaban salah telah dieliminasi.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _useFreezeTime() {
-    if (_usedFreezeTime || _answered) return;
+    if (_usedFreezeTime || _quizAnswered) return;
     setState(() {
       _usedFreezeTime = true;
-      _secondsLeft += 10;
+      _quizSecondsLeft += 10;
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('⏱️ Waktu ditambah +10 detik! Tenang dan fokus.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _useClue() {
-    if (_usedClue || _answered) return;
-    final original = _sessionQuestions[_currentIndex].original;
-    setState(() {
-      _usedClue = true;
-    });
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.lightbulb_rounded, color: AppColors.orange, size: 24),
-            SizedBox(width: 8),
-            Text(
-              'Petunjuk Rahasia',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (original.category != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.tint(AppColors.orange, 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  original.category!,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.orange,
-                  ),
-                ),
-              ),
-            Text(
-              original.hint,
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: AppColors.charcoal,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+    if (_usedClue || _quizAnswered) return;
+    final activeQ = _quizSessionQuestions[_quizQuestionIndex];
+    setState(() => _usedClue = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('💡 Petunjuk: ${activeQ.original.hint}'),
+        backgroundColor: AppColors.charcoal,
       ),
     );
   }
 
-  Future<void> _openRelatedRestaurant(String restaurantId) async {
-    try {
-      final resto = await SupabaseService.instance.getRestaurant(restaurantId);
-      if (resto != null && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => DetailPage(restaurant: resto)),
-        );
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data restoran sedang dimuat...')),
-          );
+  // ───────────────────────────────────────────────────────────────────────────
+  // GAME 2: KULINERDLE LOGIC
+  // ───────────────────────────────────────────────────────────────────────────
+  void _initKulinerdleWord({bool randomFreePlay = false}) {
+    setState(() {
+      _isDailyKulinerdle = !randomFreePlay;
+      _kulinerdleTarget = randomFreePlay
+          ? getRandomKulinerdleWord()
+          : getDailyKulinerdleWord();
+      _kulinerdleGuesses.clear();
+      _kulinerdleCurrentInput = '';
+      _kulinerdleGameOver = false;
+      _kulinerdleKeyEvaluations.clear();
+    });
+  }
+
+  void _onVirtualKeyPress(String char) {
+    if (_kulinerdleGameOver) return;
+    if (_kulinerdleCurrentInput.length < 5) {
+      setState(() => _kulinerdleCurrentInput += char.toUpperCase());
+    }
+  }
+
+  void _onVirtualBackspace() {
+    if (_kulinerdleGameOver || _kulinerdleCurrentInput.isEmpty) return;
+    setState(() {
+      _kulinerdleCurrentInput = _kulinerdleCurrentInput.substring(
+        0,
+        _kulinerdleCurrentInput.length - 1,
+      );
+    });
+  }
+
+  void _onVirtualEnter() {
+    if (_kulinerdleGameOver) return;
+
+    if (_kulinerdleCurrentInput.length < 5) {
+      _showToast('Kata harus terdiri dari 5 huruf!');
+      return;
+    }
+
+    final guess = _kulinerdleCurrentInput.toUpperCase();
+    if (!kKulinerdleValidWords.contains(guess)) {
+      _showToast('Kata "$guess" belum ada di kamus kuliner!');
+      return;
+    }
+
+    setState(() {
+      _kulinerdleGuesses.add(guess);
+      _kulinerdleCurrentInput = '';
+      _updateKeyEvaluations(guess);
+    });
+
+    final target = _kulinerdleTarget.word.toUpperCase();
+    if (guess == target) {
+      _handleKulinerdleWin();
+    } else if (_kulinerdleGuesses.length >= 6) {
+      _handleKulinerdleLoss();
+    }
+  }
+
+  void _updateKeyEvaluations(String guess) {
+    final evals = _evaluateGuess(guess, _kulinerdleTarget.word);
+    for (int i = 0; i < guess.length; i++) {
+      final char = guess[i];
+      final current = _kulinerdleKeyEvaluations[char];
+      final newEval = evals[i];
+
+      if (current == LetterEvaluation.correct) continue;
+      if (newEval == LetterEvaluation.correct) {
+        _kulinerdleKeyEvaluations[char] = LetterEvaluation.correct;
+      } else if (newEval == LetterEvaluation.present &&
+          current != LetterEvaluation.correct) {
+        _kulinerdleKeyEvaluations[char] = LetterEvaluation.present;
+      } else if (current == null) {
+        _kulinerdleKeyEvaluations[char] = LetterEvaluation.absent;
+      }
+    }
+  }
+
+  List<LetterEvaluation> _evaluateGuess(String guess, String target) {
+    final result = List<LetterEvaluation>.filled(5, LetterEvaluation.absent);
+    final targetChars = target.split('');
+    final guessChars = guess.split('');
+
+    for (int i = 0; i < 5; i++) {
+      if (guessChars[i] == targetChars[i]) {
+        result[i] = LetterEvaluation.correct;
+        targetChars[i] = '#';
+        guessChars[i] = '*';
+      }
+    }
+
+    for (int i = 0; i < 5; i++) {
+      if (guessChars[i] != '*') {
+        final matchIdx = targetChars.indexOf(guessChars[i]);
+        if (matchIdx != -1) {
+          result[i] = LetterEvaluation.present;
+          targetChars[matchIdx] = '#';
         }
+      }
+    }
+
+    return result;
+  }
+
+  Future<void> _handleKulinerdleWin() async {
+    setState(() => _kulinerdleGameOver = true);
+    final attempt = _kulinerdleGuesses.length;
+    final int pointsEarned = (160 - (attempt * 15)).clamp(50, 150);
+
+    if (_kulinerdleTarget.word == 'GUDEG') {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('foodie_game_achieve_gudeg', true);
+    }
+
+    _kdPlayed++;
+    _kdWon++;
+    _kdCurrentStreak++;
+    if (_kdCurrentStreak > _kdMaxStreak) _kdMaxStreak = _kdCurrentStreak;
+    _kdGuessDistribution[attempt] = (_kdGuessDistribution[attempt] ?? 0) + 1;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('kulinerdle_played', _kdPlayed);
+    await prefs.setInt('kulinerdle_won', _kdWon);
+    await prefs.setInt('kulinerdle_current_streak', _kdCurrentStreak);
+    await prefs.setInt('kulinerdle_max_streak', _kdMaxStreak);
+    await prefs.setInt(
+      'kulinerdle_dist_$attempt',
+      _kdGuessDistribution[attempt] ?? 0,
+    );
+
+    await _addScore(pointsEarned);
+
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) _showKulinerdleResultModal(won: true, points: pointsEarned);
+    });
+  }
+
+  Future<void> _handleKulinerdleLoss() async {
+    setState(() => _kulinerdleGameOver = true);
+    _kdPlayed++;
+    _kdCurrentStreak = 0;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('kulinerdle_played', _kdPlayed);
+    await prefs.setInt('kulinerdle_current_streak', 0);
+
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) _showKulinerdleResultModal(won: false, points: 0);
+    });
+  }
+
+  void _showKulinerdleResultModal({required bool won, required int points}) {
+    final wordObj = _kulinerdleTarget;
+    final isGudeg = wordObj.word == 'GUDEG';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: (won ? AppColors.green : AppColors.tomato).withValues(
+                    alpha: 0.12,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    won ? '🏆' : '💔',
+                    style: const TextStyle(fontSize: 28),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                won ? 'KATA TERPECAHKAN!' : 'KESEMPATAN HABIS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: won ? AppColors.green : AppColors.tomato,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                wordObj.word,
+                style: AppText.display(
+                  24,
+                  color: AppColors.charcoal,
+                  letterSpacing: 3,
+                ),
+              ),
+              Text(
+                wordObj.category,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.slateBlue,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              if (won) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.line),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.stars_rounded,
+                            size: 16,
+                            color: AppColors.saffron,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+$points Poin',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppColors.charcoal,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Tebakan ${_kulinerdleGuesses.length}/6',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppColors.slateBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+
+              // Fun Fact Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.lightbulb_rounded,
+                          size: 16,
+                          color: AppColors.paprika,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isGudeg
+                              ? 'FAKTA SPESIAL GUDEG JOGJA'
+                              : 'FAKTA KULINER NUSANTARA',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.paprika,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      wordObj.funFact,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.charcoal,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Button: Temukan di Direktori Resto
+              PrimaryButton(
+                label: isGudeg
+                    ? 'Temukan Gudeg di Direktori Resto'
+                    : 'Temukan ${wordObj.searchQuery} di Resto Terdekat',
+                icon: Icons.travel_explore_rounded,
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _openDirectorySearch(wordObj.searchQuery);
+                },
+              ),
+              const SizedBox(height: 10),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.charcoal,
+                        side: const BorderSide(color: AppColors.line),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _initKulinerdleWord(randomFreePlay: true);
+                      },
+                      child: const Text(
+                        'Main Kata Lain 🔄',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.charcoal,
+                        side: const BorderSide(color: AppColors.line),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        setState(() => _currentView = _GameView.hub);
+                      },
+                      child: const Text(
+                        'Beranda Game 🏠',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _openDirectorySearch(String query) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: AppColors.background,
+          body: ExploreTab(initialQuery: query),
+        ),
+      ),
+    );
+  }
+
+  void _showToast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.charcoal,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // GAME 3: DETEKTIF KASUS LOGIC
+  // ───────────────────────────────────────────────────────────────────────────
+  void _startCooldownTimer(int seconds) {
+    _cooldownTimer?.cancel();
+    _cooldownRemainingSeconds = seconds;
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (!mounted) return;
+      if (_cooldownRemainingSeconds <= 1) {
+        timer.cancel();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('foodie_game_cooldown_end');
+        setState(() {
+          _cooldownRemainingSeconds = 0;
+          _detectiveLives = 3;
+        });
+      } else {
+        setState(() => _cooldownRemainingSeconds--);
+      }
+    });
+  }
+
+  Future<void> _triggerCooldown() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cooldownEnd =
+        DateTime.now().millisecondsSinceEpoch +
+        (_cooldownDurationSeconds * 1000);
+    await prefs.setInt('foodie_game_cooldown_end', cooldownEnd);
+    _startCooldownTimer(_cooldownDurationSeconds);
+  }
+
+  Future<void> _instantRestoreDetectiveLives() async {
+    const cost = 50;
+    if (_totalScore < cost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Poin detektif tidak cukup untuk pemulihan cepat (butuh 50 poin).',
+          ),
+          backgroundColor: AppColors.tomato,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('foodie_game_cooldown_end');
+      _cooldownTimer?.cancel();
+      await SupabaseService.instance.saveGameScore(-cost);
+
+      if (mounted) {
+        setState(() {
+          _totalScore = (_totalScore - cost).clamp(0, 999999);
+          _detectiveLives = 3;
+          _cooldownRemainingSeconds = 0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚡ 3 Hati berhasil dipulihkan secara instan!'),
+            backgroundColor: AppColors.green,
+          ),
+        );
       }
     } catch (_) {}
   }
 
+  void _startDetectiveCase(DetectiveCase c) {
+    if (_detectiveLives <= 0 && _cooldownRemainingSeconds > 0) {
+      _showCooldownDialog();
+      return;
+    }
+
+    setState(() {
+      _activeCase = c;
+      _currentSceneIndex = 0;
+      _detectiveLives = 3;
+      _bossHp = c.scenes.isNotEmpty && c.scenes.last.isBossFight
+          ? (c.scenes.last.boss?.maxHp ?? 100)
+          : 100;
+      _gatheredClueIds.clear();
+      _gatheredClues.clear();
+      _selectedChoiceIndicesInScene.clear();
+      _currentView = _GameView.detectiveInvestigation;
+    });
+  }
+
+  CaseScene? get _currentScene {
+    if (_activeCase == null || _activeCase!.scenes.isEmpty) return null;
+    if (_currentSceneIndex < 0 ||
+        _currentSceneIndex >= _activeCase!.scenes.length) {
+      return null;
+    }
+    return _activeCase!.scenes[_currentSceneIndex];
+  }
+
+  void _handleDetectiveChoice(int choiceIndex, SceneChoice choice) {
+    final scene = _currentScene;
+    if (scene == null) return;
+
+    setState(() {
+      _selectedChoiceIndicesInScene.add(choiceIndex);
+
+      if (choice.foundClue != null &&
+          !_gatheredClueIds.contains(choice.foundClue!.id)) {
+        _gatheredClueIds.add(choice.foundClue!.id);
+        _gatheredClues.add(choice.foundClue!);
+      }
+
+      if (choice.losesLife) {
+        _detectiveLives = (_detectiveLives - 1).clamp(0, 3).toInt();
+      }
+
+      if (scene.isBossFight && choice.bossDamage > 0) {
+        _bossHp = (_bossHp - choice.bossDamage).clamp(0, 100).toInt();
+      }
+    });
+
+    _showDetectiveChoiceFeedback(choice, scene);
+  }
+
+  void _showDetectiveChoiceFeedback(SceneChoice choice, CaseScene scene) {
+    final isBossDefeated = scene.isBossFight && _bossHp <= 0;
+    final isGameOver = _detectiveLives <= 0;
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          (choice.isCorrect
+                                  ? AppColors.green
+                                  : AppColors.tomato)
+                              .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      choice.isCorrect
+                          ? 'DEDUKSI TEPAT'
+                          : 'KESALAHAN INVESTIGASI',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: choice.isCorrect
+                            ? AppColors.green
+                            : AppColors.tomato,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: List.generate(3, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 3),
+                        child: Icon(
+                          index < _detectiveLives
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          size: 18,
+                          color: index < _detectiveLives
+                              ? AppColors.tomato
+                              : Colors.black12,
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                choice.feedback,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  height: 1.5,
+                  color: AppColors.charcoal,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              if (choice.foundClue != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.saffron.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        choice.foundClue!.icon,
+                        size: 20,
+                        color: AppColors.paprika,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              choice.foundClue!.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.charcoal,
+                              ),
+                            ),
+                            Text(
+                              choice.foundClue!.description,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.slateBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+
+              PrimaryButton(
+                label: isGameOver
+                    ? 'Investigasi Terhenti (Nyawa Habis)'
+                    : (isBossDefeated
+                          ? 'Kasus Selesai: Lihat Hasil 🏆'
+                          : (scene.isBossFight
+                                ? 'Lanjutkan Konfrontasi ⚔️'
+                                : 'Langkah Selanjutnya ➔')),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _afterDetectiveFeedbackNavigation(
+                    choice: choice,
+                    scene: scene,
+                    isBossDefeated: isBossDefeated,
+                    isGameOver: isGameOver,
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _afterDetectiveFeedbackNavigation({
+    required SceneChoice choice,
+    required CaseScene scene,
+    required bool isBossDefeated,
+    required bool isGameOver,
+  }) {
+    if (isGameOver) {
+      _triggerCooldown();
+      setState(() => _currentView = _GameView.detectiveBadEnding);
+      return;
+    }
+
+    if (isBossDefeated) {
+      final stars = _detectiveLives == 3 ? 3 : (_detectiveLives == 2 ? 2 : 1);
+      final points = _activeCase?.baseReward ?? 250;
+      _saveDetectiveCaseProgress(
+        level: _activeCase!.level,
+        stars: stars,
+        pointsEarned: points,
+      );
+      setState(() => _currentView = _GameView.detectiveGoodEnding);
+      return;
+    }
+
+    if (choice.nextSceneId != null) {
+      final nextIdx = _activeCase!.scenes.indexWhere(
+        (s) => s.id == choice.nextSceneId,
+      );
+      if (nextIdx != -1) {
+        setState(() {
+          _currentSceneIndex = nextIdx;
+          _selectedChoiceIndicesInScene.clear();
+          final nextScene = _activeCase!.scenes[nextIdx];
+          if (nextScene.isBossFight && nextScene.boss != null) {
+            _bossHp = nextScene.boss!.maxHp;
+          }
+        });
+        return;
+      }
+    }
+
+    if (scene.isBossFight) return;
+
+    if (_currentSceneIndex < _activeCase!.scenes.length - 1) {
+      setState(() {
+        _currentSceneIndex++;
+        _selectedChoiceIndicesInScene.clear();
+        final nextScene = _activeCase!.scenes[_currentSceneIndex];
+        if (nextScene.isBossFight && nextScene.boss != null) {
+          _bossHp = nextScene.boss!.maxHp;
+        }
+      });
+    } else {
+      final stars = _detectiveLives == 3 ? 3 : (_detectiveLives == 2 ? 2 : 1);
+      final points = _activeCase?.baseReward ?? 250;
+      _saveDetectiveCaseProgress(
+        level: _activeCase!.level,
+        stars: stars,
+        pointsEarned: points,
+      );
+      setState(() => _currentView = _GameView.detectiveGoodEnding);
+    }
+  }
+
+  Future<void> _saveDetectiveCaseProgress({
+    required int level,
+    required int stars,
+    required int pointsEarned,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final currentStars = _detectiveStars[level] ?? 0;
+      if (stars > currentStars) {
+        _detectiveStars[level] = stars;
+        await prefs.setInt('foodie_game_stars_$level', stars);
+      }
+
+      if (level >= _unlockedDetectiveLevel && level < kDetectiveCases.length) {
+        _unlockedDetectiveLevel = level + 1;
+        await prefs.setInt(
+          'foodie_game_unlocked_level',
+          _unlockedDetectiveLevel,
+        );
+      }
+
+      await _addScore(pointsEarned);
+    } catch (_) {}
+  }
+
+  void _openClueNotebook() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.72,
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.menu_book_rounded,
+                    color: AppColors.paprika,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Text('Papan Bukti Investigasi', style: AppText.display(18)),
+                  const Spacer(),
+                  Text(
+                    '${_gatheredClues.length} Bukti',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.paprika,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(color: AppColors.line, height: 24),
+              Expanded(
+                child: _gatheredClues.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Belum ada bukti terkumpul.',
+                          style: TextStyle(color: AppColors.slateBlue),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: _gatheredClues.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (ctx, idx) {
+                          final clue = _gatheredClues[idx];
+                          return Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.line),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  clue.icon,
+                                  color: AppColors.paprika,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        clue.title,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.charcoal,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        clue.description,
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          color: AppColors.slateBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCooldownDialog() {
+    final mins = _cooldownRemainingSeconds ~/ 60;
+    final secs = _cooldownRemainingSeconds % 60;
+    final timeStr =
+        '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Penyelidikan Ditangguhkan',
+            style: TextStyle(
+              color: AppColors.charcoal,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Hati detektif sedang dalam masa pemulihan.',
+                style: TextStyle(color: AppColors.slateBlue, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                timeStr,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.charcoal,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text(
+                'Tunggu',
+                style: TextStyle(color: AppColors.slateBlue),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orange,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _instantRestoreDetectiveLives();
+              },
+              child: const Text('Pulihkan (50 Poin)'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // MASTER BUILD METHOD (App PageBackground Aesthetic)
+  // ───────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    if (_gameMode == _GameMode.menu) {
-      return Scaffold(
-        body: PageBackground(
-          child: _buildMiniGamesMenu(),
-        ),
-      );
-    }
-
-    if (_gameMode == _GameMode.detective) {
-      return Scaffold(
-        body: DetectiveGameView(
-          onBackToMain: () {
-            _loadProgress();
-            setState(() => _gameMode = _GameMode.menu);
-          },
-        ),
-      );
-    }
-
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: PageBackground(
         child: switch (_currentView) {
-          _GameView.levelSelect => _buildLevelSelect(),
-          _GameView.playing => _buildPlaying(),
-          _GameView.levelSummary => _buildLevelSummary(),
-          _GameView.gameOver => _buildGameOver(),
+          _GameView.hub => _buildHubView(),
+          // Quiz
+          _GameView.quizLevelSelect => _buildQuizLevelSelectView(),
+          _GameView.quizPlaying => _buildQuizPlayingView(),
+          _GameView.quizSummary => _buildQuizSummaryView(),
+          _GameView.quizGameOver => _buildQuizGameOverView(),
+          // Kulinerdle
+          _GameView.kulinerdle => _buildKulinerdleView(),
+          // Detective
+          _GameView.detectiveCaseSelect => _buildDetectiveCaseSelectView(),
+          _GameView.detectiveInvestigation =>
+            _buildDetectiveInvestigationView(),
+          _GameView.detectiveGoodEnding => _buildDetectiveGoodEndingView(),
+          _GameView.detectiveBadEnding => _buildDetectiveBadEndingView(),
         },
       ),
     );
   }
 
-  // ==========================================
-  // VIEW 0: MINI GAMES HUB MENU (2 PILIHAN GAME)
-  // ==========================================
-  Widget _buildMiniGamesMenu() {
-    int totalStarsEarned = 0;
-    for (final s in _levelStars.values) {
-      totalStarsEarned += s;
+  // ===========================================================================
+  // 1. GAME HUB (Matches Real App Profile & Palette)
+  // ===========================================================================
+  Widget _buildHubView() {
+    final solvedCases = _detectiveStars.values.where((s) => s > 0).length;
+    int totalQuizStars = 0;
+    for (final s in _quizStars.values) {
+      totalQuizStars += s;
     }
 
+    final p = _realProfile;
+    final displayName = p?.displayName.isNotEmpty == true
+        ? p!.displayName
+        : (SupabaseService.instance.currentUser?.userMetadata?['name']
+                  as String?) ??
+              'Kurator Rasa';
+    final levelTitle = p?.levelTitle ?? 'Pemula Rasa';
+    final curatorLevel = p?.curatorLevel ?? 1;
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
       children: [
-        // App bar row
+        // App Bar
         Row(
           children: [
             InkWell(
@@ -561,31 +1561,69 @@ class _GamePageState extends State<GamePage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  boxShadow: [
+                  border: Border.all(color: AppColors.line),
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: Color(0x0A000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
                     ),
                   ],
                 ),
                 child: const Icon(
                   Icons.arrow_back,
                   size: 20,
-                  color: AppColors.textDark,
+                  color: AppColors.charcoal,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Mini Games Kuliner', style: AppText.display(18)),
-                  const SizedBox(height: 2),
                   const Text(
-                    'Pilih game untuk menguji wawasan & kemampuan rasa Anda',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                    'ARENA PERMAINAN FOODIE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.orange,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  Text('Pusat Game Kuliner', style: AppText.display(18)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x06000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.stars_rounded,
+                    size: 16,
+                    color: AppColors.saffron,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '$_totalScore',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.charcoal,
+                    ),
                   ),
                 ],
               ),
@@ -594,227 +1632,368 @@ class _GamePageState extends State<GamePage> {
         ),
         const SizedBox(height: 18),
 
-        // Player Stats Overview Card
+        // Real Profile Card (No overlapping elements)
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppColors.line),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Color(0x08000000),
                 blurRadius: 10,
-                offset: const Offset(0, 3),
+                offset: Offset(0, 3),
               ),
             ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildMiniStat(Icons.star_rounded, AppColors.orange, '$totalStarsEarned', 'Bintang Kuis'),
-              Container(width: 1, height: 32, color: AppColors.line),
-              _buildMiniStat(Icons.assignment_turned_in_rounded, AppColors.green, '$_detectiveCompletedCount/15', 'Kasus Selesai'),
-              Container(width: 1, height: 32, color: AppColors.line),
-              _buildMiniStat(Icons.favorite_rounded, AppColors.tomato, '$_detectiveLives/3', 'Stamina Hati'),
+              Row(
+                children: [
+                  // Real Avatar
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: AppColors.surfaceSubtle,
+                    backgroundImage:
+                        (p?.avatarUrl != null && p!.avatarUrl!.isNotEmpty)
+                        ? NetworkImage(p.avatarUrl!)
+                        : null,
+                    child: (p?.avatarUrl == null || p!.avatarUrl!.isEmpty)
+                        ? Text(
+                            displayName.isNotEmpty
+                                ? displayName[0].toUpperCase()
+                                : 'F',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.orange,
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                displayName,
+                                style: AppText.display(16),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.orange.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'LV $curatorLevel',
+                                style: const TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.orange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          levelTitle,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.slateBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Daily Streak Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSubtle,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '🔥 $_dailyStreak',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.orange,
+                          ),
+                        ),
+                        const Text(
+                          'Hari Streak',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: AppColors.slateBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(color: AppColors.line, height: 24),
+              // Stats Overview Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStatColumn(
+                    'Kuis Selesai',
+                    '$_unlockedQuizLevel/6',
+                    Icons.quiz_rounded,
+                    AppColors.orange,
+                  ),
+                  Container(width: 1, height: 26, color: AppColors.line),
+                  _buildStatColumn(
+                    'Kulinerdle',
+                    '$_kdWon Menang',
+                    Icons.grid_on_rounded,
+                    AppColors.green,
+                  ),
+                  Container(width: 1, height: 26, color: AppColors.line),
+                  _buildStatColumn(
+                    'Kasus Selesai',
+                    '$solvedCases/15',
+                    Icons.local_police_rounded,
+                    AppColors.charcoal,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
 
-        // GAME CARD 1: KUIS RASA MATARAMAN
-        _buildGameCard(
-          title: 'Kuis Rasa Mataraman',
-          badgeText: 'KUIS TRIVIA',
-          badgeColor: AppColors.orange,
-          imageUrl: 'https://images.unsplash.com/photo-1551266080-616f5d8174f1?auto=format&fit=crop&w=800&q=80',
-          infoText: 'Tingkat $_unlockedLevel/6 • $totalStarsEarned Bintang',
-          buttonText: 'Mainkan Kuis',
-          buttonColor: AppColors.orange,
-          onTap: () => setState(() => _gameMode = _GameMode.quiz),
+        // Section Title: 3 Pilihan Game
+        Text(
+          'PILIH PERMAINAN KULINER',
+          style: AppText.display(
+            13,
+            color: AppColors.slateBlue,
+            letterSpacing: 0.8,
+          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
-        // GAME CARD 2: DETEKTIF RASA JOGJA
-        _buildGameCard(
-          title: 'Detektif Rasa: Pilih Jalanmu',
-          badgeText: 'INVESTIGASI KASUS',
+        // GAME CARD 1: KUIS KULINER MATARAMAN
+        _buildHubGameCard(
+          title: 'Kuis Kuliner Mataraman',
+          badge: '6 LEVEL • TRIVIA KLASIK • LIFELINES',
+          badgeColor: AppColors.orange,
+          icon: Icons.quiz_rounded,
+          description: 'Uji wawasan rasa legendaris Jogja & Jawa Tengah dengan batas waktu, combo skor, dan bantuan 50:50.',
+          stats:
+              'Level Terbuka: $_unlockedQuizLevel/6 • Total Bintang: $totalQuizStars ⭐',
+          ctaText: 'Mulai Kuis ➔',
+          onTap: () => setState(() => _currentView = _GameView.quizLevelSelect),
+        ),
+        const SizedBox(height: 14),
+
+        // GAME CARD 2: KULINERDLE NUSANTARA
+        _buildHubGameCard(
+          title: 'Kulinerdle Nusantara',
+          badge: 'WORDLE 5 HURUF • TANTANGAN HARIAN',
+          badgeColor: AppColors.green,
+          icon: Icons.grid_on_rounded,
+          description: 'Tebak kata masakan khas nusantara 5 huruf dalam 6 kesempatan dengan keyboard virtual dan rekomendasi direktori.',
+          stats: 'Menang: $_kdWon/$_kdPlayed • Streak: 🔥 $_kdCurrentStreak',
+          ctaText: 'Mainkan Kulinerdle ➔',
+          onTap: () => setState(() => _currentView = _GameView.kulinerdle),
+        ),
+        const SizedBox(height: 14),
+
+        // GAME CARD 3: PILIH JALANMU (DETEKTIF KASUS)
+        _buildHubGameCard(
+          title: 'Pilih Jalanmu: Detektif Kuliner',
+          badge: '15 KASUS • 3 BABAK • BOSS FIGHT',
           badgeColor: AppColors.charcoal,
-          imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-          infoText: 'Kasus $_detectiveUnlocked/15 • Checkpoint Lvl 5, 10, 15',
-          buttonText: 'Mulai Investigasi',
-          buttonColor: AppColors.charcoal,
-          onTap: () => setState(() => _gameMode = _GameMode.detective),
+          icon: Icons.local_police_rounded,
+          description: 'Investigasi misteri kriminal kuliner nusantara, kumpulkan bukti fisik, dan hadapi dalang utama.',
+          stats: 'Kasus: $solvedCases/15 • Nyawa: ❤️ $_detectiveLives',
+          ctaText: 'Buka Berkas Kasus ➔',
+          onTap: () =>
+              setState(() => _currentView = _GameView.detectiveCaseSelect),
         ),
       ],
     );
   }
 
-  Widget _buildMiniStat(IconData icon, Color color, String value, String label) {
+  Widget _buildStatColumn(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 16),
+            Icon(icon, size: 14, color: color),
             const SizedBox(width: 4),
             Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.charcoal),
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.bold,
+                color: AppColors.charcoal,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+          style: const TextStyle(fontSize: 10, color: AppColors.slateBlue),
         ),
       ],
     );
   }
 
-  Widget _buildGameCard({
+  Widget _buildHubGameCard({
     required String title,
-    required String badgeText,
+    required String badge,
     required Color badgeColor,
-    required String imageUrl,
-    required String infoText,
-    required String buttonText,
-    required Color buttonColor,
+    required IconData icon,
+    required String description,
+    required String stats,
+    required String ctaText,
     required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.line),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Gambar menu besar di atas
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: Image.network(
-                  imageUrl,
-                  height: 145,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 145,
-                    color: AppColors.surfaceSubtle,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.restaurant_rounded, size: 36, color: AppColors.textMuted),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: badgeColor,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badge,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: badgeColor,
+                          letterSpacing: 0.5,
                         ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceSubtle,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.line),
-                          ),
-                          child: Text(
-                            infoText,
-                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.charcoal),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.charcoal,
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: buttonColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 0,
+                    const Spacer(),
+                    Icon(icon, color: badgeColor, size: 24),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(title, style: AppText.display(16)),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.slateBlue,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        stats,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.charcoal,
                         ),
-                        onPressed: onTap,
-                        child: Text(
-                          buttonText,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        ctaText,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ==========================================
-  // VIEW 1: LEVEL SELECTOR / STAGE MAP
-  // ==========================================
-  Widget _buildLevelSelect() {
-    int totalStarsEarned = 0;
-    for (final s in _levelStars.values) {
-      totalStarsEarned += s;
-    }
-
+  // ===========================================================================
+  // 2. GAME 1: KUIS TRIVIA VIEWS
+  // ===========================================================================
+  Widget _buildQuizLevelSelectView() {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
       children: [
-        // App bar row
         Row(
           children: [
             InkWell(
-              onTap: () {
-                _loadProgress();
-                setState(() => _gameMode = _GameMode.menu);
-              },
+              onTap: () => setState(() => _currentView = _GameView.hub),
               customBorder: const CircleBorder(),
               child: Container(
                 width: 40,
@@ -822,673 +2001,913 @@ class _GamePageState extends State<GamePage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  border: Border.all(color: AppColors.line),
                 ),
                 child: const Icon(
                   Icons.arrow_back,
                   size: 20,
-                  color: AppColors.textDark,
+                  color: AppColors.charcoal,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Kuis Kuliner Mataraman', style: AppText.display(18)),
-                  const SizedBox(height: 2),
                   const Text(
-                    'Jelajahi rasa otentik Jogja & taklukkan levelnya!',
-                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    'PILIH LEVEL KUIS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.orange,
+                    ),
                   ),
+                  Text('Kuis Kuliner Mataraman', style: AppText.display(17)),
                 ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 18),
-
-        // Total score & stars banner
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.greenDark, Color(0xFF234C37)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        const SizedBox(height: 16),
+        ...kQuizLevelsConfig.map((cfg) {
+          final isUnlocked = cfg.level <= _unlockedQuizLevel;
+          final stars = _quizStars[cfg.level] ?? 0;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.line),
             ),
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.greenDark.withValues(alpha: 0.25),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'TOTAL FOODIE SCORE',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        color: Colors.white70,
-                      ),
+              leading: CircleAvatar(
+                backgroundColor: isUnlocked
+                    ? AppColors.surfaceSubtle
+                    : AppColors.line,
+                child: Icon(
+                  isUnlocked ? cfg.icon : Icons.lock_rounded,
+                  color: isUnlocked ? AppColors.orange : AppColors.slateBlue,
+                ),
+              ),
+              title: Text(
+                'Level ${cfg.level}: ${cfg.title}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 2),
+                  Text(
+                    cfg.subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.slateBlue,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$_totalScore Poin',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  if (isUnlocked && stars > 0)
                     Row(
-                      children: [
-                        const Icon(Icons.star_rounded, size: 16, color: AppColors.yellow),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$totalStarsEarned / ${kLevelsConfig.length * 3} Bintang Terkumpul',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                      children: List.generate(
+                        3,
+                        (i) => Icon(
+                          Icons.star_rounded,
+                          size: 14,
+                          color: i < stars ? AppColors.saffron : AppColors.line,
                         ),
-                      ],
+                      ),
                     ),
-                  ],
-                ),
+                ],
               ),
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.emoji_events_rounded,
-                  size: 32,
-                  color: AppColors.yellow,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-
-        const Text(
-          'Pilih Tantangan Level',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: AppColors.charcoal,
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // List of Levels
-        for (final config in kLevelsConfig) _buildLevelCard(config),
+              trailing: isUnlocked
+                  ? const Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: AppColors.orange,
+                      size: 32,
+                    )
+                  : const Icon(
+                      Icons.lock_outline_rounded,
+                      color: AppColors.slateBlue,
+                      size: 20,
+                    ),
+              onTap: isUnlocked ? () => _startQuizLevel(cfg.level) : null,
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildLevelCard(LevelConfig config) {
-    final isUnlocked = config.level <= _unlockedLevel;
-    final stars = _levelStars[config.level] ?? 0;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isUnlocked
-              ? AppColors.tint(AppColors.greenDark, 0.15)
-              : AppColors.line,
-          width: isUnlocked ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: isUnlocked ? () => _startLevel(config.level) : null,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Level Badge
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: isUnlocked
-                        ? AppColors.tint(AppColors.green, 0.15)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      isUnlocked ? config.icon : Icons.lock_rounded,
-                      size: 24,
-                      color: isUnlocked ? AppColors.greenDark : Colors.grey.shade400,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isUnlocked
-                                  ? AppColors.tint(AppColors.orange, 0.12)
-                                  : Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'LEVEL ${config.level}',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
-                                color: isUnlocked ? AppColors.orange : Colors.grey,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          // Stars
-                          if (isUnlocked)
-                            Row(
-                              children: List.generate(
-                                3,
-                                (i) => Icon(
-                                  i < stars ? Icons.star_rounded : Icons.star_border_rounded,
-                                  size: 16,
-                                  color: i < stars ? AppColors.orange : Colors.grey.shade300,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        config.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: isUnlocked ? AppColors.charcoal : Colors.grey.shade500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        config.subtitle,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isUnlocked ? AppColors.textMuted : Colors.grey.shade400,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Meta tags
-                      Row(
-                        children: [
-                          _smallBadge(
-                            Icons.help_outline_rounded,
-                            '${config.questionCount} Soal',
-                            isUnlocked,
-                          ),
-                          const SizedBox(width: 8),
-                          _smallBadge(
-                            Icons.timer_outlined,
-                            '${config.timePerQuestion}s / Soal',
-                            isUnlocked,
-                          ),
-                          const SizedBox(width: 8),
-                          _smallBadge(
-                            Icons.stars_rounded,
-                            '+${config.basePoints} Poin',
-                            isUnlocked,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-                Icon(
-                  isUnlocked ? Icons.play_circle_fill_rounded : Icons.lock_outline_rounded,
-                  color: isUnlocked ? AppColors.greenDark : Colors.grey.shade300,
-                  size: 28,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _smallBadge(IconData icon, String text, bool active) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: active ? AppColors.tint(AppColors.greenDark, 0.06) : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: active ? AppColors.greenDark : Colors.grey),
-          const SizedBox(width: 3),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w700,
-              color: active ? AppColors.greenDark : Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==========================================
-  // VIEW 2: ACTIVE GAMEPLAY SCREEN
-  // ==========================================
-  Widget _buildPlaying() {
-    if (_sessionQuestions.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+  Widget _buildQuizPlayingView() {
+    if (_quizSessionQuestions.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.orange),
+      );
     }
 
-    final config = _getLevelConfig(_selectedLevel);
-    final activeQ = _sessionQuestions[_currentIndex];
-    final originalQ = activeQ.original;
-    final progress = (_currentIndex + 1) / _sessionQuestions.length;
+    final activeQ = _quizSessionQuestions[_quizQuestionIndex];
+    final progress = (_quizQuestionIndex + 1) / _quizSessionQuestions.length;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
+    return Column(
       children: [
-        // Top Header
-        Row(
-          children: [
-            InkWell(
-              onTap: () {
-                _timer?.cancel();
-                setState(() => _currentView = _GameView.levelSelect);
-              },
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
+        // App Bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: AppColors.line)),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(
                   Icons.close_rounded,
-                  size: 20,
-                  color: AppColors.textDark,
+                  color: AppColors.charcoal,
                 ),
+                onPressed: () =>
+                    setState(() => _currentView = _GameView.quizLevelSelect),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Level $_selectedLevel: ${config.title}',
-                      style: AppText.display(14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(
-                    'Soal ${_currentIndex + 1} dari ${_sessionQuestions.length}',
-                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-                  ),
-                ],
-              ),
-            ),
-            // Hearts (Nyawa)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.tint(AppColors.red, 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  3,
-                  (i) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                    child: Icon(
-                      i < _lives ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      size: 16,
-                      color: i < _lives ? AppColors.red : Colors.grey.shade300,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // Score & Combo Bar
-        Row(
-          children: [
-            // Score chip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.greenDark,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.stars_rounded, size: 14, color: AppColors.yellow),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$_scoreInLevel pts',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (_currentCombo > 1) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.orange, Color(0xFFFF8A00)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
+              Expanded(
+                child: Column(
                   children: [
-                    const Icon(Icons.local_fire_department_rounded, size: 13, color: Colors.white),
-                    const SizedBox(width: 3),
                     Text(
-                      'COMBO x$_currentCombo',
+                      'Soal ${_quizQuestionIndex + 1} dari ${_quizSessionQuestions.length}',
                       style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        fontSize: 11,
+                        color: AppColors.slateBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: AppColors.line,
+                        valueColor: const AlwaysStoppedAnimation(
+                          AppColors.orange,
+                        ),
+                        minHeight: 4,
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Timer Ticker
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _quizSecondsLeft <= 3
+                      ? AppColors.tomato.withValues(alpha: 0.15)
+                      : AppColors.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${_quizSecondsLeft}s',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _quizSecondsLeft <= 3
+                        ? AppColors.tomato
+                        : AppColors.charcoal,
+                  ),
                 ),
               ),
             ],
-            const Spacer(),
-            _timerWidget(),
+          ),
+        ),
+
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+            children: [
+              // Question Card
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeQ.original.category ?? 'Kuliner Mataraman',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      activeQ.original.question,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.bold,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Options
+              ...activeQ.shuffledOptions.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final opt = entry.value;
+                final isEliminated = activeQ.eliminatedIndices.contains(idx);
+                if (isEliminated) return const SizedBox.shrink();
+
+                Color bg = Colors.white;
+                Color border = AppColors.line;
+                Color text = AppColors.charcoal;
+
+                if (_quizAnswered) {
+                  if (idx == activeQ.correctIndex) {
+                    bg = AppColors.green.withValues(alpha: 0.15);
+                    border = AppColors.green;
+                    text = AppColors.green;
+                  } else if (idx == _quizSelectedIndex) {
+                    bg = AppColors.tomato.withValues(alpha: 0.15);
+                    border = AppColors.tomato;
+                    text = AppColors.tomato;
+                  }
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: InkWell(
+                    onTap: _quizAnswered ? null : () => _selectQuizOption(idx),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: bg,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: border, width: 1.5),
+                      ),
+                      child: Text(
+                        opt,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: text,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 14),
+
+              // Lifelines Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildLifelineButton(
+                    '50:50',
+                    Icons.filter_2_rounded,
+                    _usedFiftyFifty,
+                    _useFiftyFifty,
+                  ),
+                  _buildLifelineButton(
+                    '+10 Detik',
+                    Icons.timer_rounded,
+                    _usedFreezeTime,
+                    _useFreezeTime,
+                  ),
+                  _buildLifelineButton(
+                    'Petunjuk',
+                    Icons.lightbulb_rounded,
+                    _usedClue,
+                    _useClue,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        if (_quizAnswered && _quizLives > 0)
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
+            child: PrimaryButton(
+              label: 'Lanjut Soal Berikutnya ➔',
+              onPressed: _advanceQuizQuestion,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLifelineButton(
+    String label,
+    IconData icon,
+    bool used,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: used ? null : onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: used ? AppColors.line : AppColors.surfaceSubtle,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: used
+                ? Colors.transparent
+                : AppColors.orange.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: used ? AppColors.slateBlue : AppColors.orange,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: used ? AppColors.slateBlue : AppColors.charcoal,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 10),
+      ),
+    );
+  }
 
-        // Progress line
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 6,
-            backgroundColor: AppColors.tint(AppColors.green, 0.15),
-            valueColor: const AlwaysStoppedAnimation(AppColors.green),
+  Widget _buildQuizSummaryView() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Center(child: Text('🏆', style: TextStyle(fontSize: 48))),
+        const SizedBox(height: 10),
+        Center(
+          child: Text(
+            'Level $_selectedQuizLevel Selesai!',
+            style: AppText.display(20),
           ),
         ),
         const SizedBox(height: 14),
-
-        // Lifelines toolbar (Bantuan)
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.line),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _lifelineButton(
-                icon: Icons.electric_bolt_rounded,
-                label: '50:50',
-                used: _usedFiftyFifty,
-                onTap: _useFiftyFifty,
-              ),
-              _dividerLifeline(),
-              _lifelineButton(
-                icon: Icons.more_time_rounded,
-                label: '+10s Waktu',
-                used: _usedFreezeTime,
-                onTap: _useFreezeTime,
-              ),
-              _dividerLifeline(),
-              _lifelineButton(
-                icon: Icons.lightbulb_outline_rounded,
-                label: 'Petunjuk',
-                used: _usedClue,
-                onTap: _useClue,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Question card
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Photo if available
-              if (originalQ.imageUrl != null && originalQ.imageUrl!.isNotEmpty)
-                Stack(
-                  children: [
-                    Image.network(
-                      originalQ.imageUrl!,
-                      height: 170,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                    ),
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.camera_alt_rounded, size: 12, color: AppColors.yellow),
-                            const SizedBox(width: 4),
-                            Text(
-                              originalQ.category ?? 'Tebak Foto Kuliner',
-                              style: const TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+              Text(
+                'Skor Didapat: +$_quizScoreInLevel Poin',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppColors.charcoal,
                 ),
-
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category & Hint
-                    Row(
-                      children: [
-                        if (originalQ.category != null && originalQ.imageUrl == null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.tint(AppColors.orange, 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              originalQ.category!,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.orange,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        const Icon(Icons.location_on_rounded, size: 13, color: AppColors.orange),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            originalQ.hint,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textMuted,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Question text
-                    Text(
-                      originalQ.question,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        height: 1.5,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Jawaban Benar: $_quizCorrectAnswers / ${_quizSessionQuestions.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.slateBlue,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
-
-        // Options
-        for (int i = 0; i < activeQ.shuffledOptions.length; i++)
-          if (!activeQ.eliminatedIndices.contains(i))
-            _optionTile(activeQ, i),
-
-        // Answer feedback & explanation
-        if (_answered) ...[
-          const SizedBox(height: 14),
-          _buildAnswerFeedback(activeQ),
-          const SizedBox(height: 16),
-          PrimaryButton(
-            label: _currentIndex < _sessionQuestions.length - 1
-                ? 'Lanjut ke Soal Berikutnya'
-                : 'Selesaikan Level $_selectedLevel',
-            trailingArrow: true,
-            onPressed: _advanceQuestion,
-          ),
-        ],
+        const SizedBox(height: 20),
+        PrimaryButton(
+          label: 'Kembali ke Level Kuis',
+          onPressed: () =>
+              setState(() => _currentView = _GameView.quizLevelSelect),
+        ),
       ],
     );
   }
 
-  Widget _timerWidget() {
-    final urgent = _secondsLeft <= 4;
+  Widget _buildQuizGameOverView() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Center(child: Text('💔', style: TextStyle(fontSize: 48))),
+        const SizedBox(height: 10),
+        Center(
+          child: Text(
+            'Nyawa Habis!',
+            style: AppText.display(20, color: AppColors.tomato),
+          ),
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'Jangan menyerah, coba lagi untuk skor sempurna!',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.slateBlue),
+        ),
+        const SizedBox(height: 20),
+        PrimaryButton(
+          label: 'Coba Lagi Level Ini',
+          onPressed: () => _startQuizLevel(_selectedQuizLevel),
+        ),
+        const SizedBox(height: 10),
+        TextButton(
+          onPressed: () =>
+              setState(() => _currentView = _GameView.quizLevelSelect),
+          child: const Text('Kembali ke Menu Kuis'),
+        ),
+      ],
+    );
+  }
+
+  // ===========================================================================
+  // 3. GAME 2: KULINERDLE (Wordle Nusantara 5x6 with Zero Overlap)
+  // ===========================================================================
+  Widget _buildKulinerdleView() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate responsive tile size to strictly prevent vertical overflow
+        final availableHeight = constraints.maxHeight;
+        // Tile size clamped between 34 and 46
+        final tileSize = ((availableHeight - 270) / 6).clamp(34.0, 46.0);
+
+        return Column(
+          children: [
+            // Top App Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: AppColors.line)),
+              ),
+              child: Row(
+                children: [
+                  InkWell(
+                    onTap: () => setState(() => _currentView = _GameView.hub),
+                    customBorder: const CircleBorder(),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.line),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        size: 18,
+                        color: AppColors.charcoal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text('KULINERDLE', style: AppText.display(15)),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _isDailyKulinerdle
+                                    ? AppColors.green.withValues(alpha: 0.15)
+                                    : AppColors.orange.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _isDailyKulinerdle ? 'HARIAN' : 'BEBAS',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isDailyKulinerdle
+                                      ? AppColors.green
+                                      : AppColors.orange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Text(
+                          'Tebak 5 huruf masakan Nusantara',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: AppColors.slateBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: AppColors.orange,
+                      size: 22,
+                    ),
+                    tooltip: 'Ronde Baru Bebas',
+                    onPressed: () => _initKulinerdleWord(randomFreePlay: true),
+                  ),
+                ],
+              ),
+            ),
+
+            // Scrollable Content area with Zero Overlap
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Wordle 5x6 Board
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(6, (rowIdx) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: _buildWordleRow(rowIdx, tileSize),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Virtual Keyboard
+                    _buildVirtualKeyboard(constraints.maxWidth),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWordleRow(int rowIdx, double size) {
+    final isSubmitted = rowIdx < _kulinerdleGuesses.length;
+    final isCurrent = rowIdx == _kulinerdleGuesses.length;
+    final guess = isSubmitted
+        ? _kulinerdleGuesses[rowIdx]
+        : (isCurrent ? _kulinerdleCurrentInput : '');
+
+    List<LetterEvaluation> evaluations = List.filled(5, LetterEvaluation.empty);
+    if (isSubmitted) {
+      evaluations = _evaluateGuess(guess, _kulinerdleTarget.word);
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (colIdx) {
+        final char = colIdx < guess.length ? guess[colIdx] : '';
+        final eval = isSubmitted
+            ? evaluations[colIdx]
+            : (char.isNotEmpty
+                  ? LetterEvaluation.pending
+                  : LetterEvaluation.empty);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: _buildWordleTile(char, eval, size),
+        );
+      }),
+    );
+  }
+
+  Widget _buildWordleTile(String char, LetterEvaluation eval, double size) {
+    Color bg = Colors.white;
+    Color border = AppColors.line;
+    Color text = AppColors.charcoal;
+
+    switch (eval) {
+      case LetterEvaluation.correct:
+        bg = AppColors.green;
+        border = AppColors.green;
+        text = Colors.white;
+        break;
+      case LetterEvaluation.present:
+        bg = AppColors.saffron;
+        border = AppColors.saffron;
+        text = Colors.black;
+        break;
+      case LetterEvaluation.absent:
+        bg = const Color(0xFFE2DDD5);
+        border = const Color(0xFFE2DDD5);
+        text = AppColors.slateBlue;
+        break;
+      case LetterEvaluation.pending:
+        border = AppColors.orange;
+        break;
+      case LetterEvaluation.empty:
+        border = AppColors.line;
+        break;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: urgent
-            ? AppColors.tint(AppColors.red, 0.15)
-            : AppColors.tint(AppColors.green, 0.15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: urgent ? AppColors.red : AppColors.green,
-          width: 1,
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border, width: 1.5),
+      ),
+      child: Center(
+        child: Text(
+          char,
+          style: TextStyle(
+            fontSize: (size * 0.45).clamp(16.0, 22.0),
+            fontWeight: FontWeight.w900,
+            color: text,
+          ),
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    );
+  }
+
+  Widget _buildVirtualKeyboard(double screenWidth) {
+    const row1 = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
+    const row2 = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
+    const row3 = ['Z', 'X', 'C', 'V', 'B', 'N', 'M'];
+
+    final keyWidth = ((screenWidth - 44) / 10).clamp(26.0, 34.0);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
         children: [
-          Icon(
-            Icons.timer_rounded,
-            size: 14,
-            color: urgent ? AppColors.red : AppColors.greenDark,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: row1.map((c) => _buildCharKey(c, keyWidth)).toList(),
           ),
-          const SizedBox(width: 4),
-          Text(
-            '${_secondsLeft}s',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: urgent ? AppColors.red : AppColors.greenDark,
+          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: row2.map((c) => _buildCharKey(c, keyWidth)).toList(),
+          ),
+          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildSpecialKey(
+                'ENTER',
+                width: keyWidth * 1.5,
+                onTap: _onVirtualEnter,
+              ),
+              ...row3.map((c) => _buildCharKey(c, keyWidth)),
+              _buildSpecialKey(
+                '⌫',
+                width: keyWidth * 1.3,
+                onTap: _onVirtualBackspace,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCharKey(String char, double width) {
+    final eval = _kulinerdleKeyEvaluations[char];
+    Color bg = Colors.white;
+    Color border = AppColors.line;
+    Color text = AppColors.charcoal;
+
+    if (eval == LetterEvaluation.correct) {
+      bg = AppColors.green;
+      border = AppColors.green;
+      text = Colors.white;
+    } else if (eval == LetterEvaluation.present) {
+      bg = AppColors.saffron;
+      border = AppColors.saffron;
+      text = Colors.black;
+    } else if (eval == LetterEvaluation.absent) {
+      bg = const Color(0xFFE8E4DD);
+      border = const Color(0xFFE8E4DD);
+      text = Colors.black38;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+      child: InkWell(
+        onTap: () => _onVirtualKeyPress(char),
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          width: width,
+          height: 38,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: border),
+          ),
+          child: Center(
+            child: Text(
+              char,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: text,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpecialKey(
+    String label, {
+    required double width,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          width: width,
+          height: 38,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceSubtle,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppColors.charcoal,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // 4. GAME 3: DETEKTIF KASUS (Clean Authentic Palette)
+  // ===========================================================================
+  Widget _buildDetectiveCaseSelectView() {
+    final chapterCases = kDetectiveCases
+        .where((c) => c.chapter == _selectedChapter)
+        .toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
+      children: [
+        Row(
+          children: [
+            InkWell(
+              onTap: () => setState(() => _currentView = _GameView.hub),
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: const Icon(
+                  Icons.arrow_back,
+                  size: 20,
+                  color: AppColors.charcoal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'PILIH JALANMU: DETEKTIF',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                  Text('Berkas Misteri Mataram', style: AppText.display(17)),
+                ],
+              ),
+            ),
+            Row(
+              children: List.generate(3, (i) {
+                return Padding(
+                  padding: const EdgeInsets.only(left: 3),
+                  child: Icon(
+                    i < _detectiveLives
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    size: 18,
+                    color: i < _detectiveLives
+                        ? AppColors.tomato
+                        : AppColors.line,
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        if (_detectiveLives <= 0 && _cooldownRemainingSeconds > 0) ...[
+          _buildDetectiveCooldownBanner(),
+          const SizedBox(height: 16),
+        ],
+
+        // Chapter Tabs
+        Row(
+          children: [
+            _buildChapterTabItem(1, 'Bab I', 'Kota Pusaka'),
+            const SizedBox(width: 8),
+            _buildChapterTabItem(2, 'Bab II', 'Jalur Mataram'),
+            const SizedBox(width: 8),
+            _buildChapterTabItem(3, 'Bab III', 'Sindikat'),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        ...chapterCases.map((c) => _buildDetectiveCaseCard(c)),
+      ],
+    );
+  }
+
+  Widget _buildDetectiveCooldownBanner() {
+    final mins = _cooldownRemainingSeconds ~/ 60;
+    final secs = _cooldownRemainingSeconds % 60;
+    final timeStr =
+        '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.tomato.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.timer_outlined, color: AppColors.tomato, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Cooldown Investigasi Aktif',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.charcoal,
+                  ),
+                ),
+                Text(
+                  'Hati pulih dalam: $timeStr',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.slateBlue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.orange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+            onPressed: _instantRestoreDetectiveLives,
+            child: const Text(
+              'Pulihkan',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1496,118 +2915,187 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  Widget _dividerLifeline() {
-    return Container(
-      width: 1,
-      height: 24,
-      color: AppColors.line,
-    );
-  }
+  Widget _buildChapterTabItem(int num, String title, String subtitle) {
+    final isSelected = _selectedChapter == num;
+    final isLocked = num > 1 && _unlockedDetectiveLevel < ((num - 1) * 5 + 1);
 
-  Widget _lifelineButton({
-    required IconData icon,
-    required String label,
-    required bool used,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: used || _answered ? null : onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: used ? Colors.grey.shade400 : AppColors.orange,
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (isLocked) {
+            _showToast('Selesaikan Bab ${num - 1} untuk membuka babak ini.');
+            return;
+          }
+          setState(() => _selectedChapter = num);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.surfaceSubtle : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.orange : AppColors.line,
             ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: used ? Colors.grey.shade400 : AppColors.charcoal,
-                decoration: used ? TextDecoration.lineThrough : null,
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? AppColors.orange
+                      : (isLocked ? AppColors.line : AppColors.charcoal),
+                ),
               ),
-            ),
-          ],
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: isSelected ? AppColors.charcoal : AppColors.slateBlue,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _optionTile(_ActiveQuestion activeQ, int i) {
-    Color bg = Colors.white;
-    Color border = AppColors.line;
-    Color textColor = AppColors.textDark;
+  Widget _buildDetectiveCaseCard(DetectiveCase c) {
+    final isUnlocked = c.level <= _unlockedDetectiveLevel;
+    final stars = _detectiveStars[c.level] ?? 0;
 
-    if (_answered) {
-      if (i == activeQ.correctIndex) {
-        bg = AppColors.tint(AppColors.green, 0.15);
-        border = AppColors.green;
-        textColor = AppColors.greenDark;
-      } else if (i == _selectedIndex) {
-        bg = AppColors.tint(AppColors.red, 0.15);
-        border = AppColors.red;
-        textColor = AppColors.red;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: bg,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: _answered ? null : () => _selectOption(i),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: border, width: 1.5),
-            ),
-            child: Row(
+          onTap: isUnlocked ? () => _startDetectiveCase(c) : null,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: _answered && i == activeQ.correctIndex
-                        ? AppColors.green
-                        : _answered && i == _selectedIndex
-                            ? AppColors.red
-                            : AppColors.tint(AppColors.orange, 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: _answered && i == activeQ.correctIndex
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
-                        : _answered && i == _selectedIndex
-                            ? const Icon(Icons.close, size: 16, color: Colors.white)
-                            : Text(
-                                String.fromCharCode(65 + i),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.orange,
-                                ),
-                              ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    activeQ.shuffledOptions[i],
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: c.isCheckpoint
+                            ? AppColors.saffron.withValues(alpha: 0.2)
+                            : AppColors.surfaceSubtle,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        c.isCheckpoint
+                            ? 'CHECKPOINT LV ${c.level}'
+                            : 'KASUS ${c.level}',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: c.isCheckpoint
+                              ? AppColors.paprika
+                              : AppColors.slateBlue,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: c.difficulty.color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        c.difficulty.label,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: c.difficulty.color,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (!isUnlocked)
+                      const Icon(
+                        Icons.lock_rounded,
+                        size: 16,
+                        color: AppColors.slateBlue,
+                      )
+                    else if (stars > 0)
+                      Row(
+                        children: List.generate(
+                          3,
+                          (i) => Icon(
+                            Icons.star_rounded,
+                            size: 15,
+                            color: i < stars
+                                ? AppColors.saffron
+                                : AppColors.line,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceSubtle,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Text(
+                          c.iconEmoji,
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c.title,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.charcoal,
+                            ),
+                          ),
+                          Text(
+                            c.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.slateBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1617,383 +3105,408 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  Widget _buildAnswerFeedback(_ActiveQuestion activeQ) {
-    final original = activeQ.original;
-    final isCorrect = _selectedIndex == activeQ.correctIndex;
-    final timedOut = _selectedIndex == -1;
+  Widget _buildDetectiveInvestigationView() {
+    final c = _activeCase;
+    final scene = _currentScene;
+    if (c == null || scene == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.orange),
+      );
+    }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isCorrect
-            ? AppColors.tint(AppColors.green, 0.1)
-            : AppColors.tint(AppColors.red, 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isCorrect
-              ? AppColors.tint(AppColors.green, 0.3)
-              : AppColors.tint(AppColors.red, 0.3),
+    return Column(
+      children: [
+        // App Bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: AppColors.line)),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: AppColors.charcoal,
+                ),
+                onPressed: () => setState(
+                  () => _currentView = _GameView.detectiveCaseSelect,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  'Kasus ${c.level}: ${c.title}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              InkWell(
+                onTap: _openClueNotebook,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.line),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.menu_book_rounded,
+                        size: 14,
+                        color: AppColors.paprika,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_gatheredClues.length} Bukti',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(18),
+            children: [
+              if (scene.isBossFight && scene.boss != null) ...[
+                _buildDetectiveBossFightCard(scene.boss!),
+                const SizedBox(height: 14),
+              ],
+
+              // Dialogue Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: AppColors.surfaceSubtle,
+                      child: Text(scene.speakerAvatar),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            scene.speakerName,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            scene.speakerRole,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: AppColors.slateBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Narrative Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Text(
+                  scene.narrative,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    height: 1.5,
+                    color: AppColors.charcoal,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Text(
+                'PILIH LANGKAH INVESTIGASI:',
+                style: AppText.display(
+                  11,
+                  color: AppColors.slateBlue,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              ...scene.choices.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final choice = entry.value;
+                final isSelected = _selectedChoiceIndicesInScene.contains(idx);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: InkWell(
+                    onTap: isSelected
+                        ? null
+                        : () => _handleDetectiveChoice(idx, choice),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.surfaceSubtle
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.line
+                              : choice.type.color.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            choice.type.label.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: choice.type.color,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            choice.text,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.charcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            choice.actionDetail,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.slateBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetectiveBossFightCard(BossConfrontation boss) {
+    final hpPct = (_bossHp / boss.maxHp).clamp(0.0, 1.0);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.tomato, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                isCorrect
-                    ? Icons.check_circle_rounded
-                    : Icons.cancel_rounded,
-                color: isCorrect ? AppColors.greenDark : AppColors.red,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  isCorrect
-                      ? 'Jawaban Benar! (+${_getLevelConfig(_selectedLevel).basePoints * (_currentCombo - 1)} poin)'
-                      : timedOut
-                          ? 'Waktu Habis! (-1 Nyawa)'
-                          : 'Jawaban Salah! (-1 Nyawa)',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: isCorrect ? AppColors.greenDark : AppColors.red,
-                  ),
+              const Text(
+                'KONFRONTASI DALANG',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.tomato,
                 ),
               ),
-              // Restaurant navigation button
-              if (original.relatedRestaurantId != null)
-                InkWell(
-                  onTap: () => _openRelatedRestaurant(original.relatedRestaurantId!),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.orange,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.storefront_rounded, size: 12, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text(
-                          'Lihat Resto',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              const Spacer(),
+              Text(
+                'HP: $_bossHp/${boss.maxHp}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.charcoal,
                 ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            original.explanation,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              color: AppColors.textDark,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: hpPct,
+              backgroundColor: AppColors.line,
+              valueColor: const AlwaysStoppedAnimation(AppColors.tomato),
+              minHeight: 8,
             ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text(boss.avatar, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  boss.name,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // ==========================================
-  // VIEW 3: LEVEL SUMMARY (LEVEL CLEARED)
-  // ==========================================
-  Widget _buildLevelSummary() {
-    final config = _getLevelConfig(_selectedLevel);
-    int stars = 1;
-    if (_lives == 3) {
-      stars = 3;
-    } else if (_lives >= 2) {
-      stars = 2;
+  Widget _buildDetectiveGoodEndingView() {
+    final c = _activeCase;
+    if (c == null) {
+      return Center(
+        child: PrimaryButton(
+          label: 'Kembali',
+          onPressed: () => setState(() => _currentView = _GameView.hub),
+        ),
+      );
     }
 
-    return Center(
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(26),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Trophy or Star badge
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    color: AppColors.tint(AppColors.orange, 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.emoji_events_rounded,
-                    size: 40,
-                    color: AppColors.orange,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text('Level $_selectedLevel Berhasil!', style: AppText.display(22)),
-                const SizedBox(height: 4),
-                Text(
-                  config.title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Star display
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    3,
-                    (i) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        i < stars ? Icons.star_rounded : Icons.star_border_rounded,
-                        size: 36,
-                        color: i < stars ? AppColors.orange : Colors.grey.shade300,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Points earned
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.tint(AppColors.green, 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.stars_rounded, color: AppColors.greenDark, size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        '+$_scoreInLevel Poin Didapatkan',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.greenDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Stats row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _statCard(Icons.check_circle_rounded, '$_correctAnswers', 'Benar', AppColors.green),
-                    const SizedBox(width: 12),
-                    _statCard(Icons.favorite_rounded, '$_lives', 'Sisa Nyawa', AppColors.red),
-                    const SizedBox(width: 12),
-                    _statCard(Icons.local_fire_department_rounded, 'x$_highestCombo', 'Max Combo', AppColors.orange),
-                  ],
-                ),
-
-                if (_saving) ...[
-                  const SizedBox(height: 16),
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.green),
-                  ),
-                ],
-              ],
-            ),
+    final ending = c.goodEnding;
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Center(child: Text('🏆', style: TextStyle(fontSize: 48))),
+        const SizedBox(height: 10),
+        Center(child: Text('KASUS TERPECAHKAN!', style: AppText.display(20))),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
           ),
-          const SizedBox(height: 20),
-
-          // Next Level or Back button
-          if (_selectedLevel < kLevelsConfig.length)
-            PrimaryButton(
-              label: 'Lanjut Level ${_selectedLevel + 1}',
-              icon: Icons.play_arrow_rounded,
-              onPressed: () => _startLevel(_selectedLevel + 1),
-            )
-          else
-            PrimaryButton(
-              label: 'Semua Level Selesai! Hebat!',
-              icon: Icons.celebration_rounded,
-              onPressed: () => setState(() => _currentView = _GameView.levelSelect),
-            ),
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: () => setState(() => _currentView = _GameView.levelSelect),
-            child: const Text(
-              'Kembali ke Peta Level',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.bold,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                ending.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
+              const Divider(color: AppColors.line, height: 20),
+              Text(
+                ending.narrative,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: AppColors.charcoal,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 20),
+        PrimaryButton(
+          label: 'Daftar Kasus Berikutnya ➔',
+          onPressed: () =>
+              setState(() => _currentView = _GameView.detectiveCaseSelect),
+        ),
+      ],
     );
   }
 
-  // ==========================================
-  // VIEW 4: GAME OVER (HABIS NYAWA)
-  // ==========================================
-  Widget _buildGameOver() {
-    return Center(
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(26),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    color: AppColors.tint(AppColors.red, 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.heart_broken_rounded,
-                    size: 40,
-                    color: AppColors.red,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Nyawa Habis!', style: AppText.display(22, color: AppColors.red)),
-                const SizedBox(height: 6),
-                const Text(
-                  'Tantangan level ini belum berhasil dilewati.\nJangan menyerah, coba lagi untuk skor sempurna!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.line),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Text(
-                        'Skor Didapat: $_scoreInLevel',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.charcoal,
-                        ),
-                      ),
-                      Text(
-                        'Benar: $_correctAnswers / ${_sessionQuestions.length}',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
+  Widget _buildDetectiveBadEndingView() {
+    final c = _activeCase;
+    if (c == null) {
+      return Center(
+        child: PrimaryButton(
+          label: 'Kembali',
+          onPressed: () => setState(() => _currentView = _GameView.hub),
+        ),
+      );
+    }
 
-          PrimaryButton(
-            label: 'Coba Lagi Level Ini',
-            icon: Icons.replay_rounded,
-            onPressed: () => _startLevel(_selectedLevel),
+    final ending = c.badEnding;
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Center(child: Text('💔', style: TextStyle(fontSize: 48))),
+        const SizedBox(height: 10),
+        Center(
+          child: Text(
+            'INVESTIGASI GAGAL!',
+            style: AppText.display(20, color: AppColors.tomato),
           ),
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: () => setState(() => _currentView = _GameView.levelSelect),
-            child: const Text(
-              'Kembali ke Peta Level',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.bold,
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                ending.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
+              const Divider(color: AppColors.line, height: 20),
+              Text(
+                ending.narrative,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: AppColors.charcoal,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statCard(IconData icon, String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.tint(color, 0.08),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 20),
+        PrimaryButton(
+          label: 'Kembali ke Menu Kasus',
+          onPressed: () =>
+              setState(() => _currentView = _GameView.detectiveCaseSelect),
+        ),
+      ],
     );
   }
 }

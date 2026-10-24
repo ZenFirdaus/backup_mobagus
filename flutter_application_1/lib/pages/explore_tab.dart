@@ -36,6 +36,8 @@ class ExploreTab extends StatefulWidget {
   final String name;
   /// Kategori awal yang dipilih (dari Home).
   final String? initialCategory;
+  /// Kata kunci pencarian awal (opsional, misal dari game Kulinerdle).
+  final String? initialQuery;
   /// Koordinat user untuk sort terdekat (dikirim dari HomePage).
   final double? userLat;
   final double? userLng;
@@ -44,6 +46,7 @@ class ExploreTab extends StatefulWidget {
     super.key,
     this.name = '',
     this.initialCategory,
+    this.initialQuery,
     this.userLat,
     this.userLng,
     this.onBackToHome,
@@ -80,6 +83,10 @@ class _ExploreTabState extends State<ExploreTab> {
   void initState() {
     super.initState();
     LocationService.instance.currentLocation.addListener(_onLocationChanged);
+    // Terapkan query pencarian awal jika ada
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _search.text = widget.initialQuery!;
+    }
     // Terapkan filter kategori awal dari Home jika ada
     if (widget.initialCategory != null) {
       _category = widget.initialCategory;

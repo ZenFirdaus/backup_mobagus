@@ -11,6 +11,22 @@ enum CaseDifficulty {
   const CaseDifficulty(this.label, this.color);
 }
 
+enum ChoiceType {
+  investigate('Periksa Bukti', Icons.search_rounded, Color(0xFFF5BD50)),
+  interrogate(
+    'Interogasi Saksi',
+    Icons.record_voice_over_rounded,
+    Color(0xFFEF8235),
+  ),
+  deduce('Analisis Deduksi', Icons.psychology_rounded, Color(0xFF42A5F5)),
+  confront('Hadapi Dalang', Icons.gavel_rounded, Color(0xFFE53935));
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  const ChoiceType(this.label, this.icon, this.color);
+}
+
 class CaseClue {
   final String id;
   final String title;
@@ -34,6 +50,7 @@ class SceneChoice {
   final int bossDamage; // Damage ke HP boss jika saat boss fight
   final CaseClue? foundClue;
   final String? nextSceneId;
+  final ChoiceType type;
 
   const SceneChoice({
     required this.text,
@@ -44,6 +61,7 @@ class SceneChoice {
     this.bossDamage = 0,
     this.foundClue,
     this.nextSceneId,
+    this.type = ChoiceType.investigate,
   });
 }
 
@@ -114,6 +132,7 @@ class DetectiveCase {
   final String subtitle;
   final String location;
   final String targetRestaurant;
+  final String? relatedRestaurantId;
   final String suspectName;
   final CaseDifficulty difficulty;
   final int baseReward;
@@ -130,6 +149,7 @@ class DetectiveCase {
     required this.subtitle,
     required this.location,
     required this.targetRestaurant,
+    this.relatedRestaurantId,
     required this.suspectName,
     required this.difficulty,
     required this.baseReward,
@@ -139,4 +159,20 @@ class DetectiveCase {
     required this.goodEnding,
     required this.badEnding,
   });
+
+  /// Bab / Chapter (Tiap 5 level memiliki 1 checkpoint dan babak cerita)
+  int get chapter => ((level - 1) ~/ 5) + 1;
+
+  String get chapterTitle {
+    switch (chapter) {
+      case 1:
+        return 'Bab I: Misteri Kota Pusaka (Level 1 - 5)';
+      case 2:
+        return 'Bab II: Konspirasi Jalur Mataram (Level 6 - 10)';
+      default:
+        return 'Bab III: Runtuhnya Sindikat Nusantara (Level 11 - 15)';
+    }
+  }
+
+  bool get isCheckpoint => level % 5 == 0;
 }
