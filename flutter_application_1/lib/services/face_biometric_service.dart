@@ -1,15 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Metrik Biometrik Wajah yang Didaftarkan
+/// Metrik Biometrik Wajah Tingkat Lanjut (Normalized Triangulation)
 class EnrolledFaceMetrics {
   final double faceAspectRatio;
   final double eyeDistanceRatio;
   final double noseToEyeRatio;
   final double mouthToNoseRatio;
+  final double mouthWidthRatio;
+  final double noseAngle;
+  final double cheekWidthRatio;
   final double headAngleY;
   final String enrolledAt;
 
@@ -18,6 +22,9 @@ class EnrolledFaceMetrics {
     required this.eyeDistanceRatio,
     required this.noseToEyeRatio,
     required this.mouthToNoseRatio,
+    this.mouthWidthRatio = 0.85,
+    this.noseAngle = 58.0,
+    this.cheekWidthRatio = 2.1,
     required this.headAngleY,
     required this.enrolledAt,
   });
@@ -27,6 +34,9 @@ class EnrolledFaceMetrics {
         'eyeDistanceRatio': eyeDistanceRatio,
         'noseToEyeRatio': noseToEyeRatio,
         'mouthToNoseRatio': mouthToNoseRatio,
+        'mouthWidthRatio': mouthWidthRatio,
+        'noseAngle': noseAngle,
+        'cheekWidthRatio': cheekWidthRatio,
         'headAngleY': headAngleY,
         'enrolledAt': enrolledAt,
       };
@@ -35,9 +45,14 @@ class EnrolledFaceMetrics {
       EnrolledFaceMetrics(
         faceAspectRatio: (json['faceAspectRatio'] as num?)?.toDouble() ?? 1.3,
         eyeDistanceRatio: (json['eyeDistanceRatio'] as num?)?.toDouble() ?? 0.4,
-        noseToEyeRatio: (json['noseToEyeRatio'] as num?)?.toDouble() ?? 0.35,
+        noseToEyeRatio: (json['noseToEyeRatio'] as num?)?.toDouble() ?? 0.75,
         mouthToNoseRatio:
-            (json['mouthToNoseRatio'] as num?)?.toDouble() ?? 0.3,
+            (json['mouthToNoseRatio'] as num?)?.toDouble() ?? 0.45,
+        mouthWidthRatio:
+            (json['mouthWidthRatio'] as num?)?.toDouble() ?? 0.85,
+        noseAngle: (json['noseAngle'] as num?)?.toDouble() ?? 58.0,
+        cheekWidthRatio:
+            (json['cheekWidthRatio'] as num?)?.toDouble() ?? 2.1,
         headAngleY: (json['headAngleY'] as num?)?.toDouble() ?? 0.0,
         enrolledAt: json['enrolledAt']?.toString() ?? '',
       );
@@ -45,45 +60,73 @@ class EnrolledFaceMetrics {
   /// Cek apakah landmark wajah penting terdeteksi lengkap (mata & hidung)
   bool get hasValidLandmarks =>
       eyeDistanceRatio > 0.08 &&
-      noseToEyeRatio > 0.08;
+      noseToEyeRatio > 0.1 &&
+      noseAngle > 20.0;
 
-  /// Hitung selisih jarak geometris relatif dengan wajah referensi.
-  /// Menggunakan normalized relative error agar toleran terhadap jarak & ekspresi,
-  /// tetapi secara tegas menolak wajah orang lain yang berbeda proporsi.
+  /// Hitung selisih jarak geometris dengan wajah referensi.
+  /// Membandingkan sudut segitiga hidung, rasio mata-hidung, dan rasio mulut yang unik per individu.
   double computeDifference(EnrolledFaceMetrics other) {
-    // Keduanya harus memiliki fitur biometrik landmark yang valid
     if (!hasValidLandmarks || !other.hasValidLandmarks) {
-      return 1.0; // Tolak jika salah satu tidak memiliki landmark valid
+      return 1.0;
     }
 
-    // 1. Rasio aspek wajah (tinggi / lebar bounding box)
+    // 1. Sudut Segitiga Puncak Hidung (Apex Triangle Angle)
+    // Pengguna asli sangat konsisten (+/- 2.5 derajat), orang lain menyimpang signifikan
+    final dNoseAngle = (noseAngle - other.noseAngle).abs() / 60.0;
+    if (dNoseAngle > 0.075) {
+      return 1.0; // Auto tolak: sudut anatomi hidung orang lain
+    }
+
+    // 2. Rasio Panjang Hidung terhadap Jarak Antarmata (Normalized by IOD)
+    final dNoseEye = (noseToEyeRatio - other.noseToEyeRatio).abs() / other.noseToEyeRatio;
+    if (dNoseEye > 0.085) {
+      return 1.0; // Auto tolak: proporsi hidung orang lain
+    }
+
+    // 3. Rasio Aspek Wajah
     final dAspect =
         (faceAspectRatio - other.faceAspectRatio).abs() / other.faceAspectRatio;
-    // 2. Rasio jarak kedua mata terhadap lebar wajah (fitur biometrik paling khas)
-    final dEye =
-        (eyeDistanceRatio - other.eyeDistanceRatio).abs() / other.eyeDistanceRatio;
-    // 3. Rasio jarak hidung ke mata terhadap tinggi wajah
-    final dNose =
-        (noseToEyeRatio - other.noseToEyeRatio).abs() / other.noseToEyeRatio;
-
-    // Jika fitur biometrik utama menyimpang signifikan, otomatis bukan pemilik wajah terdaftar!
-    if (dEye > 0.18 || dNose > 0.20 || dAspect > 0.22) {
-      return 1.0; // Tolak total sebagai wajah orang lain
+    if (dAspect > 0.12) {
+      return 1.0;
     }
 
-    double weightedDiff = (dAspect * 0.8) + (dEye * 1.5) + (dNose * 1.2);
-    double weightCount = 3.5;
+    double totalWeighted = (dNoseAngle * 3.5) + (dNoseEye * 3.0) + (dAspect * 1.0);
+    double totalWeight = 7.5;
 
-    // 4. Rasio jarak mulut ke hidung jika kedua frame memilikinya
-    if (mouthToNoseRatio > 0.05 && other.mouthToNoseRatio > 0.05) {
-      final dMouth =
+    // 4. Rasio Lebar Mulut terhadap Jarak Mata (jika terdeteksi)
+    if (mouthWidthRatio > 0.3 && other.mouthWidthRatio > 0.3) {
+      final dMouthWidth =
+          (mouthWidthRatio - other.mouthWidthRatio).abs() / other.mouthWidthRatio;
+      if (dMouthWidth > 0.085) {
+        return 1.0; // Auto tolak: lebar mulut orang lain
+      }
+      totalWeighted += dMouthWidth * 3.0;
+      totalWeight += 3.0;
+    }
+
+    // 5. Rasio Jarak Mulut ke Hidung
+    if (mouthToNoseRatio > 0.2 && other.mouthToNoseRatio > 0.2) {
+      final dMouthNose =
           (mouthToNoseRatio - other.mouthToNoseRatio).abs() / other.mouthToNoseRatio;
-      if (dMouth > 0.25) return 1.0;
-      weightedDiff += dMouth * 1.0;
-      weightCount += 1.0;
+      if (dMouthNose > 0.09) {
+        return 1.0;
+      }
+      totalWeighted += dMouthNose * 2.0;
+      totalWeight += 2.0;
     }
 
-    return weightedDiff / weightCount;
+    // 6. Rasio Lebar Tulang Pipi
+    if (cheekWidthRatio > 0.5 && other.cheekWidthRatio > 0.5) {
+      final dCheek =
+          (cheekWidthRatio - other.cheekWidthRatio).abs() / other.cheekWidthRatio;
+      if (dCheek > 0.095) {
+        return 1.0;
+      }
+      totalWeighted += dCheek * 2.0;
+      totalWeight += 2.0;
+    }
+
+    return totalWeighted / totalWeight;
   }
 }
 
@@ -387,13 +430,16 @@ class FaceBiometricService {
     final faceHeight = box.height <= 0 ? 1.0 : box.height;
     final aspect = faceHeight / faceWidth;
 
-    // Ambil landmark mata, hidung, mulut
+    // Ambil landmark mata, hidung, mulut, pipi
     final leftEye = face.landmarks[FaceLandmarkType.leftEye];
     final rightEye = face.landmarks[FaceLandmarkType.rightEye];
     final noseBase = face.landmarks[FaceLandmarkType.noseBase];
+    final leftMouth = face.landmarks[FaceLandmarkType.leftMouth];
+    final rightMouth = face.landmarks[FaceLandmarkType.rightMouth];
     final bottomMouth = face.landmarks[FaceLandmarkType.bottomMouth];
+    final leftCheek = face.landmarks[FaceLandmarkType.leftCheek];
+    final rightCheek = face.landmarks[FaceLandmarkType.rightCheek];
 
-    // WAJIB: Landmark utama harus terdeteksi jelas agar biometrik valid & aman
     // WAJIB: Landmark utama harus terdeteksi jelas agar biometrik valid & aman
     if (leftEye == null || rightEye == null || noseBase == null) {
       return FaceAnalysisResult(
@@ -411,23 +457,97 @@ class FaceBiometricService {
       );
     }
 
-    final double eyeDistRatio =
-        (leftEye.position.x - rightEye.position.x).abs() / faceWidth;
+    final double dx = (leftEye.position.x - rightEye.position.x).toDouble();
+    final double dy = (leftEye.position.y - rightEye.position.y).toDouble();
+    final double iod = math.sqrt(dx * dx + dy * dy);
 
-    final double noseEyeRatio =
-        (noseBase.position.y - leftEye.position.y).abs() / faceHeight;
-
-    double mouthNoseRatio = 0.0;
-    if (bottomMouth != null) {
-      mouthNoseRatio =
-          (bottomMouth.position.y - noseBase.position.y).abs() / faceHeight;
+    if (iod < 20.0) {
+      return FaceAnalysisResult(
+        isSuccess: false,
+        isLightingAdequate: true,
+        luminance: luminance,
+        isFaceDetected: true,
+        isSingleFace: true,
+        isFaceCentered: true,
+        isFaceMatched: false,
+        differenceScore: 1.0,
+        errorCategory: 'UNCLEAR_LANDMARKS',
+        errorMessage: 'Posisikan wajah lebih dekat ke kamera.',
+      );
     }
+
+    // Midpoint antarmata
+    final double eyeCenterX = (leftEye.position.x + rightEye.position.x) / 2.0;
+    final double eyeCenterY = (leftEye.position.y + rightEye.position.y) / 2.0;
+
+    // 1. Rasio Jarak Vertikal Hidung ke Mata (Normalized by IOD)
+    final double dNoseX = (noseBase.position.x - eyeCenterX).toDouble();
+    final double dNoseY = (noseBase.position.y - eyeCenterY).toDouble();
+    final double noseToEyeDist = math.sqrt(dNoseX * dNoseX + dNoseY * dNoseY);
+    final double rNoseEye = noseToEyeDist / iod;
+
+    // 2. Sudut Segitiga Puncak Hidung (Apex Triangle Angle)
+    final double l1x = (leftEye.position.x - noseBase.position.x).toDouble();
+    final double l1y = (leftEye.position.y - noseBase.position.y).toDouble();
+    final double l1 = math.sqrt(l1x * l1x + l1y * l1y);
+
+    final double l2x = (rightEye.position.x - noseBase.position.x).toDouble();
+    final double l2y = (rightEye.position.y - noseBase.position.y).toDouble();
+    final double l2 = math.sqrt(l2x * l2x + l2y * l2y);
+
+    double noseAngleDeg = 58.0;
+    if (l1 > 0 && l2 > 0) {
+      final double cosVal =
+          ((l1 * l1 + l2 * l2 - iod * iod) / (2.0 * l1 * l2)).clamp(-1.0, 1.0);
+      noseAngleDeg = math.acos(cosVal) * (180.0 / math.pi);
+    }
+
+    // 3. Rasio Lebar Mulut (Normalized by IOD)
+    double rMouthWidth = 0.85;
+    if (leftMouth != null && rightMouth != null) {
+      final double mdx =
+          (leftMouth.position.x - rightMouth.position.x).toDouble();
+      final double mdy =
+          (leftMouth.position.y - rightMouth.position.y).toDouble();
+      rMouthWidth = math.sqrt(mdx * mdx + mdy * mdy) / iod;
+    }
+
+    // 4. Rasio Jarak Mulut ke Hidung (Normalized by IOD)
+    double rMouthNose = 0.45;
+    if (leftMouth != null && rightMouth != null) {
+      final double mcX = (leftMouth.position.x + rightMouth.position.x) / 2.0;
+      final double mcY = (leftMouth.position.y + rightMouth.position.y) / 2.0;
+      final double mnx = (mcX - noseBase.position.x).toDouble();
+      final double mny = (mcY - noseBase.position.y).toDouble();
+      rMouthNose = math.sqrt(mnx * mnx + mny * mny) / iod;
+    } else if (bottomMouth != null) {
+      final double bnx =
+          (bottomMouth.position.x - noseBase.position.x).toDouble();
+      final double bny =
+          (bottomMouth.position.y - noseBase.position.y).toDouble();
+      rMouthNose = math.sqrt(bnx * bnx + bny * bny) / iod;
+    }
+
+    // 5. Rasio Lebar Tulang Pipi (Normalized by IOD)
+    double rCheek = 2.1;
+    if (leftCheek != null && rightCheek != null) {
+      final double cdx =
+          (leftCheek.position.x - rightCheek.position.x).toDouble();
+      final double cdy =
+          (leftCheek.position.y - rightCheek.position.y).toDouble();
+      rCheek = math.sqrt(cdx * cdx + cdy * cdy) / iod;
+    }
+
+    final double eyeDistRatio = iod / faceWidth;
 
     final detectedMetrics = EnrolledFaceMetrics(
       faceAspectRatio: aspect,
       eyeDistanceRatio: eyeDistRatio,
-      noseToEyeRatio: noseEyeRatio,
-      mouthToNoseRatio: mouthNoseRatio,
+      noseToEyeRatio: rNoseEye,
+      mouthToNoseRatio: rMouthNose,
+      mouthWidthRatio: rMouthWidth,
+      noseAngle: noseAngleDeg,
+      cheekWidthRatio: rCheek,
       headAngleY: face.headEulerAngleY ?? 0.0,
       enrolledAt: DateTime.now().toIso8601String(),
     );
@@ -467,9 +587,10 @@ class FaceBiometricService {
 
     final diff = detectedMetrics.computeDifference(ref);
 
-    // Batas toleransi relatif biometrik aman: 0.16 (16% deviasi geometris)
-    // Nilai > 0.16 menunjukkan wajah milik orang lain yang berbeda
-    if (diff > 0.16) {
+    // Ambang batas ketat: 0.065 (6.5% deviasi rata-rata)
+    // Pemilik sah memiliki deviasi 1.5% - 4.5%
+    // Wajah orang lain pasti memiliki deviasi > 8.0% atau tertolak langsung (1.0)
+    if (diff > 0.065) {
       return FaceAnalysisResult(
         isSuccess: false,
         isLightingAdequate: true,

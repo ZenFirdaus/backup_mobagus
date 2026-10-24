@@ -17,8 +17,11 @@ void main() {
       final metricsUserA = EnrolledFaceMetrics(
         faceAspectRatio: 1.35,
         eyeDistanceRatio: 0.42,
-        noseToEyeRatio: 0.36,
-        mouthToNoseRatio: 0.31,
+        noseToEyeRatio: 0.78,
+        mouthToNoseRatio: 0.45,
+        mouthWidthRatio: 0.85,
+        noseAngle: 58.0,
+        cheekWidthRatio: 2.1,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
@@ -47,51 +50,64 @@ void main() {
       final loadedMetricsA = await bioService.getEnrolledMetrics(email: 'dimas@foodie.id');
       expect(loadedMetricsA, isNotNull);
       expect(loadedMetricsA!.faceAspectRatio, closeTo(1.35, 0.001));
+      expect(loadedMetricsA.noseAngle, closeTo(58.0, 0.001));
     });
 
-    test('Threshold & landmark ML Kit menolak wajah orang lain yang berbeda proporsi', () {
+    test('Triangulasi Face ID menolak wajah orang lain yang berbeda anatomi', () {
       final faceDimas = EnrolledFaceMetrics(
         faceAspectRatio: 1.35,
         eyeDistanceRatio: 0.42,
-        noseToEyeRatio: 0.36,
-        mouthToNoseRatio: 0.31,
+        noseToEyeRatio: 0.78,
+        mouthToNoseRatio: 0.45,
+        mouthWidthRatio: 0.85,
+        noseAngle: 58.0,
+        cheekWidthRatio: 2.1,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
 
-      // Wajah orang lain (proporsi berbeda: mata lebih rapat, hidung berbeda)
+      // Wajah orang lain (sudut segitiga hidung berbeda: 51 derajat vs 58 derajat, mulut lebih lebar)
       final faceOrangLain = EnrolledFaceMetrics(
-        faceAspectRatio: 1.62,
-        eyeDistanceRatio: 0.31,
-        noseToEyeRatio: 0.45,
-        mouthToNoseRatio: 0.24,
+        faceAspectRatio: 1.36,
+        eyeDistanceRatio: 0.43,
+        noseToEyeRatio: 0.88, // hidung lebih panjang
+        mouthToNoseRatio: 0.52,
+        mouthWidthRatio: 0.98, // mulut lebih lebar
+        noseAngle: 51.0,      // sudut segitiga hidung berbeda signifikan
+        cheekWidthRatio: 2.3,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
 
       final diff = faceOrangLain.computeDifference(faceDimas);
 
-      // Wajah orang lain harus memiliki deviasi > 0.16 atau ditolak total (1.0)
-      expect(diff > 0.16, isTrue,
-          reason: 'Deviasi wajah orang lain ($diff) harus > 0.16 agar ditolak.');
+      // Wajah orang lain harus ditolak total (diff = 1.0) atau > 0.065
+      expect(diff > 0.065, isTrue,
+          reason: 'Deviasi wajah orang lain ($diff) harus > 0.065 agar ditolak.');
     });
 
     test('Wajah tanpa landmark esensial valid otomatis ditolak (mencegah bypass aspect ratio)', () {
       final faceValid = EnrolledFaceMetrics(
         faceAspectRatio: 1.35,
         eyeDistanceRatio: 0.42,
-        noseToEyeRatio: 0.36,
-        mouthToNoseRatio: 0.31,
+        noseToEyeRatio: 0.78,
+        mouthToNoseRatio: 0.45,
+        mouthWidthRatio: 0.85,
+        noseAngle: 58.0,
+        cheekWidthRatio: 2.1,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
 
       // Wajah tanpa landmark (hanya bounding box, landmark 0.0)
       final faceTanpaLandmark = EnrolledFaceMetrics(
-        faceAspectRatio: 1.35, // rasio aspek sama persis!
+        faceAspectRatio: 1.35,
         eyeDistanceRatio: 0.0,
         noseToEyeRatio: 0.0,
         mouthToNoseRatio: 0.0,
+        mouthWidthRatio: 0.0,
+        noseAngle: 0.0,
+        cheekWidthRatio: 0.0,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
@@ -102,31 +118,37 @@ void main() {
           reason: 'Wajah tanpa landmark harus menghasilkan selisih 1.0 (ditolak total)');
     });
 
-    test('Wajah pemilik akun yang sama dengan sedikit toleransi ekspresi tetap diterima', () {
+    test('Wajah pemilik akun yang sama dengan sedikit variasi alami tetap diterima', () {
       final faceDimasAsli = EnrolledFaceMetrics(
         faceAspectRatio: 1.35,
         eyeDistanceRatio: 0.42,
-        noseToEyeRatio: 0.36,
-        mouthToNoseRatio: 0.31,
+        noseToEyeRatio: 0.78,
+        mouthToNoseRatio: 0.45,
+        mouthWidthRatio: 0.85,
+        noseAngle: 58.0,
+        cheekWidthRatio: 2.1,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
 
       // Wajah Dimas saat sedikit tersenyum / jarak kamera berbeda tipis
       final faceDimasKunjunganBerikutnya = EnrolledFaceMetrics(
-        faceAspectRatio: 1.38,
-        eyeDistanceRatio: 0.41,
-        noseToEyeRatio: 0.35,
-        mouthToNoseRatio: 0.32,
+        faceAspectRatio: 1.36,
+        eyeDistanceRatio: 0.418,
+        noseToEyeRatio: 0.785,
+        mouthToNoseRatio: 0.455,
+        mouthWidthRatio: 0.86,
+        noseAngle: 58.4,
+        cheekWidthRatio: 2.12,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
 
       final diff = faceDimasKunjunganBerikutnya.computeDifference(faceDimasAsli);
 
-      // Harus lolos (<= 0.16)
-      expect(diff <= 0.16, isTrue,
-          reason: 'Wajah pemilik sah ($diff) harus <= 0.16 agar berhasil masuk.');
+      // Harus lolos (<= 0.065)
+      expect(diff <= 0.065, isTrue,
+          reason: 'Wajah pemilik sah ($diff) harus <= 0.065 agar berhasil masuk.');
     });
   });
 
@@ -139,8 +161,11 @@ void main() {
       final metricsUserA = EnrolledFaceMetrics(
         faceAspectRatio: 1.35,
         eyeDistanceRatio: 0.42,
-        noseToEyeRatio: 0.36,
-        mouthToNoseRatio: 0.31,
+        noseToEyeRatio: 0.78,
+        mouthToNoseRatio: 0.45,
+        mouthWidthRatio: 0.85,
+        noseAngle: 58.0,
+        cheekWidthRatio: 2.1,
         headAngleY: 0.0,
         enrolledAt: DateTime.now().toIso8601String(),
       );
