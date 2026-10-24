@@ -1,6 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,11 +14,11 @@ import '../models/food.dart';
 import '../models/review.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../services/location_service.dart';
 import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
 import '../widgets/auth_widgets.dart';
-import '../widgets/buttons.dart';
 import '../widgets/modern_time_picker.dart';
 import '../widgets/modern_date_picker.dart';
 import '../widgets/profile_border_avatar.dart';
@@ -33,6 +38,13 @@ class _DetailPageState extends State<DetailPage> {
   bool _hasReminder = false;
   late double _currentRating;
   late int _currentReviewCount;
+  final MapController _mapController = MapController();
+  double _currentMapZoom = 15.5;
+  List<LatLng> _routePoints = [];
+  bool _isLoadingRoute = false;
+  String? _routeDistance;
+  String? _routeDuration;
+  bool _showRoute = false;
 
   List<Food> _foods = [];
   bool _foodsLoading = true;
@@ -56,6 +68,89 @@ class _DetailPageState extends State<DetailPage> {
     _loadFoods();
     _loadReviews();
     _subscribeRealtime();
+    _fetchRoute();
+  }
+
+  Future<void> _fetchRoute() async {
+    final userLoc = LocationService.instance.currentLocation.value;
+    final userLat = userLoc?.lat ?? -7.7956;
+    final userLng = userLoc?.lng ?? 110.3695;
+
+    setState(() {
+      _isLoadingRoute = true;
+      _showRoute = true;
+    });
+
+    try {
+      final url = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/$userLng,$userLat;${_r.lng},${_r.lat}?overview=full&geometries=geojson',
+      );
+
+      final res = await http.get(url).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['code'] == 'Ok' &&
+            data['routes'] != null &&
+            (data['routes'] as List).isNotEmpty) {
+          final route = data['routes'][0];
+          final coords = (route['geometry']['coordinates'] as List);
+          final points = coords
+              .map<LatLng>((c) => LatLng(
+                  (c[1] as num).toDouble(), (c[0] as num).toDouble()))
+              .toList();
+
+          final meters = (route['distance'] as num?)?.toDouble() ?? 0;
+          final seconds = (route['duration'] as num?)?.toDouble() ?? 0;
+
+          final km = (meters / 1000).toStringAsFixed(1);
+          final mins = (seconds / 60).round().clamp(1, 999);
+
+          if (mounted) {
+            setState(() {
+              _routePoints = points;
+              _routeDistance = '$km km';
+              _routeDuration = '$mins menit';
+              _isLoadingRoute = false;
+            });
+
+            final midLat = (userLat + _r.lat) / 2;
+            final midLng = (userLng + _r.lng) / 2;
+            _mapController.move(LatLng(midLat, midLng), 13.2);
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Fetch OSRM route error: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _routePoints = [
+          LatLng(userLat, userLng),
+          LatLng(_r.lat, _r.lng),
+        ];
+        _routeDistance =
+            '${_calcDistance(userLat, userLng, _r.lat, _r.lng)} km';
+        _routeDuration = '~10 menit';
+        _isLoadingRoute = false;
+      });
+      final midLat = (userLat + _r.lat) / 2;
+      final midLng = (userLng + _r.lng) / 2;
+      _mapController.move(LatLng(midLat, midLng), 13.5);
+    }
+  }
+
+  double _calcDistance(
+      double lat1, double lon1, double lat2, double lon2) {
+    const p = 0.017453292519943295;
+    final a = 0.5 -
+        math.cos((lat2 - lat1) * p) / 2 +
+        math.cos(lat1 * p) *
+            math.cos(lat2 * p) *
+            (1 - math.cos((lon2 - lon1) * p)) /
+            2;
+    return (12742 * math.asin(math.sqrt(a)) * 10).round() / 10;
   }
 
   void _checkReminder() {
@@ -722,7 +817,12 @@ class _DetailPageState extends State<DetailPage> {
               slivers: [
                 SliverToBoxAdapter(child: _imageHeader()),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    MediaQuery.of(context).padding.bottom + 24,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _restaurantInfo(),
@@ -740,7 +840,6 @@ class _DetailPageState extends State<DetailPage> {
               ],
             ),
             _topBar(),
-            _bottomStickyBar(),
           ],
         ),
       ),
@@ -1040,12 +1139,6 @@ class _DetailPageState extends State<DetailPage> {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _actionButton(
-          Icons.map_rounded,
-          'Peta',
-          _openMaps,
-          color: AppColors.greenDark,
-        ),
-        _actionButton(
           _isFavorite ? Icons.bookmark_rounded : Icons.bookmark_rounded,
           _isFavorite ? 'Tersimpan' : 'Simpan',
           _toggleFavorite,
@@ -1113,37 +1206,95 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // ── Peta Google Maps Static Preview ──
+  // ── Peta Interaktif OpenStreetMap (flutter_map) & Rute Nyata (OSRM) ──
   Widget _mapPreviewSection() {
+    final targetLatLng = LatLng(_r.lat, _r.lng);
+    final userLoc = LocationService.instance.currentLocation.value;
+    final userLat = userLoc?.lat ?? -7.7956;
+    final userLng = userLoc?.lng ?? 110.3695;
+    final userLatLng = LatLng(userLat, userLng);
 
-    return GestureDetector(
-      onTap: _openMaps,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x06000000),
-              blurRadius: 10,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header peta
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_on_rounded,
-                      size: 16, color: AppColors.red),
-                  const SizedBox(width: 6),
-                  Text('Lokasi', style: AppText.display(14)),
-                  const Spacer(),
-                  Container(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header peta & kontrol rute
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Row(
+              children: [
+                const Icon(Icons.location_on_rounded,
+                    size: 16, color: AppColors.red),
+                const SizedBox(width: 6),
+                Text('Lokasi & Rute', style: AppText.display(14)),
+                const SizedBox(width: 8),
+                // Tombol Toggle Rute
+                InkWell(
+                  onTap: () {
+                    if (_showRoute) {
+                      setState(() => _showRoute = false);
+                      _mapController.move(targetLatLng, 15.5);
+                    } else {
+                      if (_routePoints.isNotEmpty) {
+                        setState(() => _showRoute = true);
+                        final midLat = (userLat + _r.lat) / 2;
+                        final midLng = (userLng + _r.lng) / 2;
+                        _mapController.move(LatLng(midLat, midLng), 13.2);
+                      } else {
+                        _fetchRoute();
+                      }
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: _showRoute
+                          ? const Color(0xFF2563EB).withValues(alpha: 0.12)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _showRoute ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _showRoute ? Icons.close_rounded : Icons.alt_route_rounded,
+                          size: 12.5,
+                          color: _showRoute ? const Color(0xFF2563EB) : AppColors.charcoal,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _showRoute ? 'Tutup Rute' : 'Lihat Rute',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: _showRoute ? const Color(0xFF2563EB) : AppColors.charcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                InkWell(
+                  onTap: _openMaps,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -1157,7 +1308,7 @@ class _DetailPageState extends State<DetailPage> {
                             size: 12, color: AppColors.greenDark),
                         SizedBox(width: 4),
                         Text(
-                          'Buka Maps',
+                          'Google Maps',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -1167,164 +1318,284 @@ class _DetailPageState extends State<DetailPage> {
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            // Peta static (jika API key tersedia, tampilkan gambar dari Google)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(18),
-                bottomRight: Radius.circular(18),
-              ),
+          ),
+
+          // Peta Interaktif FlutterMap dengan OpenStreetMap & Polyline Jalur Rute
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(18),
+              bottomRight: Radius.circular(18),
+            ),
+            child: SizedBox(
+              height: 220,
+              width: double.infinity,
               child: Stack(
                 children: [
-                  // Background peta dengan warna
-                  Container(
-                    height: 160,
-                    width: double.infinity,
-                    color: const Color(0xFFE8F0E9),
-                    child: Stack(
-                      children: [
-                        // Pola grid mirip peta
-                        CustomPaint(
-                          size: const Size(double.infinity, 160),
-                          painter: _MapPatternPainter(),
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _showRoute
+                          ? LatLng((userLat + _r.lat) / 2, (userLng + _r.lng) / 2)
+                          : targetLatLng,
+                      initialZoom: _showRoute ? 13.2 : _currentMapZoom,
+                      minZoom: 10.0,
+                      maxZoom: 18.5,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all,
+                      ),
+                    ),
+                    children: [
+                      // Layer Peta Dasar OpenStreetMap
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.foodie.app',
+                      ),
+
+                      // Layer Garis Rute (Polyline) Jalanan Nyata dari Lokasi User ke Restoran
+                      if (_showRoute && _routePoints.isNotEmpty)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _routePoints,
+                              color: const Color(0xFF2563EB),
+                              strokeWidth: 4.8,
+                              borderStrokeWidth: 1.8,
+                              borderColor: Colors.white,
+                            ),
+                          ],
                         ),
-                        // Pin lokasi di tengah
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: AppColors.red,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.white, width: 3),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          AppColors.red.withValues(alpha: 0.4),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
+
+                      // Layer Marker Titik Restoran & Posisi User
+                      MarkerLayer(
+                        markers: [
+                          // Marker Restoran Tujuan
+                          Marker(
+                            point: targetLatLng,
+                            width: 150,
+                            height: 70,
+                            alignment: Alignment.topCenter,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x25000000),
+                                        blurRadius: 6,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    _r.name,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.charcoal,
                                     ),
-                                  ],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                child: const Icon(
-                                  Icons.restaurant_rounded,
-                                  color: Colors.white,
-                                  size: 20,
+                                const SizedBox(height: 3),
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.red,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: Colors.white, width: 2.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.red.withValues(alpha: 0.45),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.restaurant_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Marker Posisi Pengguna Saat Ini (Ditampilkan saat rute aktif)
+                          if (_showRoute)
+                            Marker(
+                              point: userLatLng,
+                              width: 120,
+                              height: 60,
+                              alignment: Alignment.topCenter,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2563EB),
+                                      borderRadius: BorderRadius.circular(6),
+                                      boxShadow: const [
+                                        BoxShadow(color: Color(0x25000000), blurRadius: 4),
+                                      ],
+                                    ),
+                                    child: const Text(
+                                      'Lokasi Kamu',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2563EB),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2.5),
+                                      boxShadow: const [
+                                        BoxShadow(color: Color(0x35000000), blurRadius: 6),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.my_location_rounded,
+                                      size: 15,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // Banner Info Rute (Jarak & Estimasi Waktu Tempuh)
+                  if (_showRoute)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: const [BoxShadow(color: Color(0x20000000), blurRadius: 6)],
+                          border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.35)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isLoadingRoute) ...[
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Menghitung rute...',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF2563EB),
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x15000000),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  _r.name,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.charcoal,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                            ] else ...[
+                              const Icon(Icons.directions_car_rounded, size: 14, color: Color(0xFF2563EB)),
+                              const SizedBox(width: 5),
+                              Text(
+                                '${_routeDistance ?? "-"} • ${_routeDuration ?? "-"}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF2563EB),
                                 ),
                               ),
                             ],
-                          ),
+                          ],
                         ),
-                        // Overlay "Tap to view" di sudut
-                        Positioned(
-                          bottom: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Ketuk untuk buka Google Maps',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: AppColors.textMuted,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Info koordinat
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: Row(
-                children: [
-                  Expanded(
+
+                  // Floating Controls: Zoom In, Zoom Out, & Fokus Lokasi
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          _r.address,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textDark,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        _mapControlButton(
+                          icon: Icons.add_rounded,
+                          tooltip: 'Perbesar',
+                          onTap: () {
+                            _currentMapZoom = (_currentMapZoom + 1).clamp(10.0, 18.5);
+                            _mapController.move(_mapController.camera.center, _currentMapZoom);
+                          },
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${_r.lat.toStringAsFixed(4)}, ${_r.lng.toStringAsFixed(4)} · ${_r.province}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textMuted,
-                          ),
+                        const SizedBox(height: 5),
+                        _mapControlButton(
+                          icon: Icons.remove_rounded,
+                          tooltip: 'Perkecil',
+                          onTap: () {
+                            _currentMapZoom = (_currentMapZoom - 1).clamp(10.0, 18.5);
+                            _mapController.move(_mapController.camera.center, _currentMapZoom);
+                          },
+                        ),
+                        const SizedBox(height: 5),
+                        _mapControlButton(
+                          icon: Icons.restaurant_rounded,
+                          tooltip: 'Pusatkan ke Restoran',
+                          onTap: () {
+                            _currentMapZoom = 15.5;
+                            _mapController.move(targetLatLng, _currentMapZoom);
+                          },
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _openMaps,
+
+                  // Watermark Petunjuk Interaktif
+                  Positioned(
+                    left: 10,
+                    bottom: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                       decoration: BoxDecoration(
-                        color: AppColors.greenDark,
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x10000000), blurRadius: 4),
+                        ],
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.directions_rounded,
-                              size: 14, color: Colors.white),
+                          Icon(Icons.touch_app_rounded, size: 11, color: AppColors.textMuted),
                           SizedBox(width: 4),
                           Text(
-                            'Rute',
+                            'Geser & Cubit untuk Zoom',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              fontSize: 9,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -1334,7 +1605,92 @@ class _DetailPageState extends State<DetailPage> {
                 ],
               ),
             ),
-          ],
+          ),
+
+          // Info koordinat & tombol navigasi
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _r.address,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_r.lat.toStringAsFixed(4)}, ${_r.lng.toStringAsFixed(4)} · ${_r.province}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: _openMaps,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.greenDark,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.navigation_rounded,
+                            size: 14, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'Navigasi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mapControlButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 3,
+      shadowColor: const Color(0x30000000),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          child: Icon(icon, size: 16, color: AppColors.charcoal),
         ),
       ),
     );
@@ -1708,103 +2064,4 @@ class _DetailPageState extends State<DetailPage> {
       ),
     );
   }
-
-  // ── Bottom Sticky Bar ──
-  Widget _bottomStickyBar() {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          12,
-          16,
-          MediaQuery.of(context).padding.bottom + 12,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.greenDark.withValues(alpha: 0.12),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: PrimaryButton(
-          label: 'Lihat Lokasi di Google Maps',
-          icon: Icons.map_rounded,
-          onPressed: _openMaps,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Custom painter untuk background peta ──
-class _MapPatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final roadPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..strokeWidth = 10
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final minorRoadPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.4)
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-
-    final blockPaint = Paint()
-      ..color = const Color(0xFFD5E8D6)
-      ..style = PaintingStyle.fill;
-
-    // Blok bangunan
-    final blocks = [
-      Rect.fromLTWH(10, 10, 80, 50),
-      Rect.fromLTWH(120, 10, 60, 40),
-      Rect.fromLTWH(220, 20, 90, 55),
-      Rect.fromLTWH(350, 10, 70, 45),
-      Rect.fromLTWH(460, 15, 80, 50),
-      Rect.fromLTWH(10, 90, 65, 55),
-      Rect.fromLTWH(130, 80, 75, 60),
-      Rect.fromLTWH(250, 85, 85, 55),
-      Rect.fromLTWH(380, 75, 70, 65),
-      Rect.fromLTWH(490, 90, 60, 50),
-    ];
-
-    for (final block in blocks) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(block, const Radius.circular(4)),
-        blockPaint,
-      );
-    }
-
-    // Jalan utama horizontal
-    canvas.drawLine(
-      Offset(0, size.height * 0.5),
-      Offset(size.width, size.height * 0.5),
-      roadPaint,
-    );
-    // Jalan utama vertikal
-    canvas.drawLine(
-      Offset(size.width * 0.5, 0),
-      Offset(size.width * 0.5, size.height),
-      roadPaint,
-    );
-    // Jalan minor
-    canvas.drawLine(Offset(0, size.height * 0.25),
-        Offset(size.width, size.height * 0.25), minorRoadPaint);
-    canvas.drawLine(Offset(0, size.height * 0.75),
-        Offset(size.width, size.height * 0.75), minorRoadPaint);
-    canvas.drawLine(Offset(size.width * 0.25, 0),
-        Offset(size.width * 0.25, size.height), minorRoadPaint);
-    canvas.drawLine(Offset(size.width * 0.75, 0),
-        Offset(size.width * 0.75, size.height), minorRoadPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
