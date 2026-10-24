@@ -2,6 +2,7 @@ class Profile {
   final String id;
   final String displayName;
   final String? avatarUrl;
+  final String? activeBorderId;
   final int points;
   final DateTime createdAt;
 
@@ -9,6 +10,7 @@ class Profile {
     required this.id,
     required this.displayName,
     this.avatarUrl,
+    this.activeBorderId,
     required this.points,
     required this.createdAt,
   });
@@ -18,6 +20,7 @@ class Profile {
       id: json['id'].toString(),
       displayName: json['display_name'] as String? ?? '',
       avatarUrl: json['avatar_url'] as String?,
+      activeBorderId: json['active_border_id'] as String?,
       points: json['points'] as int? ?? 0,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),

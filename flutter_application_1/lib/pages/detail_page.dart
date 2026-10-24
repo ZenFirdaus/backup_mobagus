@@ -16,6 +16,7 @@ import '../widgets/auth_widgets.dart';
 import '../widgets/buttons.dart';
 import '../widgets/modern_time_picker.dart';
 import '../widgets/modern_date_picker.dart';
+import '../widgets/profile_border_avatar.dart';
 
 class DetailPage extends StatefulWidget {
   final Restaurant restaurant;
@@ -1600,43 +1601,14 @@ class _DetailPageState extends State<DetailPage> {
         children: [
           Row(
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colors[colorIdx],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: (r.userAvatar != null && r.userAvatar!.trim().isNotEmpty)
-                    ? Image.network(
-                        r.userAvatar!.trim(),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Center(
-                          child: Text(
-                            (r.userName != null && r.userName!.isNotEmpty)
-                                ? r.userName![0].toUpperCase()
-                                : 'K',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      )
-                    : Center(
-                        child: Text(
-                          (r.userName != null && r.userName!.isNotEmpty)
-                              ? r.userName![0].toUpperCase()
-                              : 'K',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+              ProfileBorderAvatar(
+                avatarUrl: r.userAvatar,
+                borderId: r.userActiveBorder,
+                size: 32,
+                backgroundColor: colors[colorIdx],
+                fallbackText: (r.userName != null && r.userName!.isNotEmpty)
+                    ? r.userName![0].toUpperCase()
+                    : 'K',
               ),
               const SizedBox(width: 10),
               Expanded(

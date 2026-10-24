@@ -69,6 +69,10 @@ class SupabaseService {
       StreamController<void>.broadcast();
   Stream<void> get onProfileChanged => _profileChangedController.stream;
 
+  void notifyProfileChanged() {
+    _profileChangedController.add(null);
+  }
+
   final StreamController<CourseFeedback> _courseFeedbackAddedController =
       StreamController<CourseFeedback>.broadcast();
   Stream<CourseFeedback> get onCourseFeedbackAdded =>
@@ -388,13 +392,17 @@ class SupabaseService {
     final keyUid = uid ?? 'guest';
     String? localName;
     String? localAvatar;
+    String? localActiveBorder;
+    int? localSavedPoints;
     bool isAvatarDeleted = false;
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Hanya ambil preferensi nama & avatar yang terikat pada keyUid pengguna saat ini
+      // Hanya ambil preferensi nama & avatar & border yang terikat pada keyUid pengguna saat ini
       localName = prefs.getString('foodie_name_$keyUid');
       localAvatar = prefs.getString('foodie_avatar_$keyUid');
+      localActiveBorder = prefs.getString('foodie_active_border_$keyUid');
+      localSavedPoints = prefs.getInt('foodie_points_$keyUid');
       isAvatarDeleted = prefs.getBool('foodie_avatar_deleted_$keyUid') ?? false;
     } catch (_) {}
 
@@ -433,11 +441,18 @@ class SupabaseService {
                   ? p.displayName.trim()
                   : defaultFallbackName;
 
+          final effectiveActiveBorder = (p.activeBorderId != null && p.activeBorderId!.isNotEmpty)
+              ? p.activeBorderId
+              : localActiveBorder;
+
+          final effectivePoints = localSavedPoints ?? (p.points + _localBonusPoints);
+
           return Profile(
             id: p.id,
             displayName: effectiveName,
             avatarUrl: effectiveAvatar,
-            points: p.points + _localBonusPoints,
+            activeBorderId: effectiveActiveBorder,
+            points: effectivePoints,
             createdAt: p.createdAt,
           );
         }
@@ -460,7 +475,8 @@ class SupabaseService {
       id: uid ?? 'curator_user',
       displayName: effectiveName,
       avatarUrl: effectiveAvatar,
-      points: 100 + _localBonusPoints + (_localCheckins.length * 50),
+      activeBorderId: localActiveBorder,
+      points: localSavedPoints ?? (100 + _localBonusPoints + (_localCheckins.length * 50)),
       createdAt: DateTime.now(),
     );
   }
@@ -468,6 +484,7 @@ class SupabaseService {
   Future<void> upsertProfile({
     required String displayName,
     String? avatarUrl,
+    String? activeBorderId,
   }) async {
     final uid = userId;
     final keyUid = uid ?? 'guest';
@@ -486,6 +503,14 @@ class SupabaseService {
       } else {
         await prefs.remove('foodie_avatar_$keyUid');
         await prefs.setBool('foodie_avatar_deleted_$keyUid', true);
+      }
+
+      if (activeBorderId != null) {
+        if (activeBorderId.trim().isNotEmpty) {
+          await prefs.setString('foodie_active_border_$keyUid', activeBorderId.trim());
+        } else {
+          await prefs.remove('foodie_active_border_$keyUid');
+        }
       }
     } catch (_) {}
 
@@ -517,6 +542,11 @@ class SupabaseService {
             ? avatarUrl.trim()
             : null,
       };
+      if (activeBorderId != null) {
+        payload['active_border_id'] = activeBorderId.trim().isNotEmpty
+            ? activeBorderId.trim()
+            : null;
+      }
       await _client.from('profiles').upsert(payload, onConflict: 'id');
     } catch (e) {
       debugPrint('Supabase profiles.upsert with avatar_url error: $e');
@@ -830,44 +860,61 @@ class SupabaseService {
 
       final rawList = res as List;
 
-      // Kumpulkan user_id jika ada ulasan lama yang belum memiliki user_name
+      // Kumpulkan user_id dari seluruh ulasan untuk sinkronisasi nama, avatar, dan border aktif terkini
       final userIds = rawList
-          .where((e) => e['user_name'] == null || (e['user_name'] as String).isEmpty)
           .map((e) => e['user_id']?.toString())
-          .where((id) => id != null && id.isNotEmpty)
+          .where((id) => id != null && id.isNotEmpty && id != 'guest')
           .toSet()
           .cast<String>()
           .toList();
 
       final Map<String, String> userNames = {};
       final Map<String, String> userAvatars = {};
+      final Map<String, String> userBorders = {};
       if (userIds.isNotEmpty) {
         try {
           final profileRes = await _client
               .from('profiles')
-              .select('id, display_name, avatar_url')
+              .select('id, display_name, avatar_url, active_border_id')
               .inFilter('id', userIds);
           for (final p in profileRes as List) {
             final uid = p['id']?.toString() ?? '';
             final name = p['display_name']?.toString();
             final av = p['avatar_url']?.toString();
+            final border = p['active_border_id']?.toString();
             if (uid.isNotEmpty && name != null && name.isNotEmpty) {
               userNames[uid] = name;
             }
             if (uid.isNotEmpty && av != null && av.isNotEmpty) {
               userAvatars[uid] = av;
             }
+            if (uid.isNotEmpty && border != null && border.isNotEmpty) {
+              userBorders[uid] = border;
+            }
           }
         } catch (_) {}
       }
 
-      // Gabungkan nama & avatar ke setiap review
+      // Jika user saat ini ada di ulasan dan punya border aktif lokal, gunakan untuk ulasannya
+      final currentUid = userId;
+      if (currentUid != null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final localBorder = prefs.getString('foodie_active_border_$currentUid');
+          if (localBorder != null && localBorder.isNotEmpty) {
+            userBorders[currentUid] = localBorder;
+          }
+        } catch (_) {}
+      }
+
+      // Gabungkan nama, avatar, & border aktif terkini ke setiap review
       remote = rawList.map((e) {
         final uid = e['user_id']?.toString() ?? '';
         return Review.fromJson({
           ...e,
           'user_name': e['user_name'] ?? userNames[uid] ?? 'Kurator Rasa',
           'user_avatar': e['user_avatar'] ?? userAvatars[uid],
+          'user_active_border': userBorders[uid] ?? e['user_active_border'],
         });
       }).toList();
     } catch (_) {}
@@ -895,6 +942,7 @@ class SupabaseService {
         : (currentUser?.userMetadata?['name'] as String? ?? guestName);
     final avatar = profile?.avatarUrl ??
         (currentUser?.userMetadata?['avatar_url'] as String?);
+    final activeBorder = profile?.activeBorderId;
 
     final resto = await getRestaurant(restaurantId) ??
         kDefaultRestaurants.where((r) =>
@@ -916,6 +964,7 @@ class SupabaseService {
       createdAt: DateTime.now(),
       userName: name,
       userAvatar: avatar,
+      userActiveBorder: activeBorder,
       restaurantName: resolvedRestoName,
     );
 
@@ -937,6 +986,7 @@ class SupabaseService {
         comment: comment,
         userName: name,
         userAvatar: avatar,
+        userActiveBorder: activeBorder,
       );
     }
 
@@ -951,9 +1001,10 @@ class SupabaseService {
     required String comment,
     String? userName,
     String? userAvatar,
+    String? userActiveBorder,
   }) async {
     final parsedId = int.tryParse(restaurantId);
-    // 1. Try with user_name, user_avatar, comment + parsed numeric id
+    // 1. Try with user_name, user_avatar, user_active_border, comment + parsed numeric id
     try {
       final payload = <String, dynamic>{
         'client_uuid': uuid,
@@ -964,6 +1015,7 @@ class SupabaseService {
       };
       if (userName != null && userName.isNotEmpty) payload['user_name'] = userName;
       if (userAvatar != null && userAvatar.isNotEmpty) payload['user_avatar'] = userAvatar;
+      if (userActiveBorder != null && userActiveBorder.isNotEmpty) payload['user_active_border'] = userActiveBorder;
       await _client.from('reviews').insert(payload);
       return;
     } catch (_) {}

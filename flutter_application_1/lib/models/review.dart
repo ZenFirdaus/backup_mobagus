@@ -7,6 +7,7 @@ class Review {
   final DateTime createdAt;
   final String? userName;
   final String? userAvatar;
+  final String? userActiveBorder;
   final String? restaurantName;
 
   const Review({
@@ -18,6 +19,7 @@ class Review {
     required this.createdAt,
     this.userName,
     this.userAvatar,
+    this.userActiveBorder,
     this.restaurantName,
   });
 
@@ -30,6 +32,7 @@ class Review {
     DateTime? createdAt,
     String? userName,
     String? userAvatar,
+    String? userActiveBorder,
     String? restaurantName,
   }) {
     return Review(
@@ -41,6 +44,7 @@ class Review {
       createdAt: createdAt ?? this.createdAt,
       userName: userName ?? this.userName,
       userAvatar: userAvatar ?? this.userAvatar,
+      userActiveBorder: userActiveBorder ?? this.userActiveBorder,
       restaurantName: restaurantName ?? this.restaurantName,
     );
   }
@@ -60,6 +64,8 @@ class Review {
           DateTime.now(),
       userName: json['user_name'] as String? ?? profile?['display_name'] as String?,
       userAvatar: json['user_avatar'] as String? ?? profile?['avatar_url'] as String?,
+      userActiveBorder: json['user_active_border'] as String? ??
+          profile?['active_border_id'] as String?,
       restaurantName: (rawName != null && rawName.trim().isNotEmpty)
           ? rawName.trim()
           : null,
@@ -75,6 +81,7 @@ class Review {
     'created_at': createdAt.toIso8601String(),
     'user_name': userName,
     'user_avatar': userAvatar,
+    'user_active_border': userActiveBorder,
     'restaurant_name': restaurantName,
   };
 }

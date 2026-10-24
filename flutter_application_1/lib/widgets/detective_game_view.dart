@@ -10,6 +10,7 @@ import '../models/restaurant.dart';
 import '../pages/detail_page.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../services/reward_border_service.dart';
 import '../services/supabase_service.dart';
 
 /// Game Detektif Kuliner "Pilih Jalanmu"
@@ -221,6 +222,21 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
           'detective_cases_solved': completedList.length,
           'updated_at': DateTime.now().toIso8601String(),
         });
+      }
+    } catch (_) {}
+
+    // Berikan reward poin ke saldo FOODIE Rewards pengguna (server validated)
+    try {
+      if (reward > 0) {
+        await RewardBorderService.instance.awardGamePoints(
+          gameType: 'detective',
+          score: reward,
+          metadata: {
+            'case_id': c.id,
+            'level': c.level,
+            'title': c.title,
+          },
+        );
       }
     } catch (_) {}
   }

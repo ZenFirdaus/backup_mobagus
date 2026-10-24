@@ -9,6 +9,7 @@ import '../models/user_ai_profile.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/ai_recommendation_service.dart';
+import '../services/reward_border_service.dart';
 import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/location_service.dart';
@@ -60,6 +61,7 @@ class _HomeTabState extends State<HomeTab> {
   int _page = 0;
   int _aiPage = 0;
   StreamSubscription<void>? _profileSub;
+  StreamSubscription<void>? _rewardSub;
 
   @override
   void initState() {
@@ -71,6 +73,12 @@ class _HomeTabState extends State<HomeTab> {
     // Auto-detect lokasi GPS pengguna saat aplikasi dibuka
     LocationService.instance.fetchGpsLocation();
     _profileSub = _svc.onProfileChanged.listen((_) {
+      if (mounted) {
+        _isLoadingData = false;
+        _load();
+      }
+    });
+    _rewardSub = RewardBorderService.instance.onChange.listen((_) {
       if (mounted) {
         _isLoadingData = false;
         _load();
@@ -122,6 +130,7 @@ class _HomeTabState extends State<HomeTab> {
     LocationService.instance.isLoading.removeListener(_onLocationLoadingChanged);
     AiRecommendationService.instance.profileNotifier.removeListener(_onAiProfileUpdated);
     _profileSub?.cancel();
+    _rewardSub?.cancel();
     _pageCtrl.dispose();
     _aiPageCtrl.dispose();
     super.dispose();
