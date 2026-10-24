@@ -12,6 +12,7 @@ class HiveService {
   static const String boxReminders = 'reminders_local';
   static const String boxFavorites = 'favorites_local';
   static const String boxSearchHistory = 'search_history_local';
+  static const String boxFaceBiometrics = 'face_biometrics_db';
 
   /// Inisialisasi Hive dan buka seluruh box yang dibutuhkan aplikasi
   Future<void> init() async {
@@ -20,6 +21,7 @@ class HiveService {
     await Hive.openBox(boxReminders);
     await Hive.openBox(boxFavorites);
     await Hive.openBox(boxSearchHistory);
+    await Hive.openBox(boxFaceBiometrics);
   }
 
   // ==========================================
@@ -161,4 +163,59 @@ class HiveService {
 
     return count;
   }
+
+  // ==========================================
+  // 3. PERSISTENSI BIOMETRIK WAJAH NO-SQL (HIVE)
+  // Tersimpan permanen di database lokal meski user logout berkali-kali
+  // ==========================================
+
+  Box get _faceBox => Hive.box(boxFaceBiometrics);
+
+  /// Menyimpan data biometrik wajah terikat ke email akun
+  Future<void> saveBiometricProfile({
+    required String email,
+    required String name,
+    String? password,
+    required Map<String, dynamic> metrics,
+    String? userId,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await _faceBox.put(cleanEmail, {
+      'email': cleanEmail,
+      'name': name.trim(),
+      'password': password ?? '',
+      'metrics': metrics,
+      'userId': userId ?? '',
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Mengambil profil biometrik berdasarkan email
+  Map<String, dynamic>? getBiometricProfile(String email) {
+    final cleanEmail = email.trim().toLowerCase();
+    final raw = _faceBox.get(cleanEmail);
+    if (raw != null && raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return null;
+  }
+
+  /// Mengambil semua akun yang terdaftar Face ID di perangkat
+  List<Map<String, dynamic>> getAllBiometricProfiles() {
+    final List<Map<String, dynamic>> list = [];
+    for (var key in _faceBox.keys) {
+      final raw = _faceBox.get(key);
+      if (raw != null && raw is Map) {
+        list.add(Map<String, dynamic>.from(raw));
+      }
+    }
+    return list;
+  }
+
+  /// Menghapus pendaftaran biometrik suatu akun
+  Future<void> deleteBiometricProfile(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await _faceBox.delete(cleanEmail);
+  }
 }
+

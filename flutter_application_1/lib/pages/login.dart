@@ -10,6 +10,7 @@ import '../widgets/foodie_logo.dart';
 import '../widgets/text_field.dart';
 import '../widgets/face_id_scanner_sheet.dart';
 import '../services/face_biometric_service.dart';
+import '../services/hive_service.dart';
 import 'home.dart';
 import 'onboarding.dart';
 import 'register.dart';
@@ -45,6 +46,21 @@ class _LoginPageState extends State<LoginPage> {
       await prefs.setString('foodie_last_user_email', email);
       if (password != null && password.isNotEmpty) {
         await prefs.setString('foodie_saved_password', password);
+        final key = email.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+        await prefs.setString('foodie_face_pwd_$key', password);
+
+        final cleanEmail = email.trim().toLowerCase();
+        final existingProf = HiveService.instance.getBiometricProfile(cleanEmail);
+        if (existingProf != null && existingProf['metrics'] is Map) {
+          await HiveService.instance.saveBiometricProfile(
+            email: cleanEmail,
+            name: existingProf['name']?.toString() ?? name,
+            password: password,
+            metrics: Map<String, dynamic>.from(existingProf['metrics'] as Map),
+            userId: existingProf['user_id']?.toString() ??
+                SupabaseService.instance.userId,
+          );
+        }
       }
     } catch (_) {}
   }
@@ -127,14 +143,125 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  /// Proses login berhasil setelah Face ID cocok secara biometrik
+  Future<void> _handleFaceLoginSuccess({
+    required String name,
+    required String email,
+    String? password,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    String? resolvedPassword = password;
+
+    // 1. Selesaikan kata sandi dari Hive NoSQL permanen
+    if (resolvedPassword == null || resolvedPassword.isEmpty) {
+      final hiveProf = HiveService.instance.getBiometricProfile(cleanEmail);
+      if (hiveProf != null && hiveProf['password'] != null) {
+        final p = hiveProf['password'].toString().trim();
+        if (p.isNotEmpty) resolvedPassword = p;
+      }
+    }
+
+    // 2. Fallback kata sandi dari SharedPreferences
+    if (resolvedPassword == null || resolvedPassword.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      final key = cleanEmail.replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+      resolvedPassword = prefs.getString('foodie_face_pwd_$key') ??
+          prefs.getString('foodie_saved_password');
+    }
+
+    // 3. Autentikasi Supabase resmi menggunakan email & kata sandi akun
+    if (resolvedPassword != null &&
+        resolvedPassword.isNotEmpty &&
+        cleanEmail.isNotEmpty) {
+      try {
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: cleanEmail,
+          password: resolvedPassword,
+        );
+      } catch (e) {
+        debugPrint('Autentikasi Supabase via Face ID gagal: $e');
+      }
+    }
+
+    // 4. PERLINDUNGAN MUTLAK ANTI-GUEST:
+    // Jika tidak ada sesi autentikasi Supabase aktif untuk akun ini,
+    // DILARANG KERAS MASUK KE APLIKASI ATAU KE AKUN GUEST!
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(
+                Icons.lock_outline_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Sesi akun $email tidak valid. Silakan masuk menggunakan kata sandi Anda.',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    // 5. Autentikasi valid & terverifikasi resmi: simpan sesi dan buka Home
+    await _saveUserSession(name, cleanEmail, resolvedPassword);
+    await SupabaseService.instance.initStorage(force: true);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(
+              Icons.face_unlock_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Face ID terverifikasi. Selamat datang kembali, $name',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.greenDark,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    _goHome(name, biometricOn: true);
+  }
+
   /// Tombol Login Wajah di halaman login:
   /// Masuk cepat menggunakan pemindai kamera Apple Face ID.
-  /// Hanya dapat digunakan jika akun pengguna sudah mendaftarkan wajah sebelumnya.
+  /// Mendukung 1 wajah 1 akun: otomatis mengenali pemilik wajah meski telah logout berkali-kali.
   Future<void> _loginWithFaceId() async {
-    final inputEmail = _email.text.trim();
-    String targetEmail;
-    String targetName;
+    final inputEmail = _email.text.trim().toLowerCase();
+    String targetEmail = '';
+    String targetName = 'Pengguna';
     String? targetPassword;
+
+    // Periksa apakah ada akun yang terdaftar Face ID di perangkat ini
+    final allRegistered =
+        await FaceBiometricService.instance.getAllRegisteredProfiles();
+
+    if (allRegistered.isEmpty) {
+      if (!mounted) return;
+      _showBiometricNotEnrolledSheet();
+      return;
+    }
 
     if (inputEmail.isNotEmpty) {
       // 1. Jika user mengetikkan email, pastikan Face ID terdaftar KHUSUS untuk email tersebut
@@ -155,25 +282,42 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      final key = inputEmail.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
       targetEmail = inputEmail;
-      targetName = prefs.getString('foodie_face_name_$key') ??
+      final hiveProf = HiveService.instance.getBiometricProfile(inputEmail);
+      final prefs = await SharedPreferences.getInstance();
+      final key = inputEmail.replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+
+      targetName = hiveProf?['name']?.toString() ??
+          prefs.getString('foodie_face_name_$key') ??
           prefs.getString('foodie_last_user_name') ??
           inputEmail.split('@').first;
-      targetPassword = prefs.getString('foodie_face_pwd_$key') ??
+      targetPassword = hiveProf?['password']?.toString() ??
+          prefs.getString('foodie_face_pwd_$key') ??
           prefs.getString('foodie_saved_password');
     } else {
-      // 2. Jika email belum diisi, periksa akun biometrik aktif yang terdaftar di perangkat ini
-      final account = await FaceBiometricService.instance.getActiveBiometricAccount();
-      if (account == null) {
-        if (!mounted) return;
-        _showBiometricNotEnrolledSheet();
-        return;
+      // 2. Jika email belum diisi, ambil akun biometrik terdaftar di perangkat
+      final account =
+          await FaceBiometricService.instance.getActiveBiometricAccount();
+      if (account != null && account['email']?.isNotEmpty == true) {
+        targetEmail = account['email']!;
+        targetName = account['name'] ?? 'Pengguna';
+        targetPassword = account['password'];
+        _email.text = targetEmail;
+      } else if (allRegistered.isNotEmpty) {
+        final first = allRegistered.first;
+        targetEmail = first['email']?.toString() ?? '';
+        targetName = first['name']?.toString() ?? 'Pengguna';
+        targetPassword = first['password']?.toString();
+        if (targetEmail.isNotEmpty) {
+          _email.text = targetEmail;
+        }
       }
-      targetEmail = account['email']!;
-      targetName = account['name']!;
-      targetPassword = account['password'];
+    }
+
+    if (targetEmail.isEmpty) {
+      if (!mounted) return;
+      _showBiometricNotEnrolledSheet();
+      return;
     }
 
     if (!mounted) return;
@@ -188,54 +332,21 @@ class _LoginPageState extends State<LoginPage> {
         userEmail: targetEmail,
         savedPassword: targetPassword,
         isEnrollment: false,
+        onAccountMatched: (matched) async {
+          Navigator.of(ctx).pop();
+          await _handleFaceLoginSuccess(
+            name: matched['name']?.toString() ?? targetName,
+            email: matched['email']?.toString() ?? targetEmail,
+            password: matched['password']?.toString() ?? targetPassword,
+          );
+        },
         onSuccess: () async {
           Navigator.of(ctx).pop();
-
-          // AUTENTIKASI SUPABASE SECARA REAL-TIME DENGAN FACE ID:
-          if (targetPassword != null &&
-              targetPassword.isNotEmpty &&
-              targetEmail.isNotEmpty) {
-            try {
-              await Supabase.instance.client.auth.signInWithPassword(
-                email: targetEmail,
-                password: targetPassword,
-              );
-            } catch (_) {
-              // Jika offline atau server lambat, fallback ke sesi lokal
-            }
-          }
-          if (SupabaseService.instance.userId == null &&
-              targetEmail.isNotEmpty) {
-            SupabaseService.instance.setDemoUser(targetEmail);
-          }
-
-          await _saveUserSession(targetName, targetEmail, targetPassword);
-          await SupabaseService.instance.initStorage(force: true);
-
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(
-                    Icons.face_unlock_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Face ID terverifikasi. Selamat datang kembali, $targetName',
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: AppColors.greenDark,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-            ),
+          await _handleFaceLoginSuccess(
+            name: targetName,
+            email: targetEmail,
+            password: targetPassword,
           );
-          _goHome(targetName, biometricOn: true);
         },
       ),
     );

@@ -13,6 +13,7 @@ import '../models/quiz_data.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
+import '../services/reward_border_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/buttons.dart';
 import 'explore_tab.dart';
@@ -366,8 +367,15 @@ class _GamePageState extends State<GamePage> {
     if (points <= 0) return;
     setState(() => _totalScore += points);
     try {
-      await SupabaseService.instance.saveGameScore(points);
-    } catch (_) {}
+      await RewardBorderService.instance.awardGamePoints(
+        gameType: 'kulinerdle',
+        score: points,
+      );
+    } catch (_) {
+      try {
+        await SupabaseService.instance.saveGameScore(points);
+      } catch (_) {}
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────────

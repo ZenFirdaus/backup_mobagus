@@ -27,7 +27,10 @@ import 'favorites_page.dart';
 import 'game_page.dart';
 import 'intro.dart';
 import 'saran_kesan_page.dart';
+import 'rewards_shop_page.dart';
+import '../widgets/profile_border_avatar.dart';
 import '../widgets/modern_time_picker.dart';
+import '../services/reward_border_service.dart';
 
 class ProfileTab extends StatefulWidget {
   final String name;
@@ -71,6 +74,7 @@ class _ProfileTabState extends State<ProfileTab>
   bool _histLoading = true;
 
   StreamSubscription<void>? _profileSub;
+  StreamSubscription<void>? _rewardSub;
   StreamSubscription<Review>? _reviewAddedSub;
   StreamSubscription<Set<String>>? _favSub;
 
@@ -105,6 +109,11 @@ class _ProfileTabState extends State<ProfileTab>
       _load();
     });
 
+    _rewardSub = RewardBorderService.instance.onChange.listen((_) {
+      if (!mounted) return;
+      _load();
+    });
+
     _reviewAddedSub = svc.onReviewAdded.listen((rev) {
       if (!mounted) return;
       setState(() {
@@ -117,6 +126,7 @@ class _ProfileTabState extends State<ProfileTab>
             id: _profile!.id,
             displayName: _profile!.displayName,
             avatarUrl: _profile!.avatarUrl,
+            activeBorderId: _profile!.activeBorderId,
             points: _profile!.points + 20,
             createdAt: _profile!.createdAt,
           );
@@ -145,6 +155,7 @@ class _ProfileTabState extends State<ProfileTab>
             id: _profile!.id,
             displayName: widget.name,
             avatarUrl: _profile!.avatarUrl,
+            activeBorderId: _profile!.activeBorderId,
             points: _profile!.points,
             createdAt: _profile!.createdAt,
           );
@@ -159,6 +170,7 @@ class _ProfileTabState extends State<ProfileTab>
   void dispose() {
     AiRecommendationService.instance.profileNotifier.removeListener(_onAiProfileChanged);
     _profileSub?.cancel();
+    _rewardSub?.cancel();
     _reviewAddedSub?.cancel();
     _favSub?.cancel();
     _histTab.dispose();
@@ -195,6 +207,11 @@ class _ProfileTabState extends State<ProfileTab>
     final currentName = _profile?.displayName ?? widget.name;
 
     if (val) {
+      final prefs = await SharedPreferences.getInstance();
+      final savedPwd = prefs.getString('foodie_saved_password');
+
+      if (!mounted) return;
+
       // Buka FaceIdScannerSheet dengan preview kamera depan
       showModalBottomSheet(
         context: context,
@@ -204,6 +221,7 @@ class _ProfileTabState extends State<ProfileTab>
         builder: (ctx) => FaceIdScannerSheet(
           userName: currentName,
           userEmail: currentEmail,
+          savedPassword: savedPwd,
           isEnrollment: true,
           onSuccess: () async {
             Navigator.of(ctx).pop();
@@ -576,63 +594,18 @@ class _ProfileTabState extends State<ProfileTab>
                     children: [
                       GestureDetector(
                         onTap: () async {
-                          if (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty) {
-                            final act = await showModalBottomSheet<String>(
-                              context: context,
-                              backgroundColor: Colors.white,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                              ),
-                              builder: (sheetCtx) => Padding(
-                                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 40, height: 4,
-                                      margin: const EdgeInsets.only(bottom: 20),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.line,
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                    ),
-                                    Text('Foto Profil', style: AppText.display(18)),
-                                    const SizedBox(height: 20),
-                                    _actionTile(
-                                      sheetCtx,
-                                      Icons.photo_library_rounded,
-                                      'Pilih Foto Baru dari Galeri',
-                                      AppColors.orange,
-                                      'gallery',
-                                    ),
-                                    const SizedBox(height: 10),
-                                    _actionTile(
-                                      sheetCtx,
-                                      Icons.delete_outline_rounded,
-                                      'Hapus Foto Profil',
-                                      AppColors.red,
-                                      'delete',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-
-                            if (act == 'gallery') {
-                              await _pickAvatarFromGallery((url) {
-                                tempAvatarUrl = url;
-                                setSheet(() {});
-                              });
-                            } else if (act == 'delete') {
-                              tempAvatarUrl = null;
-                              setSheet(() {});
-                            }
-                          } else {
-                            await _pickAvatarFromGallery((url) {
+                          await _showPhotoSourceSheet(
+                            parentContext: ctx,
+                            hasExistingPhoto: tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty,
+                            onPicked: (url) {
                               tempAvatarUrl = url;
                               setSheet(() {});
-                            });
-                          }
+                            },
+                            onDeletePhoto: () {
+                              tempAvatarUrl = null;
+                              setSheet(() {});
+                            },
+                          );
                         },
                         child: Stack(
                           children: [
@@ -661,38 +634,46 @@ class _ProfileTabState extends State<ProfileTab>
                                   color: AppColors.orange,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.photo_library_rounded,
+                                child: const Icon(Icons.camera_alt_rounded,
                                     size: 14, color: Colors.white),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.orange,
-                              side: const BorderSide(color: AppColors.orange),
+                              foregroundColor: AppColors.charcoal,
+                              side: const BorderSide(color: AppColors.line),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             ),
-                            icon: const Icon(Icons.photo_library_rounded, size: 16),
+                            icon: const Icon(Icons.add_a_photo_rounded, size: 16, color: AppColors.orange),
                             label: Text(
                               (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty)
-                                  ? 'Ganti (Galeri)'
-                                  : 'Pilih dari Galeri',
+                                  ? 'Ubah Foto'
+                                  : 'Pilih Foto',
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                             ),
                             onPressed: () async {
-                              await _pickAvatarFromGallery((url) {
-                                tempAvatarUrl = url;
-                                setSheet(() {});
-                              });
+                              await _showPhotoSourceSheet(
+                                parentContext: ctx,
+                                hasExistingPhoto: tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty,
+                                onPicked: (url) {
+                                  tempAvatarUrl = url;
+                                  setSheet(() {});
+                                },
+                                onDeletePhoto: () {
+                                  tempAvatarUrl = null;
+                                  setSheet(() {});
+                                },
+                              );
                             },
                           ),
                           if (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty) ...[
@@ -708,7 +689,7 @@ class _ProfileTabState extends State<ProfileTab>
                               ),
                               icon: const Icon(Icons.delete_outline_rounded, size: 16),
                               label: const Text(
-                                'Hapus Foto',
+                                'Hapus',
                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                               ),
                               onPressed: () {
@@ -786,12 +767,15 @@ class _ProfileTabState extends State<ProfileTab>
                           ? tempAvatarUrl!.trim()
                           : null;
 
+                      final activeBorder = _profile?.activeBorderId;
+
                       // 1. Update UI langsung tanpa delay
                       setState(() {
                         _profile = Profile(
                           id: _profile?.id ?? SupabaseService.instance.userId ?? 'curator_user',
                           displayName: newName,
                           avatarUrl: cleanAvatar,
+                          activeBorderId: activeBorder,
                           points: _profile?.points ?? 100,
                           createdAt: _profile?.createdAt ?? DateTime.now(),
                         );
@@ -803,6 +787,7 @@ class _ProfileTabState extends State<ProfileTab>
                       await SupabaseService.instance.upsertProfile(
                         displayName: newName,
                         avatarUrl: cleanAvatar,
+                        activeBorderId: activeBorder,
                       );
                       await _load();
 
@@ -833,12 +818,16 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
-  Future<void> _pickAvatarFromGallery(void Function(String?) onPicked) async {
+  Future<void> _pickAvatar({
+    required ImageSource source,
+    required void Function(String?) onPicked,
+  }) async {
     final picker = ImagePicker();
     XFile? picked;
+    final sourceName = source == ImageSource.camera ? 'kamera' : 'galeri';
     try {
       picked = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 85,
         maxWidth: 800,
       );
@@ -846,7 +835,7 @@ class _ProfileTabState extends State<ProfileTab>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengakses galeri: ${e.toString().split(':').first}'),
+            content: Text('Gagal mengakses $sourceName: ${e.toString().split(':').first}'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -857,21 +846,23 @@ class _ProfileTabState extends State<ProfileTab>
     if (picked == null || !mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(
           children: [
-            SizedBox(
-              width: 16, height: 16,
+            const SizedBox(
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(
-                strokeWidth: 2, color: Colors.white,
+                strokeWidth: 2,
+                color: Colors.white,
               ),
             ),
-            SizedBox(width: 12),
-            Text('Memproses foto dari galeri...'),
+            const SizedBox(width: 12),
+            Text('Memproses foto dari $sourceName...'),
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 4),
+        duration: const Duration(seconds: 4),
         backgroundColor: AppColors.charcoal,
       ),
     );
@@ -929,40 +920,148 @@ class _ProfileTabState extends State<ProfileTab>
     onPicked(uploadedUrl);
   }
 
-  Widget _actionTile(
-    BuildContext ctx,
-    IconData icon,
-    String label,
-    Color color,
-    String value,
-  ) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(ctx, value),
+  Future<void> _showPhotoSourceSheet({
+    required BuildContext parentContext,
+    required void Function(String?) onPicked,
+    required VoidCallback onDeletePhoto,
+    required bool hasExistingPhoto,
+  }) async {
+    final act = await showModalBottomSheet<String>(
+      context: parentContext,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Pilih Sumber Foto Profil',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.charcoal,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(sheetCtx),
+                    child: const Icon(Icons.close_rounded, size: 20, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _photoSourceTile(
+                ctx: sheetCtx,
+                icon: Icons.camera_alt_rounded,
+                title: 'Ambil Foto dari Kamera',
+                subtitle: 'Gunakan kamera perangkat untuk mengambil foto baru',
+                color: AppColors.orange,
+                action: 'camera',
+              ),
+              const SizedBox(height: 10),
+              _photoSourceTile(
+                ctx: sheetCtx,
+                icon: Icons.photo_library_rounded,
+                title: 'Pilih dari Galeri',
+                subtitle: 'Pilih foto yang tersimpan di album perangkat',
+                color: AppColors.slateBlue,
+                action: 'gallery',
+              ),
+              if (hasExistingPhoto) ...[
+                const SizedBox(height: 10),
+                _photoSourceTile(
+                  ctx: sheetCtx,
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Hapus Foto Profil',
+                  subtitle: 'Gunakan inisial nama Anda sebagai avatar',
+                  color: AppColors.red,
+                  action: 'delete',
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (act == 'camera') {
+      await _pickAvatar(source: ImageSource.camera, onPicked: onPicked);
+    } else if (act == 'gallery') {
+      await _pickAvatar(source: ImageSource.gallery, onPicked: onPicked);
+    } else if (act == 'delete') {
+      onDeletePhoto();
+    }
+  }
+
+  Widget _photoSourceTile({
+    required BuildContext ctx,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required String action,
+  }) {
+    final isDelete = action == 'delete';
+    return InkWell(
+      onTap: () => Navigator.pop(ctx, action),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceSubtle,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x06000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: AppColors.line.withValues(alpha: 0.6)),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: color),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
             const SizedBox(width: 14),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: color == AppColors.red ? AppColors.red : AppColors.textDark,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: isDelete ? AppColors.red : AppColors.charcoal,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
               ),
             ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.textMuted.withValues(alpha: 0.5), size: 18),
           ],
         ),
       ),
@@ -974,11 +1073,29 @@ class _ProfileTabState extends State<ProfileTab>
       final results = await Future.wait([
         SupabaseService.instance.getProfile(),
         SupabaseService.instance.getUserStats(),
+        RewardBorderService.instance.getActiveBorderId(),
+        RewardBorderService.instance.getUserPoints(),
       ]);
       if (!mounted) return;
+      var prof = results[0] as Profile?;
+      final stats = results[1] as Map<String, int>;
+      final activeBorder = results[2] as String?;
+      final pts = results[3] as int;
+
+      if (prof != null) {
+        prof = Profile(
+          id: prof.id,
+          displayName: prof.displayName,
+          avatarUrl: prof.avatarUrl,
+          activeBorderId: activeBorder ?? prof.activeBorderId,
+          points: pts,
+          createdAt: prof.createdAt,
+        );
+      }
+
       setState(() {
-        _profile = results[0] as Profile?;
-        _stats = results[1] as Map<String, int>;
+        _profile = prof;
+        _stats = stats;
         _loading = false;
       });
     } catch (_) {
@@ -1072,6 +1189,19 @@ class _ProfileTabState extends State<ProfileTab>
                     _sectionLabel('AKTIVITAS KULINER'),
                     const SizedBox(height: 8),
                     _group([
+                      _tile(
+                        Icons.storefront_rounded,
+                        'Toko Border & Rewards',
+                        trailing: '20 Border',
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const RewardsShopPage(),
+                            ),
+                          );
+                          _load();
+                        },
+                      ),
                       _tile(
                         Icons.favorite_border,
                         'Favorit & Koleksi',
@@ -1600,19 +1730,11 @@ class _ProfileTabState extends State<ProfileTab>
             onTap: _showEditProfile,
             child: Stack(
               children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: const BoxDecoration(
-                    color: AppColors.orange,
-                    shape: BoxShape.circle,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: AvatarImage(
-                    url: _profile?.avatarUrl,
-                    size: 56,
-                    fallbackText: name.isNotEmpty ? name : 'F',
-                  ),
+                ProfileBorderAvatar(
+                  avatarUrl: _profile?.avatarUrl,
+                  borderId: _profile?.activeBorderId,
+                  size: 56,
+                  fallbackText: name.isNotEmpty ? name : 'F',
                 ),
                 Positioned(
                   bottom: 0,
