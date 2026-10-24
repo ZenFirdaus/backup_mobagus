@@ -67,7 +67,9 @@ class _AiTabState extends State<AiTab> {
     final prof = await AiRecommendationService.instance.getProfile();
     if (!mounted) return;
     if (prof != null && prof.isCompleted) {
-      final taste = prof.favoriteTastes.isNotEmpty ? prof.favoriteTastes.first : 'Kuliner';
+      final taste = prof.favoriteTastes.isNotEmpty
+          ? prof.favoriteTastes.first
+          : 'Kuliner';
       setState(() {
         _messages.clear();
         _messages.add(
@@ -76,9 +78,13 @@ class _AiTabState extends State<AiTab> {
               'Halo! Sesuai preferensimu sebagai **${prof.occupation}** dengan selera **${prof.favoriteTastes.join(" & ")}**,\n\n'
               'Ada yang bisa kubantu carikan hari ini? Kamu juga bisa memilih rekomendasi di bawah:',
               chips: [
-                QuickReply('Rasa $taste untuk ${prof.occupation?.split(" ").first ?? "aku"}'),
+                QuickReply(
+                  'Rasa $taste untuk ${prof.occupation?.split(" ").first ?? "aku"}',
+                ),
                 QuickReply('Kuliner dekat ${prof.housingType}'),
-                QuickReply('Sesuai budget ${prof.mealBudget?.split(" ").first ?? "hemat"}'),
+                QuickReply(
+                  'Sesuai budget ${prof.mealBudget?.split(" ").first ?? "hemat"}',
+                ),
                 QuickReply('Rekomendasi terbaik'),
               ],
             ),
