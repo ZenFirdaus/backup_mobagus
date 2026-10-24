@@ -19,390 +19,339 @@ const List<KulinerdleWord> kKulinerdleTargetWords = [
   KulinerdleWord(
     word: 'GUDEG',
     category: 'Ikon Kuliner Yogyakarta',
-    funFact:
-        'Gudeg adalah sayur nangka muda (gori) yang dimasak lambat bersama santan aren, gula kelapa, dan daun jati selama 12–18 jam hingga bumbu meresap sempurna dan berwarna cokelat tembaga kemerahan alami tanpa pewarna buatan!',
+    funFact: 'Gudeg adalah sayur nangka muda (gori) yang dimasak lambat bersama santan aren, gula kelapa, dan daun jati selama 12–18 jam hingga bumbu meresap sempurna dan berwarna cokelat tembaga kemerahan alami tanpa pewarna buatan!',
     searchQuery: 'Gudeg',
   ),
   KulinerdleWord(
     word: 'BAKSO',
     category: 'Kuliner Kuah Favorit Nusantara',
-    funFact:
-        'Bakso berakar dari seni kuliner Tionghoa-Nusantara "bak-so" (daging giling). Di Yogyakarta dan Jawa Tengah, bakso urat legendaris kerap disajikan bersama tetelan melimpah dan kaldu sumsum sapi pekat.',
+    funFact: 'Bakso berakar dari seni kuliner Tionghoa-Nusantara "bak-so" (daging giling). Di Yogyakarta dan Jawa Tengah, bakso urat legendaris kerap disajikan bersama tetelan melimpah dan kaldu sumsum sapi pekat.',
     searchQuery: 'Bakso',
   ),
   KulinerdleWord(
     word: 'KOYOR',
     category: 'Spesialisasi Sapi Mataraman',
-    funFact:
-        'Koyor adalah bagian urat dan persendian sapi yang memiliki tekstur kenyal dan meleleh lembut di mulut setelah dimasak berjam-jam dalam bumbu gulai kental atau oseng mercon pedas khas Malioboro.',
+    funFact: 'Koyor adalah bagian urat dan persendian sapi yang memiliki tekstur kenyal dan meleleh lembut di mulut setelah dimasak berjam-jam dalam bumbu gulai kental atau oseng mercon pedas khas Malioboro.',
     searchQuery: 'Koyor',
   ),
   KulinerdleWord(
     word: 'PECEL',
     category: 'Sayuran Sambal Kacang Tradisional',
-    funFact:
-        'Pecel merupakan hidangan purba yang telah tercatat dalam Kakawin Ramayana abad ke-9 dan Serat Centhini. Aroma harum khasnya berasal dari rempah kencur segar dan daun jeruk purut pada bumbu kacangnya.',
+    funFact: 'Pecel merupakan hidangan purba yang telah tercatat dalam Kakawin Ramayana abad ke-9 dan Serat Centhini. Aroma harum khasnya berasal dari rempah kencur segar dan daun jeruk purut pada bumbu kacangnya.',
     searchQuery: 'Pecel',
   ),
   KulinerdleWord(
     word: 'TELUR',
     category: 'Protein & Olahan Telur',
-    funFact:
-        'Telur bebek bacem berwarna cokelat gelap dengan rasa manis gurih dan telur asin bakar Brebes adalah lauk pendamping legendaris wajib untuk sepiring gudeg komplit maupun rawon kuah hitam.',
+    funFact: 'Telur bebek bacem berwarna cokelat gelap dengan rasa manis gurih dan telur asin bakar Brebes adalah lauk pendamping legendaris wajib untuk sepiring gudeg komplit maupun rawon kuah hitam.',
     searchQuery: 'Telur',
   ),
   KulinerdleWord(
     word: 'CUCUR',
     category: 'Kue Basah Tradisional',
-    funFact:
-        'Kue cucur khas Nusantara digoreng dalam wajan cekung kecil hingga bagian tepinya berenda renyah (keriting kecokelatan) sementara bagian tengahnya tebal, berserat bambu, dan legit gula merah aren.',
+    funFact: 'Kue cucur khas Nusantara digoreng dalam wajan cekung kecil hingga bagian tepinya berenda renyah (keriting kecokelatan) sementara bagian tengahnya tebal, berserat bambu, dan legit gula merah aren.',
     searchQuery: 'Cucur',
   ),
   KulinerdleWord(
     word: 'TIMUN',
     category: 'Sayuran & Pelengkap Segar',
-    funFact:
-        'Mentimun (timun) segar berkhasiat mendinginkan pencernaan dan menjadi elemen wajib dalam lalapan sunda, acar sate klathak, maupun acar minyak samin nasi kebuli.',
+    funFact: 'Mentimun (timun) segar berkhasiat mendinginkan pencernaan dan menjadi elemen wajib dalam lalapan sunda, acar sate klathak, maupun acar minyak samin nasi kebuli.',
     searchQuery: 'Timun',
   ),
   KulinerdleWord(
     word: 'RAWON',
     category: 'Sup Daging Berkuah Hitam',
-    funFact:
-        'Warna hitam pekat kuah rawon berasal dari rempah kluwek (kepayang) yang diperam di dalam abu. Kluwek memberikan rasa gurih earthy yang mendalam dan berkhasiat menghangatkan tubuh.',
+    funFact: 'Warna hitam pekat kuah rawon berasal dari rempah kluwek (kepayang) yang diperam di dalam abu. Kluwek memberikan rasa gurih earthy yang mendalam dan berkhasiat menghangatkan tubuh.',
     searchQuery: 'Rawon',
   ),
   KulinerdleWord(
     word: 'RUJAK',
     category: 'Camilan Buah & Bumbu Manis Pedas',
-    funFact:
-        'Rujak es krim di Pakualaman Jogja memadukan irisan buah serut segar, bumbu pedas gula jawa, dan scoop es puter santan dingin yang menciptakan sensasi rasa kontras yang luar biasa nagih!',
+    funFact: 'Rujak es krim di Pakualaman Jogja memadukan irisan buah serut segar, bumbu pedas gula jawa, dan scoop es puter santan dingin yang menciptakan sensasi rasa kontras yang luar biasa nagih!',
     searchQuery: 'Rujak',
   ),
   KulinerdleWord(
     word: 'EMPAL',
     category: 'Olahan Daging Tradisional',
-    funFact:
-        'Empal gentong dimasak perlahan di dalam periuk tanah liat (gentong) dengan kayu bakar pohon asam untuk menjaga kestabilan api dan memberikan aroma asap yang khas.',
+    funFact: 'Empal gentong dimasak perlahan di dalam periuk tanah liat (gentong) dengan kayu bakar pohon asam untuk menjaga kestabilan api dan memberikan aroma asap yang khas.',
     searchQuery: 'Empal',
   ),
   KulinerdleWord(
     word: 'GULAI',
     category: 'Kuah Rempah Santan Gurih',
-    funFact:
-        'Gulai Nusantara memadukan santan segar dengan 15 jenis rempah termasuk kunyit, asam kandis, kapulaga, dan cengkeh. Di sentra sate klathak, gulai kambing encer menjadi teman wajib menyantap sate tusuk jeruji.',
+    funFact: 'Gulai Nusantara memadukan santan segar dengan 15 jenis rempah termasuk kunyit, asam kandis, kapulaga, dan cengkeh. Di sentra sate klathak, gulai kambing encer menjadi teman wajib menyantap sate tusuk jeruji.',
     searchQuery: 'Gulai',
   ),
   KulinerdleWord(
     word: 'BACEM',
     category: 'Teknik Olahan Manis Gurih Jawa',
-    funFact:
-        'Membacem adalah metode pengawetan warisan Mataram kuno. Tahu dan tempe direbus dalam air kelapa, ketumbar sangrai, dan gula merah aren hingga cairan mengering dan bumbu karamel meresap sampai ke inti.',
+    funFact: 'Membacem adalah metode pengawetan warisan Mataram kuno. Tahu dan tempe direbus dalam air kelapa, ketumbar sangrai, dan gula merah aren hingga cairan mengering dan bumbu karamel meresap sampai ke inti.',
     searchQuery: 'Bacem',
   ),
   KulinerdleWord(
     word: 'BOTOK',
     category: 'Kukusan Daun Pisang Tradisional',
-    funFact:
-        'Botok awalnya dibuat dari ampas kelapa parut sisa perasan santan agar tidak terbuang sia-sia, lalu dibumbui cabai, petai cina, teri, dan daun kemangi sebelum dikukus dalam bungkusan daun pisang.',
+    funFact: 'Botok awalnya dibuat dari ampas kelapa parut sisa perasan santan agar tidak terbuang sia-sia, lalu dibumbui cabai, petai cina, teri, dan daun kemangi sebelum dikukus dalam bungkusan daun pisang.',
     searchQuery: 'Botok',
   ),
   KulinerdleWord(
     word: 'DAWET',
     category: 'Minuman Segar Tradisional',
-    funFact:
-        'Dawet ireng khas Purworejo dan Butuh menggunakan pewarna alami dari abu bakar jerami padi (oman) yang disaring bersih, menghasilkan butiran dawet kenyal hitam legam berkhasiat pereda panas dalam.',
+    funFact: 'Dawet ireng khas Purworejo dan Butuh menggunakan pewarna alami dari abu bakar jerami padi (oman) yang disaring bersih, menghasilkan butiran dawet kenyal hitam legam berkhasiat pereda panas dalam.',
     searchQuery: 'Dawet',
   ),
   KulinerdleWord(
     word: 'DODOL',
     category: 'Kudapan Manis Tradisional',
-    funFact:
-        'Memasak dodol dan jenang membutuhkan kekuatan fisik luar biasa karena adonan ketan dan gula kelapa harus terus diaduk di wajan kawah tembaga selama 4 hingga 8 jam tanpa henti agar tidak hangus.',
+    funFact: 'Memasak dodol dan jenang membutuhkan kekuatan fisik luar biasa karena adonan ketan dan gula kelapa harus terus diaduk di wajan kawah tembaga selama 4 hingga 8 jam tanpa henti agar tidak hangus.',
     searchQuery: 'Dodol',
   ),
   KulinerdleWord(
     word: 'GEPUK',
     category: 'Daging Suwir Bumbu Kelapa',
-    funFact:
-        'Kata "gepuk" berasal dari teknik pembuatannya: bongkahan daging sapi direbus setengah matang lalu dipukul-pukul (digepuk) di atas talenan batu hingga seratnya melebar dan empuk saat dimasak.',
+    funFact: 'Kata "gepuk" berasal dari teknik pembuatannya: bongkahan daging sapi direbus setengah matang lalu dipukul-pukul (digepuk) di atas talenan batu hingga seratnya melebar dan empuk saat dimasak.',
     searchQuery: 'Gepuk',
   ),
   KulinerdleWord(
     word: 'GETUK',
     category: 'Jajanan Pasar Singkong Legendaris',
-    funFact:
-        'Getuk lahir pada masa pendudukan masa paceklik ketika beras langka. Masyarakat Magelang dan Jogja mengolah singkong kukus dengan cara ditumbuk (getuk) bersama gula hingga halus dan legit.',
+    funFact: 'Getuk lahir pada masa pendudukan masa paceklik ketika beras langka. Masyarakat Magelang dan Jogja mengolah singkong kukus dengan cara ditumbuk (getuk) bersama gula hingga halus dan legit.',
     searchQuery: 'Getuk',
   ),
   KulinerdleWord(
     word: 'LODEH',
     category: 'Sayur Berkuah Santan Nusantara',
-    funFact:
-        'Dalam tradisi keraton Yogyakarta, sayur lodeh 7 warna (lodeh pitu) kerap dimasak sebagai ritual tolak bala dan doa keselamatan dengan 7 bahan sayuran yang memiliki filosofi keharmonisan alam.',
+    funFact: 'Dalam tradisi keraton Yogyakarta, sayur lodeh 7 warna (lodeh pitu) kerap dimasak sebagai ritual tolak bala dan doa keselamatan dengan 7 bahan sayuran yang memiliki filosofi keharmonisan alam.',
     searchQuery: 'Lodeh',
   ),
   KulinerdleWord(
     word: 'MENDO',
     category: 'Gorengan Tempe Khas Banyumas',
-    funFact:
-        '"Mendo" dalam bahasa Banyumasan berarti setengah matang atau lembek. Tempe mendoan dicelup ke adonan tepung beras dan daun bawang lalu digoreng cepat dalam minyak mendidih panas selama 1–2 menit saja.',
+    funFact: '"Mendo" dalam bahasa Banyumasan berarti setengah matang atau lembek. Tempe mendoan dicelup ke adonan tepung beras dan daun bawang lalu digoreng cepat dalam minyak mendidih panas selama 1–2 menit saja.',
     searchQuery: 'Mendoan',
   ),
   KulinerdleWord(
     word: 'RONDE',
     category: 'Minuman Penghangat Tubuh',
-    funFact:
-        'Wedang ronde di sekitar Alun-alun Kidul Jogja disajikan dalam mangkuk keramik kecil berisi kuah jahe panas wangi serai, bulatan ketan isi kacang tanah tumbuk, kolang-kaling, dan roti tawar.',
+    funFact: 'Wedang ronde di sekitar Alun-alun Kidul Jogja disajikan dalam mangkuk keramik kecil berisi kuah jahe panas wangi serai, bulatan ketan isi kacang tanah tumbuk, kolang-kaling, dan roti tawar.',
     searchQuery: 'Ronde',
   ),
   KulinerdleWord(
     word: 'TEMPE',
     category: 'Superfood Fermentasi Nusantara',
-    funFact:
-        'Tempe adalah satu-satunya produk fermentasi kedelai tradisional yang tidak berasal dari Tiongkok atau Jepang, melainkan murni lahir di tanah Jawa sejak abad ke-16 sebagaimana tertulis di Serat Centhini.',
+    funFact: 'Tempe adalah satu-satunya produk fermentasi kedelai tradisional yang tidak berasal dari Tiongkok atau Jepang, melainkan murni lahir di tanah Jawa sejak abad ke-16 sebagaimana tertulis di Serat Centhini.',
     searchQuery: 'Tempe',
   ),
   KulinerdleWord(
     word: 'TIWUL',
     category: 'Makanan Pokok Singkong Gaplek',
-    funFact:
-        'Tiwul manis khas Gunungkidul dibuat dari gaplek (singkong kering yang dijemur) yang ditumbuk dan dikukus, disajikan hangat dengan taburan kelapa parut asin dan lelehan gula jawa cair.',
+    funFact: 'Tiwul manis khas Gunungkidul dibuat dari gaplek (singkong kering yang dijemur) yang ditumbuk dan dikukus, disajikan hangat dengan taburan kelapa parut asin dan lelehan gula jawa cair.',
     searchQuery: 'Tiwul',
   ),
   KulinerdleWord(
     word: 'WAJIK',
     category: 'Kue Ketan Manis Tradisional',
-    funFact:
-        'Kue wajik ketan melambangkan ikatan silaturahmi yang erat dan manis karena tekstur beras ketan yang lengket menyatu dengan santan kental dan gula aren pekat.',
+    funFact: 'Kue wajik ketan melambangkan ikatan silaturahmi yang erat dan manis karena tekstur beras ketan yang lengket menyatu dengan santan kental dan gula aren pekat.',
     searchQuery: 'Wajik',
   ),
   KulinerdleWord(
     word: 'CILOK',
     category: 'Jajanan Khas Tepung Tapioka',
-    funFact:
-        'Cilok merupakan akronim dari "aci dicolok". Teksturnya yang kenyal berpadu sempurna dengan bumbu kacang pedas manis atau sambal cabai rawit pedas khas gerobak kaki lima.',
+    funFact: 'Cilok merupakan akronim dari "aci dicolok". Teksturnya yang kenyal berpadu sempurna dengan bumbu kacang pedas manis atau sambal cabai rawit pedas khas gerobak kaki lima.',
     searchQuery: 'Cilok',
   ),
   KulinerdleWord(
     word: 'CIMOL',
     category: 'Camilan Gurih Renyah',
-    funFact:
-        'Cimol singkatan dari "aci digemol" (dibulat-bulatkan). Adonan tapioka digoreng api sedang agar mengembang renyah di luar dan kopong kenyal di dalam, lalu ditaburi bubuk keju atau cabai bubuk.',
+    funFact: 'Cimol singkatan dari "aci digemol" (dibulat-bulatkan). Adonan tapioka digoreng api sedang agar mengembang renyah di luar dan kopong kenyal di dalam, lalu ditaburi bubuk keju atau cabai bubuk.',
     searchQuery: 'Cimol',
   ),
   KulinerdleWord(
     word: 'LALAP',
     category: 'Pelengkap Segar Masakan',
-    funFact:
-        'Lalapan segar seperti daun kemangi, mentimun, terong bulat, dan kol mentah bukan hanya penambah nafsu makan, tetapi juga kaya serat alami penyeimbang kolesterol hidangan gorengan.',
+    funFact: 'Lalapan segar seperti daun kemangi, mentimun, terong bulat, dan kol mentah bukan hanya penambah nafsu makan, tetapi juga kaya serat alami penyeimbang kolesterol hidangan gorengan.',
     searchQuery: 'Lalapan',
   ),
   KulinerdleWord(
     word: 'BEBEK',
     category: 'Unggas Goreng Gurih Berbumbu',
-    funFact:
-        'Bebek goreng khas Madura dan Kartasura memiliki ciri khas bumbu hitam pekat rempah kelapa sangrai dan serundeng gurih yang meresap hingga ke pori-pori daging terdalam.',
+    funFact: 'Bebek goreng khas Madura dan Kartasura memiliki ciri khas bumbu hitam pekat rempah kelapa sangrai dan serundeng gurih yang meresap hingga ke pori-pori daging terdalam.',
     searchQuery: 'Bebek',
   ),
   KulinerdleWord(
     word: 'SAYUR',
     category: 'Hidangan Kuah Sehat',
-    funFact:
-        'Sayur asem dan sayur bening bayam jagung manis adalah menu pendamping favorit makan siang warga Jawa yang memberikan kesegaran asam alami dari buah belimbing wuluh atau asam jawa.',
+    funFact: 'Sayur asem dan sayur bening bayam jagung manis adalah menu pendamping favorit makan siang warga Jawa yang memberikan kesegaran asam alami dari buah belimbing wuluh atau asam jawa.',
     searchQuery: 'Sayur',
   ),
   KulinerdleWord(
     word: 'TOMAT',
     category: 'Bahan Segar & Sambal',
-    funFact:
-        'Tomat merah segar menjadi bahan kunci sambal tomat ulek matang yang manis asam gurih, melengkapi lalapan ayam goreng dan lele bakar dengan kandungan antioksidan likopen tinggi.',
+    funFact: 'Tomat merah segar menjadi bahan kunci sambal tomat ulek matang yang manis asam gurih, melengkapi lalapan ayam goreng dan lele bakar dengan kandungan antioksidan likopen tinggi.',
     searchQuery: 'Tomat',
   ),
   KulinerdleWord(
     word: 'KECAP',
     category: 'Penyedap Manis Nusantara',
-    funFact:
-        'Kecap manis kental Nusantara dibuat dari fermentasi kedelai hitam malika dan gula kelapa aren asli, menciptakan cita rasa karamel umami yang tidak ditemukan di kecap negara lain.',
+    funFact: 'Kecap manis kental Nusantara dibuat dari fermentasi kedelai hitam malika dan gula kelapa aren asli, menciptakan cita rasa karamel umami yang tidak ditemukan di kecap negara lain.',
     searchQuery: 'Kecap',
   ),
   KulinerdleWord(
     word: 'BAYAM',
     category: 'Sayuran Hijau Segar',
-    funFact:
-        'Sayur bening bayam dengan bumbu temu kunci dan jagung pipil manis adalah hidangan rumahan penyejuk tubuh khas pawon pedesaan yang kaya zat besi dan menyegarkan.',
+    funFact: 'Sayur bening bayam dengan bumbu temu kunci dan jagung pipil manis adalah hidangan rumahan penyejuk tubuh khas pawon pedesaan yang kaya zat besi dan menyegarkan.',
     searchQuery: 'Bayam',
   ),
   KulinerdleWord(
     word: 'BUBUR',
     category: 'Olahan Beras Lembut',
-    funFact:
-        'Bubur ayam kampung gurih disajikan dengan kuah kuning rempah kunyit harum, cakwe cincang, tongcai asin, dan kerupuk renyah menjadi menu sarapan terfavorit warga Nusantara.',
+    funFact: 'Bubur ayam kampung gurih disajikan dengan kuah kuning rempah kunyit harum, cakwe cincang, tongcai asin, dan kerupuk renyah menjadi menu sarapan terfavorit warga Nusantara.',
     searchQuery: 'Bubur',
   ),
   KulinerdleWord(
     word: 'BAKMI',
     category: 'Mi Khas Jawa & Tionghoa',
-    funFact:
-        'Bakmi Jawa dimasak satu porsi per satu wajan kecil di atas anglo bara arang kayu, menghasilkan aroma gosong sedap (wok hei khas Jawa) yang tidak bisa ditiru kompor gas biasa.',
+    funFact: 'Bakmi Jawa dimasak satu porsi per satu wajan kecil di atas anglo bara arang kayu, menghasilkan aroma gosong sedap (wok hei khas Jawa) yang tidak bisa ditiru kompor gas biasa.',
     searchQuery: 'Bakmi',
   ),
   KulinerdleWord(
     word: 'KOLAK',
     category: 'Kudapan Manis Kuah Santan',
-    funFact:
-        'Kolak pisang kepok dan ubi jalar berkuah santan wangi daun pandan dan gula jawa merah adalah takjil berbuka puasa legendaris yang memiliki makna filosofis mendekatkan diri kepada Sang Pencipta.',
+    funFact: 'Kolak pisang kepok dan ubi jalar berkuah santan wangi daun pandan dan gula jawa merah adalah takjil berbuka puasa legendaris yang memiliki makna filosofis mendekatkan diri kepada Sang Pencipta.',
     searchQuery: 'Kolak',
   ),
   KulinerdleWord(
     word: 'KETAN',
     category: 'Olahan Beras Ketan Pulen',
-    funFact:
-        'Ketan bubuk khas Jawa Timur dan ketan bintul disajikan hangat dengan taburan kedelai tumbuk gurih pedas atau serundeng kelapa, melambangkan kelekatan rasa persaudaraan.',
+    funFact: 'Ketan bubuk khas Jawa Timur dan ketan bintul disajikan hangat dengan taburan kedelai tumbuk gurih pedas atau serundeng kelapa, melambangkan kelekatan rasa persaudaraan.',
     searchQuery: 'Ketan',
   ),
   KulinerdleWord(
     word: 'TIMLO',
     category: 'Sup Kembang Tahu Khas Solo',
-    funFact:
-        'Timlo Solo adalah perpaduan sup bening gurih berisi irisan sosis solo goreng, potongan telur dadar gulung, telur pindang kecap, dan ati ampela yang disiram kaldu ayam panas mendidih.',
+    funFact: 'Timlo Solo adalah perpaduan sup bening gurih berisi irisan sosis solo goreng, potongan telur dadar gulung, telur pindang kecap, dan ati ampela yang disiram kaldu ayam panas mendidih.',
     searchQuery: 'Timlo',
   ),
   KulinerdleWord(
     word: 'UDANG',
     category: 'Boga Bahari Segar',
-    funFact:
-        'Udang galah sungai Progo dan udang bakar madu pantai selatan Jogja menyuguhkan rasa manis alami daging udang yang berpadu dengan sambal terasi mentah pedas nampol.',
+    funFact: 'Udang galah sungai Progo dan udang bakar madu pantai selatan Jogja menyuguhkan rasa manis alami daging udang yang berpadu dengan sambal terasi mentah pedas nampol.',
     searchQuery: 'Udang',
   ),
   KulinerdleWord(
     word: 'LEMET',
     category: 'Jajanan Pasar Singkong',
-    funFact:
-        'Lemet dibuat dari parutan singkong segar yang diaduk rata bersama gula merah kelapa dan sedikit garam, dibungkus daun pisang lalu dikukus hingga kenyal, basah, dan legit aromatik.',
+    funFact: 'Lemet dibuat dari parutan singkong segar yang diaduk rata bersama gula merah kelapa dan sedikit garam, dibungkus daun pisang lalu dikukus hingga kenyal, basah, dan legit aromatik.',
     searchQuery: 'Lemet',
   ),
   KulinerdleWord(
     word: 'CENIL',
     category: 'Jajanan Kenyal Tradisional',
-    funFact:
-        'Cenil tapioka dibentuk lonjong mini warna-warni ceria, disajikan di pincuk daun pisang dengan lumuran kelapa parut kukus gurih dan kucuran juruh gula merah kental yang manis pekat.',
+    funFact: 'Cenil tapioka dibentuk lonjong mini warna-warni ceria, disajikan di pincuk daun pisang dengan lumuran kelapa parut kukus gurih dan kucuran juruh gula merah kental yang manis pekat.',
     searchQuery: 'Cenil',
   ),
   KulinerdleWord(
     word: 'BABAT',
     category: 'Olahan Jeroan Sapi Empuk',
-    funFact:
-        'Nasi goreng babat gongso khas Semarang dan babat bacem goreng dimasak menggunakan kecap manis kental dan cabai rawit pedas hingga tekstur babat handuk menjadi empuk tanpa bau prengus.',
+    funFact: 'Nasi goreng babat gongso khas Semarang dan babat bacem goreng dimasak menggunakan kecap manis kental dan cabai rawit pedas hingga tekstur babat handuk menjadi empuk tanpa bau prengus.',
     searchQuery: 'Babat',
   ),
   KulinerdleWord(
     word: 'CEKER',
     category: 'Olahan Kaki Ayam Empuk',
-    funFact:
-        'Ceker ayam mengandung kolagen alami melimpah. Dimasak presto hingga tulangnya lunak atau dimasak bumbu mercon cabai rawit setan yang membakar lidah para pencinta pedas ekstrem.',
+    funFact: 'Ceker ayam mengandung kolagen alami melimpah. Dimasak presto hingga tulangnya lunak atau dimasak bumbu mercon cabai rawit setan yang membakar lidah para pencinta pedas ekstrem.',
     searchQuery: 'Ceker',
   ),
   KulinerdleWord(
     word: 'DEGAN',
     category: 'Kelapa Muda Alami',
-    funFact:
-        'Degan ijo bakar rempah dicampur jahe, serai, dan madu hutan adalah minuman tradisional berkhasiat memulihkan stamina dan membersihkan racun tubuh secara alami.',
+    funFact: 'Degan ijo bakar rempah dicampur jahe, serai, dan madu hutan adalah minuman tradisional berkhasiat memulihkan stamina dan membersihkan racun tubuh secara alami.',
     searchQuery: 'Degan',
   ),
   KulinerdleWord(
     word: 'JAMUR',
     category: 'Bahan Nabati Gurih',
-    funFact:
-        'Kawasan lereng Gunung Merapi Jejamuran mengolah aneka jamur tiram, kancing, dan kuping menjadi sate jamur, rendang jamur, dan tongseng jamur dengan tekstur menyerupai daging sapi asli.',
+    funFact: 'Kawasan lereng Gunung Merapi Jejamuran mengolah aneka jamur tiram, kancing, dan kuping menjadi sate jamur, rendang jamur, dan tongseng jamur dengan tekstur menyerupai daging sapi asli.',
     searchQuery: 'Jamur',
   ),
   KulinerdleWord(
     word: 'JERUK',
     category: 'Penyegar Alami Kuliner',
-    funFact:
-        'Jeruk nipis dan jeruk purut peras adalah penyeimbang mutlak kuah soto, rawon, dan sambal terasi yang memecah rasa berlemak serta memberikan aroma harum sitrus membangkitkan selera.',
+    funFact: 'Jeruk nipis dan jeruk purut peras adalah penyeimbang mutlak kuah soto, rawon, dan sambal terasi yang memecah rasa berlemak serta memberikan aroma harum sitrus membangkitkan selera.',
     searchQuery: 'Jeruk',
   ),
   KulinerdleWord(
     word: 'PETAI',
     category: 'Biji Polong Beraroma Khas',
-    funFact:
-        'Petai (pete) bakar atau goreng menjadi pelengkap surgawi saat dicocol sambal terasi dan ikan asin panas, memiliki cita rasa renyah legit yang sangat digemari penikmat kuliner sejati.',
+    funFact: 'Petai (pete) bakar atau goreng menjadi pelengkap surgawi saat dicocol sambal terasi dan ikan asin panas, memiliki cita rasa renyah legit yang sangat digemari penikmat kuliner sejati.',
     searchQuery: 'Petai',
   ),
   KulinerdleWord(
     word: 'SALAK',
     category: 'Buah Renyah Manis Lokal',
-    funFact:
-        'Salak pondoh khas lereng Merapi Sleman memiliki tekstur daging buah tebal, renyah, manis tanpa rasa kelat, dan diolah menjadi manisan, keripik salak, hingga dodol salak legit.',
+    funFact: 'Salak pondoh khas lereng Merapi Sleman memiliki tekstur daging buah tebal, renyah, manis tanpa rasa kelat, dan diolah menjadi manisan, keripik salak, hingga dodol salak legit.',
     searchQuery: 'Salak',
   ),
   KulinerdleWord(
     word: 'NANAS',
     category: 'Buah Tropis Segar',
-    funFact:
-        'Nanas segar mengandung enzim bromelin alami yang kerap dimanfaatkan untuk mengempukkan daging kambing sebelum dibakar, sekaligus menjadi bintang utama rujak buah pedas manis.',
+    funFact: 'Nanas segar mengandung enzim bromelin alami yang kerap dimanfaatkan untuk mengempukkan daging kambing sebelum dibakar, sekaligus menjadi bintang utama rujak buah pedas manis.',
     searchQuery: 'Nanas',
   ),
   KulinerdleWord(
     word: 'TUMIS',
     category: 'Teknik Olah Sayuran Panas',
-    funFact:
-        'Menumis dengan minyak sedikit dan api besar (tumis kangkung terasi, tumis buncis cabai) mengunci kesegaran warna hijau sayuran dan mempertahankan nutrisi vitamin tetap utuh.',
+    funFact: 'Menumis dengan minyak sedikit dan api besar (tumis kangkung terasi, tumis buncis cabai) mengunci kesegaran warna hijau sayuran dan mempertahankan nutrisi vitamin tetap utuh.',
     searchQuery: 'Tumis',
   ),
   KulinerdleWord(
     word: 'SUWIR',
     category: 'Daging Suwir Berbumbu',
-    funFact:
-        'Ayam suwir bumbu bali dan suwir pedas kemangi disuwir memanjang searah serat daging agar bumbu cabai dan terasi sangrai meresap sempurna hingga ke setiap helai daging.',
+    funFact: 'Ayam suwir bumbu bali dan suwir pedas kemangi disuwir memanjang searah serat daging agar bumbu cabai dan terasi sangrai meresap sempurna hingga ke setiap helai daging.',
     searchQuery: 'Suwir',
   ),
   KulinerdleWord(
     word: 'TETEL',
     category: 'Daging Lemak Sapi Gurih',
-    funFact:
-        'Tetelan sapi dengan lemak kenyal gurih direbus bersama kaldu sumsum sapi untuk kuah bakso maupun oseng mercon tetelan yang gurih lumer saat disantap hangat.',
+    funFact: 'Tetelan sapi dengan lemak kenyal gurih direbus bersama kaldu sumsum sapi untuk kuah bakso maupun oseng mercon tetelan yang gurih lumer saat disantap hangat.',
     searchQuery: 'Tetelan',
   ),
   KulinerdleWord(
     word: 'BIHUN',
     category: 'Olahan Mi Tepung Beras',
-    funFact:
-        'Bihun bebek kuah herbal dan bihun goreng kampung berbumbu kemiri dan lada putih adalah teman sarapan pagi nikmat yang ringan di perut dan bebas gluten.',
+    funFact: 'Bihun bebek kuah herbal dan bihun goreng kampung berbumbu kemiri dan lada putih adalah teman sarapan pagi nikmat yang ringan di perut dan bebas gluten.',
     searchQuery: 'Bihun',
   ),
   KulinerdleWord(
     word: 'SUKUN',
     category: 'Kudapan Buah Bertepung',
-    funFact:
-        'Sukun goreng renyah di luar dan empuk lembut pulen seperti roti di dalam, menjadi camilan tradisional terfavorit saat musim panen ditemani secangkir kopi tubruk panas.',
+    funFact: 'Sukun goreng renyah di luar dan empuk lembut pulen seperti roti di dalam, menjadi camilan tradisional terfavorit saat musim panen ditemani secangkir kopi tubruk panas.',
     searchQuery: 'Sukun',
   ),
   KulinerdleWord(
     word: 'CABAI',
     category: 'Bumbu Pedas Jiwa Nusantara',
-    funFact:
-        'Cabai rawit merah domba dan cabai keriting menjadi bahan baku lebih dari 300 jenis sambal otentik di seantero kepulauan Nusantara, kaya vitamin C dan endorfin pemantik semangat.',
+    funFact: 'Cabai rawit merah domba dan cabai keriting menjadi bahan baku lebih dari 300 jenis sambal otentik di seantero kepulauan Nusantara, kaya vitamin C dan endorfin pemantik semangat.',
     searchQuery: 'Cabai',
   ),
   KulinerdleWord(
     word: 'GARAM',
     category: 'Bumbu Mineral Utama',
-    funFact:
-        'Garam krosok laut pesisir selatan Jawa dan garam Kusamba Bali dikristalkan secara alami menggunakan bambu dan sinar matahari, menghasilkan rasa asin lembut berkarakter gurih.',
+    funFact: 'Garam krosok laut pesisir selatan Jawa dan garam Kusamba Bali dikristalkan secara alami menggunakan bambu dan sinar matahari, menghasilkan rasa asin lembut berkarakter gurih.',
     searchQuery: 'Garam',
   ),
   KulinerdleWord(
     word: 'WALUH',
     category: 'Labu Kuning Lembut Manis',
-    funFact:
-        'Waluh (labu parang kuning) memiliki tekstur lembut mentega dan rasa manis alami, kerap dijadikan bahan utama kolak waluh, sup labu, hingga kue lumpur labu kuning tradisional.',
+    funFact: 'Waluh (labu parang kuning) memiliki tekstur lembut mentega dan rasa manis alami, kerap dijadikan bahan utama kolak waluh, sup labu, hingga kue lumpur labu kuning tradisional.',
     searchQuery: 'Waluh',
   ),
 ];
 
+/// Kamus kata 5 huruf valid untuk validasi tebakan pemain.
+/// Berisi berbagai macam makanan, bahan makanan, bumbu, sayuran, buah, minuman,
+/// serta istilah kuliner untuk memudahkan pemain melakukan eliminasi huruf tebakan,
+/// sementara kata target rahasia yang perlu ditebak tetap khas kuliner Nusantara.
 /// Kamus kata 5 huruf valid untuk validasi tebakan pemain.
 /// Berisi berbagai macam makanan, bahan makanan, bumbu, sayuran, buah, minuman,
 /// serta istilah kuliner untuk memudahkan pemain melakukan eliminasi huruf tebakan,
@@ -421,6 +370,7 @@ final Set<String> kKulinerdleValidWords = {
   'AMPAS',
   'AMPEL',
   'ANCHO',
+  'ANGGR',
   'ANGSA',
   'APELL',
   'APELP',
@@ -456,6 +406,7 @@ final Set<String> kKulinerdleValidWords = {
   'BATAG',
   'BATON',
   'BAWAG',
+  'BAWAL',
   'BAWNG',
   'BAYAM',
   'BEBEG',
@@ -492,6 +443,8 @@ final Set<String> kKulinerdleValidWords = {
   'BUNCI',
   'BUNNY',
   'BURGR',
+  'BURRI',
+  'BURUN',
   'BUTTR',
   'CABAI',
   'CABEE',
@@ -508,12 +461,15 @@ final Set<String> kKulinerdleValidWords = {
   'CEKER',
   'CENGK',
   'CENIL',
+  'CERII',
+  'CHEDD',
   'CHEFF',
   'CHILI',
   'CHIPS',
   'CHIVE',
   'CHOCO',
   'CHOWD',
+  'CHURR',
   'CIDER',
   'CILOK',
   'CIMOL',
@@ -538,16 +494,21 @@ final Set<String> kKulinerdleValidWords = {
   'DAUNN',
   'DAWET',
   'DEGAN',
+  'DELIM',
   'DIMSM',
   'DINNR',
   'DISHH',
   'DODOL',
+  'DOMBA',
   'DONAT',
   'DONER',
+  'DORAD',
+  'DORAG',
   'DOUGH',
   'DRIED',
   'DRINK',
   'DUCKK',
+  'DUKUU',
   'DURIN',
   'EMPAL',
   'EMPIN',
@@ -556,11 +517,15 @@ final Set<String> kKulinerdleValidWords = {
   'ENCER',
   'ESBAT',
   'ESCIN',
+  'ESKOP',
   'ESKRM',
   'ESLIL',
   'ESTEH',
+  'FALAF',
   'FEAST',
   'FETAS',
+  'FETTU',
+  'FIGSS',
   'FILET',
   'FISHH',
   'FISHY',
@@ -587,7 +552,9 @@ final Set<String> kKulinerdleValidWords = {
   'GEPUK',
   'GETHI',
   'GETUK',
+  'GNOCH',
   'GOREN',
+  'GOUDA',
   'GRAIN',
   'GRAPE',
   'GRAVY',
@@ -615,6 +582,7 @@ final Set<String> kKulinerdleValidWords = {
   'JAMUR',
   'JELLY',
   'JENAG',
+  'JENGK',
   'JERUK',
   'JINTN',
   'JUICE',
@@ -622,8 +590,10 @@ final Set<String> kKulinerdleValidWords = {
   'KABOB',
   'KACAG',
   'KACNG',
+  'KAKAP',
   'KALAS',
   'KALDU',
+  'KAMBG',
   'KANGK',
   'KAPAU',
   'KAPRI',
@@ -636,6 +606,7 @@ final Set<String> kKulinerdleValidWords = {
   'KAYUM',
   'KEBAB',
   'KECAP',
+  'KEDOD',
   'KEJUU',
   'KELPA',
   'KEMGI',
@@ -667,6 +638,7 @@ final Set<String> kKulinerdleValidWords = {
   'KREPE',
   'KROKT',
   'KROPO',
+  'KROTO',
   'KUAHH',
   'KUBIS',
   'KUKUS',
@@ -680,6 +652,7 @@ final Set<String> kKulinerdleValidWords = {
   'LADLE',
   'LALAP',
   'LAPAR',
+  'LASAG',
   'LEGIT',
   'LELEB',
   'LELEE',
@@ -687,6 +660,7 @@ final Set<String> kKulinerdleValidWords = {
   'LEMET',
   'LEMON',
   'LEPET',
+  'LEUNC',
   'LEZAT',
   'LIMPA',
   'LIVER',
@@ -728,6 +702,7 @@ final Set<String> kKulinerdleValidWords = {
   'MINYM',
   'MISRO',
   'MOCHA',
+  'MOZZA',
   'MSGAA',
   'MUNCH',
   'NACHO',
@@ -751,6 +726,7 @@ final Set<String> kKulinerdleValidWords = {
   'PACIT',
   'PADAN',
   'PAHIT',
+  'PALAA',
   'PALEM',
   'PALLU',
   'PALUM',
@@ -760,6 +736,7 @@ final Set<String> kKulinerdleValidWords = {
   'PANGS',
   'PANIK',
   'PANIR',
+  'PAPAY',
   'PAPED',
   'PAREE',
   'PARUT',
@@ -774,6 +751,8 @@ final Set<String> kKulinerdleValidWords = {
   'PEDAS',
   'PEMPE',
   'PENNE',
+  'PEPAY',
+  'PEPES',
   'PESMO',
   'PESTA',
   'PETAI',
@@ -789,15 +768,18 @@ final Set<String> kKulinerdleValidWords = {
   'PIZZA',
   'PLECI',
   'PLUMM',
+  'PORSI',
   'PRAWN',
   'PUCUK',
   'PUDIN',
   'PULUT',
   'PUPUS',
   'PUREE',
+  'PUYUH',
   'QUICH',
   'RAGOU',
   'RAMBA',
+  'RAMBT',
   'RAMEN',
   'RAWIS',
   'RAWON',
@@ -811,6 +793,7 @@ final Set<String> kKulinerdleValidWords = {
   'RICAA',
   'RICAS',
   'RISOL',
+  'RISOT',
   'ROAST',
   'ROKOK',
   'ROLLS',
@@ -829,6 +812,7 @@ final Set<String> kKulinerdleValidWords = {
   'SANDO',
   'SANDW',
   'SANTN',
+  'SAOSS',
   'SAPII',
   'SARAP',
   'SASAG',
@@ -855,7 +839,9 @@ final Set<String> kKulinerdleValidWords = {
   'SERVI',
   'SHAKE',
   'SHARE',
+  'SHAWA',
   'SIOMA',
+  'SIRSK',
   'SIRUP',
   'SLUSH',
   'SMOKD',
@@ -867,12 +853,14 @@ final Set<String> kKulinerdleValidWords = {
   'SOSIS',
   'SOTOA',
   'SOTOB',
+  'SOTOG',
   'SOTOK',
   'SOTOM',
   'SOTOP',
   'SOUNN',
   'SOUPP',
   'SOUPS',
+  'SPAGH',
   'SPICE',
   'SPOON',
   'STEAK',
@@ -906,6 +894,7 @@ final Set<String> kKulinerdleValidWords = {
   'TEMPE',
   'TERAS',
   'TERIG',
+  'TERII',
   'TERON',
   'TETEL',
   'TIMLO',
@@ -931,6 +920,7 @@ final Set<String> kKulinerdleValidWords = {
   'URATT',
   'VANIL',
   'VEGAN',
+  'VETSN',
   'WADAI',
   'WAFER',
   'WAFFL',
