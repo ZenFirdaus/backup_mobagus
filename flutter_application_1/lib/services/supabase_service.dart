@@ -306,11 +306,17 @@ class SupabaseService {
     _favoritesController.add({});
     _profileChangedController.add(null);
 
-    // Bersihkan residual cache SharedPreferences agar tidak bocor ke akun berikutnya
+    // Bersihkan residual cache & kredensial sesi lokal agar tidak bocor ke sesi berikutnya
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('foodie_current_display_name');
       await prefs.remove('foodie_current_avatar');
+      await prefs.remove('foodie_saved_password');
+      await prefs.remove('foodie_active_biometric_email');
+      await prefs.remove('foodie_last_user_name');
+      await prefs.remove('foodie_last_user_email');
+      await prefs.setBool('foodie_biometric_enabled', false);
+      await prefs.remove('foodie_enrolled_face_metrics');
     } catch (_) {}
 
     try {

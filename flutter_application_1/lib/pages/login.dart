@@ -187,6 +187,20 @@ class _LoginPageState extends State<LoginPage> {
           inputEmail.split('@').first;
       targetPassword = prefs.getString('foodie_face_pwd_$key') ??
           prefs.getString('foodie_saved_password');
+
+      if (targetPassword == null || targetPassword.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Sesi kata sandi telah kedaluwarsa setelah keluar. Silakan masukkan kata sandi secara manual.',
+            ),
+            backgroundColor: AppColors.charcoal,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
     } else {
       // 2. Jika email belum diisi, periksa akun biometrik aktif yang terdaftar di perangkat ini
       final account = await FaceBiometricService.instance.getActiveBiometricAccount();
@@ -198,6 +212,12 @@ class _LoginPageState extends State<LoginPage> {
       targetEmail = account['email']!;
       targetName = account['name']!;
       targetPassword = account['password'];
+
+      if (targetPassword == null || targetPassword.isEmpty) {
+        if (!mounted) return;
+        _showBiometricNotEnrolledSheet();
+        return;
+      }
     }
 
     if (!mounted) return;
@@ -216,6 +236,7 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.of(ctx).pop();
 
           // AUTENTIKASI SUPABASE SECARA REAL-TIME DENGAN FACE ID:
+          bool authSuccess = false;
           if (targetPassword != null &&
               targetPassword.isNotEmpty &&
               targetEmail.isNotEmpty) {
@@ -224,14 +245,30 @@ class _LoginPageState extends State<LoginPage> {
                 email: targetEmail,
                 password: targetPassword,
               );
+              authSuccess = true;
             } catch (_) {
-              // Jika offline atau jaringan lambat, sesi lokal tetap aktif
+              // Jika server offline / mode demo lokal
+              if (SupabaseService.instance.userId == null) {
+                SupabaseService.instance.setDemoUser(targetEmail);
+                authSuccess = true;
+              }
             }
           }
-          if (SupabaseService.instance.userId == null &&
-              targetEmail.isNotEmpty) {
-            SupabaseService.instance.setDemoUser(targetEmail);
+
+          if (!authSuccess) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Autentikasi gagal. Silakan masukkan kata sandi akun Anda secara manual.',
+                ),
+                backgroundColor: AppColors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
           }
+
           await _saveUserSession(targetName, targetEmail, targetPassword);
           await SupabaseService.instance.initStorage(force: true);
 
