@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/detective_case.dart';
 
+/// 15 Kasus Investigasi Kriminal Detektif Kuliner "Pilih Jalanmu"
+/// Mencakup 16 Rumah Makan Otentik Yogyakarta & Sindikat Rahasia "Topeng Garam".
 final List<DetectiveCase> kDetectiveCases = [
   // =========================================================================
-  // KASUS 1: WIJILAN
+  // LEVEL 1: WIJILAN (Gudeg Yu Djum) - PEMULA
   // =========================================================================
   const DetectiveCase(
     level: 1,
@@ -47,7 +49,7 @@ final List<DetectiveCase> kDetectiveCases = [
             text: 'Tuduh langsung pelayan cuci piring yang gemetar',
             actionDetail: 'Menginterogasi pelayan tanpa memeriksa bukti kuali',
             feedback:
-                'Salah langkah! Pelayan tersebut hanya panik karena kuali berasap. Sikap cerobohmu membuat dapur semakin kacau dan waktu terbuang sia-sia.',
+                'Salah langkah! Pelayan tersebut hanya panik karena kuali berasap. Sikap cerobohmu membuat dapur semakin kacau dan kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
             nextSceneId: 'scene_2',
@@ -90,72 +92,15 @@ final List<DetectiveCase> kDetectiveCases = [
               description: 'Bukti pembelian cairan perusak rasa yang diteken oleh bawahan Chef Hendra.',
               icon: Icons.receipt_long_rounded,
             ),
-            nextSceneId: 'scene_3',
+            nextSceneId: 'scene_boss',
           ),
           SceneChoice(
-            text: 'Ancam akan menyegel kios Pak Darto tanpa menunjukkan bukti',
+            text: 'Ancam akan menyegel kios Pak Darto tanpa bukti dokumen',
             actionDetail: 'Menggertak saksi secara agresif',
             feedback:
-                'Gagal! Warga pasar berkerumun membelanya dan Pak Darto menutup mulut rapat-rapat. Kamu kehilangan wibawa dan fokus detektif.',
+                'Gagal! Warga pasar berkerumun membelanya dan Pak Darto menutup mulut rapat-rapat. Kamu kehilangan fokus detektif!',
             isCorrect: false,
             losesLife: true,
-            nextSceneId: 'scene_3',
-          ),
-          SceneChoice(
-            text: 'Periksa karung kluwek dan rempah kelapa di gudang',
-            actionDetail: 'Memastikan stok bumbu pawon tidak terkontaminasi dari sumbernya',
-            feedback:
-                'Bumbu asli pasar terbukti murni. Ini membuktikan sabotase terjadi murni di dalam dapur pawon setelah bumbu tiba.',
-            isCorrect: true,
-            nextSceneId: 'scene_3',
-          ),
-        ],
-      ),
-      CaseScene(
-        id: 'scene_3',
-        title: 'Penyusupan ke Restoran "Modern Taste"',
-        location: 'Dapur Stainless Restoran Modern Taste - Pukul 11.30 WIB',
-        narrative:
-            'Dengan menyamar sebagai kurir bahan mentah, kamu menyelinap ke restoran megah milik Chef Hendra yang berada tepat di seberang gerbang Wijilan. Kamu mencium aroma krecek yang aneh dari ruang VIP.',
-        speakerName: 'Detektif (Kamu)',
-        speakerRole: 'Menyamar',
-        speakerAvatar: '🕵️',
-        choices: [
-          SceneChoice(
-            text: 'Geledah loker pribadi Chef Hendra di ruang koki utama',
-            actionDetail: 'Mencari botol sisa cairan asam dan seragam berlumpur',
-            feedback:
-                'Berhasil gemilang! Di dalam loker, kamu menemukan sepasang boot berlumpur dengan tapak identik dan sebotol asam cuka berlabel laboratorium.',
-            isCorrect: true,
-            foundClue: CaseClue(
-              id: 'clue_botol_loker',
-              title: 'Botol Kimia & Boot Bersol Identik',
-              description: 'Barang bukti fisik tak terbantahkan yang disimpan di loker sang Chef.',
-              icon: Icons.inventory_2_rounded,
-            ),
-            nextSceneId: 'scene_boss',
-          ),
-          SceneChoice(
-            text: 'Cicipi langsung kuah krecek di meja prasmanan restoran',
-            actionDetail: 'Mencicipi makanan yang diduga meniru resep Wijilan',
-            feedback:
-                'Uhuk! Krecek itu ternyata sengaja dibubuhi bubuk cabai sintetis ekstra pedas. Lidahmu mati rasa seketika dan konsentrasimu terganggu!',
-            isCorrect: false,
-            losesLife: true,
-            nextSceneId: 'scene_boss',
-          ),
-          SceneChoice(
-            text: 'Rekam percakapan bisik-bisik Chef Hendra di telepon',
-            actionDetail: 'Menggunakan mikrofon saku untuk mengumpulkan rekaman',
-            feedback:
-                'Terdengar jelas Chef Hendra berkata: "Biar saja gudeg mereka bau comberan sore ini, wartawan kuliner pasti lari ke tempatku!"',
-            isCorrect: true,
-            foundClue: CaseClue(
-              id: 'clue_rekaman_telepon',
-              title: 'Rekaman Suara Konspirasi',
-              description: 'Suara Chef Hendra merencanakan kejatuhan warung Bu Djuminten.',
-              icon: Icons.mic_external_on_rounded,
-            ),
             nextSceneId: 'scene_boss',
           ),
         ],
@@ -163,7 +108,7 @@ final List<DetectiveCase> kDetectiveCases = [
       CaseScene(
         id: 'scene_boss',
         title: 'KONFRONTASI AKHIR: Tuntaskan Chef Hendra',
-        location: 'Ruang Tengah Restoran Modern Taste - Pukul 13.00 WIB',
+        location: 'Ruang VIP Restoran Modern Taste - Pukul 13.00 WIB',
         narrative:
             'Kamu menendang pintu ruang VIP! Chef Hendra berdiri tegak dengan celemek sutra putih dan senyum sinis. Di depannya terhidang kuali replika gudeg curian.',
         speakerName: 'Chef Hendra',
@@ -177,35 +122,26 @@ final List<DetectiveCase> kDetectiveCases = [
           quote:
               'Detektif ingusan! Gudeg kuno itu memang sudah usang dan pantas punah digantikan franchise-ku! Kamu punya bukti apa menuduhku?!',
           maxHp: 100,
-          weakPoints: ['Faktur Toko Kimia', 'Boot Lumpur Identik', 'Rekaman Rencana'],
+          weakPoints: ['Faktur Toko Kimia', 'Boot Lumpur Identik'],
         ),
         choices: [
           SceneChoice(
             text: 'Banting Faktur Kimia & Hasil Uji Lakmus di atas mejanya!',
-            actionDetail: 'Menunjukkan bukti transaksi asam cuka sintetis',
+            actionDetail: 'Menunjukkan bukti transaksi asam cuka sintetis tak terbantahkan',
             feedback:
                 'CRITICAL HIT! Wajah Chef Hendra memucat melihat namanya tertera jelas di faktur bahan kimia berbahaya!',
             isCorrect: true,
-            bossDamage: 40,
+            bossDamage: 55,
             nextSceneId: 'scene_boss_2',
           ),
           SceneChoice(
-            text: 'Tuduh dia iri hati karena tidak pernah bisa membuat gudeg seenak Wijilan',
-            actionDetail: 'Menyerang secara emosional tanpa bukti dokumen',
+            text: 'Tuduh dia iri hati karena masakannya kalah laris',
+            actionDetail: 'Menyerang secara emosional tanpa dokumen pendukung',
             feedback:
-                'Chef Hendra tertawa terbahak-bahak: "Hanya hinaan murahan? Hukum butuh bukti hitam di atas putih, Detektif!" Kamu terpojok!',
+                'Chef Hendra tertawa terbahak-bahak: "Hukum butuh bukti hitam di atas putih, bukan ocehan!" Seranganmu memantul!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
-            nextSceneId: 'scene_boss_2',
-          ),
-          SceneChoice(
-            text: 'Tunjukkan foto sol boot berlumpur di dapur Bu Djuminten',
-            actionDetail: 'Mencocokkan tanah liat di dapur kuno dengan sepatu Hendra',
-            feedback:
-                'SERANGAN TELAK! Hendra refleks menyembunyikan kakinya di bawah meja! Pertahanan mentalnya mulai runtuh!',
-            isCorrect: true,
-            bossDamage: 35,
             nextSceneId: 'scene_boss_2',
           ),
         ],
@@ -213,7 +149,7 @@ final List<DetectiveCase> kDetectiveCases = [
       CaseScene(
         id: 'scene_boss_2',
         title: 'SKAKMAT: Pengakuan Chef Hendra',
-        location: 'Ruang Tengah Restoran Modern Taste - Pukul 13.15 WIB',
+        location: 'Ruang VIP Restoran Modern Taste - Pukul 13.15 WIB',
         narrative:
             'Chef Hendra terhuyung mundur. Dia panik dan mencoba meraih ponselnya untuk menghubungi pengacara!',
         speakerName: 'Chef Hendra',
@@ -225,17 +161,17 @@ final List<DetectiveCase> kDetectiveCases = [
           role: 'Tersangka Utama',
           avatar: '😰',
           quote: 'Semua itu fitnah! Aku ada di kamarku sepanjang malam tadi!',
-          maxHp: 60,
-          weakPoints: ['Rekaman Telepon Sabotase'],
+          maxHp: 50,
+          weakPoints: ['Sol Sepatu Lumpur'],
         ),
         choices: [
           SceneChoice(
-            text: 'Putar rekaman suara teleponnya di hadapan seluruh staf restoran!',
-            actionDetail: 'Memperdengarkan bukti audio pengakuan niat jahatnya',
+            text: 'Tunjukkan foto sol boot berlumpur yang cocok 100% dengan tanah pawon Wijilan!',
+            actionDetail: 'Mencocokkan jejak fisika forensik sol sepatu dengan lantai kuali',
             feedback:
-                'FATAL BLOW! Suara Hendra menggema di seluruh ruangan. Seluruh staf ternganga dan Hendra ambruk berlutut mengakui kejahatannya!',
+                'FATAL BLOW! Hendra ambruk berlutut dan mengakui bahwa dia menyelinap semalam untuk merusak kuali Bu Djuminten!',
             isCorrect: true,
-            bossDamage: 70,
+            bossDamage: 60,
           ),
           SceneChoice(
             text: 'Ajak dia duel tanding masak gudeg sekarang juga',
@@ -268,7 +204,7 @@ final List<DetectiveCase> kDetectiveCases = [
   ),
 
   // =========================================================================
-  // KASUS 2: KOPI JOSS TUGU
+  // LEVEL 2: KOPI JOSS (Lik Man Stasiun Tugu) - PEMULA
   // =========================================================================
   const DetectiveCase(
     level: 2,
@@ -278,7 +214,7 @@ final List<DetectiveCase> kDetectiveCases = [
     location: 'Kawasan Stasiun Tugu & Lesehan Malioboro',
     targetRestaurant: 'Kopi Joss Lik Man',
     suspectName: 'Mbah Broto "Juragan Arang"',
-    difficulty: CaseDifficulty.menengah,
+    difficulty: CaseDifficulty.pemula,
     baseReward: 350,
     iconEmoji: '☕',
     synopsis:
@@ -298,7 +234,7 @@ final List<DetectiveCase> kDetectiveCases = [
             text: 'Cium dan kumpulkan residu serbuk arang di pecahan gelas',
             actionDetail: 'Menggunakan pinset forensik untuk menguji serbuk bara',
             feedback:
-                'Bau belerang tambang yang menyengat menusuk hidungmu! Ini jelas bukan arang kayu sengon alami yang biasa menyerap kafein.',
+                'Bau belerang tambang yang menyengat menusuk hidungmu! Ini jelas bukan arang kayu sengon alami yang biasa menyerap racun lambung.',
             isCorrect: true,
             foundClue: CaseClue(
               id: 'clue_arang_belerang',
@@ -317,51 +253,37 @@ final List<DetectiveCase> kDetectiveCases = [
             losesLife: true,
             nextSceneId: 'scene_2',
           ),
-          SceneChoice(
-            text: 'Periksa karung goni pasokan arang di gerobak Lik Man',
-            actionDetail: 'Melihat cap stempel pada karung pengiriman arang',
-            feedback:
-                'Pada karung goni terdapat stempel merah pudar bertuliskan "Gudang Arang Broto - Pengok".',
-            isCorrect: true,
-            foundClue: CaseClue(
-              id: 'clue_cap_gudang_broto',
-              title: 'Cap Karung Gudang Broto',
-              description: 'Identitas pemasok arang bermasalah yang berbasis di area stasiun barat.',
-              icon: Icons.local_shipping_rounded,
-            ),
-            nextSceneId: 'scene_2',
-          ),
         ],
       ),
       CaseScene(
         id: 'scene_2',
-        title: 'Penyelidikan di Bengkel Arang Stasiun',
-        location: 'Gudang Kayu Pengok - Pukul 23.30 WIB',
+        title: 'Gudang Pembakaran Arang Pinggir Rel',
+        location: 'Gudang Briket Lempuyangan - Pukul 23.30 WIB',
         narrative:
-            'Kamu berjalan di antara tumpukan kayu sengon dan tumpukan karung arang. Di sudut gelap, terdengar suara pekerja sedang mengaduk cairan kuning berbusa.',
-        speakerName: 'Kuli Angkut',
-        speakerRole: 'Saksi Kunci',
-        speakerAvatar: '👷',
+            'Di gudang pembakaran gelap, kamu menemukan tumpukan karung goni bertuliskan "Limbah Tambang Belerang Merapi". Mbah Broto terlihat sedang menghitung gepokan uang kertas.',
+        speakerName: 'Mbah Broto',
+        speakerRole: 'Tengkulak Arang Oplosan',
+        speakerAvatar: '🧙‍♂️',
         choices: [
           SceneChoice(
-            text: 'Ambil sampel cairan kuning dari ember sebelum pekerja kabur',
-            actionDetail: 'Menyimpan cairan perekat belerang sebagai bukti lab',
+            text: 'Foto karung goni belerang dan cocokkan stempel karungnya',
+            actionDetail: 'Mengabadikan barang bukti distribusi arang berbahaya',
             feedback:
-                'Bahan terlarang! Itu adalah cairan limbah pabrik sulfur yang digunakan untuk merendam arang kualitas rendah agar tampak membara merah.',
+                'Bukti kuat tercatat! Stempel karung beracun itu sama persis dengan karung yang diantar ke gerobak Lik Man tadi sore!',
             isCorrect: true,
             foundClue: CaseClue(
-              id: 'clue_cairan_sulfur',
-              title: 'Cairan Sulfur Perendam Briket',
-              description: 'Zat kimia berbahaya yang dipakai Mbah Broto demi menghemat modal.',
-              icon: Icons.liquor_rounded,
+              id: 'clue_stempel_karung',
+              title: 'Stempel Karung Belerang',
+              description: 'Nomor batch distribusi arang oplosan berbahaya milik gudang Mbah Broto.',
+              icon: Icons.inventory_rounded,
             ),
             nextSceneId: 'scene_boss',
           ),
           SceneChoice(
-            text: 'Berteriak menyuruh semua orang angkat tangan',
-            actionDetail: 'Menggertak tanpa menutup jalur keluar',
+            text: 'Teriak menakuti Mbah Broto dari kejauhan',
+            actionDetail: 'Membongkar posisi pengintaian',
             feedback:
-                'Pekerja melempar ember abu ke arah matamu! Matamu perih terkena jelaga abu dan tersangka utama menyelinap pergi!',
+                'Mbah Broto menyiramkan serbuk arang panas ke arahmu! Matamu perih luar biasa dan kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
             nextSceneId: 'scene_boss',
@@ -370,38 +292,37 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss',
-        title: 'KONFRONTASI BOS: Mbah Broto Juragan Arang',
-        location: 'Kantor Rahasia Mbah Broto di Atas Gerbong Kereta Tua - Pukul 01.00 WIB',
+        title: 'KONFRONTASI: Membungkam Juragan Arang',
+        location: 'Dermaga Lori Penggilingan Batu Bara - Pukul 00.30 WIB',
         narrative:
-            'Mbah Broto duduk bersila di atas tumpukan karung arang sambil menghisap rokok klobot. Dua anjing penjaga menggonggong liar di sampingnya.',
+            'Mbah Broto terpojok di dekat lori pembakaran arang. Dia memegang linggis besi berkarat dengan tatapan mata buas.',
         speakerName: 'Mbah Broto',
-        speakerRole: 'Juragan Monopoli Arang (Boss)',
-        speakerAvatar: '🦹',
+        speakerRole: 'Juragan Arang Licik',
+        speakerAvatar: '🧙‍♂️',
         isBossFight: true,
         boss: BossConfrontation(
-          name: 'Mbah Broto "Si Juragan Bara"',
-          role: 'Pemasok Arang Ilegal Malioboro',
-          avatar: '🦹',
-          quote:
-              'Hahaha! Anak muda bau kencur mau mengajari aku soal arang? Kalau angkringan Lik Man tutup, semua pedagang terpaksa beli arang mahalku!',
+          name: 'Mbah Broto "Juragan Arang"',
+          role: 'Penyelundup Bahan Belerang',
+          avatar: '🧙‍♂️',
+          quote: 'Siapa peduli turis sakit perut?! Selama angkringan terpaksa beli arang briket buatanku, aku yang menguasai malam Jogja!',
           maxHp: 100,
-          weakPoints: ['Sampel Sulfur', 'Cap Karung Pengok'],
+          weakPoints: ['Stempel Karung Belerang', 'Serbuk Pecahan Gelas'],
         ),
         choices: [
           SceneChoice(
-            text: 'Lempar sampel serbuk arang belerang dan cap karung gudangnya!',
-            actionDetail: 'Menunjukkan kecocokan kimia antara gelas Lik Man dan gudang Broto',
+            text: 'Tunjukkan sampel belerang menyala dan surat segel Dinas Lingkungan!',
+            actionDetail: 'Membuktikan pelanggaran pidana distribusi bahan beracun berbahaya',
             feedback:
-                'TELAK! Mbah Broto tersentak: "Dari mana kamu dapat sampel itu?!" Pertahanan mentalnya goyah!',
+                'HANTAMAN TELAK! Mbah Broto menjatuhkan linggisnya saat sirine mobil biro hukum meraung di luar gudang!',
             isCorrect: true,
-            bossDamage: 50,
+            bossDamage: 60,
             nextSceneId: 'scene_boss_2',
           ),
           SceneChoice(
-            text: 'Klaim bahwa polisi sudah mengepung gerbong kereta',
-            actionDetail: 'Melakukan gertakan bohong tanpa menunjukkan bukti',
+            text: 'Tantang dia adu kekuatan fisik dengan tangan kosong',
+            actionDetail: 'Mengabaikan bahaya bara api di sekeliling panggung',
             feedback:
-                'Mbah Broto melirik ke luar jendela dan menyadari kamu hanya sendirian: "Bohong besar!" Dia melepaskan rantai anjingnya!',
+                'Mbah Broto mengayunkan sekop bara ke kakimu! Kamu terlempar dan terluka bakar!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
@@ -411,50 +332,50 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss_2',
-        title: 'BUNGKAM JURAGAN BARA',
-        location: 'Pintu Gerbong Kereta Pengok',
+        title: 'BONGKAR BUKTI TIKET SETORAN',
+        location: 'Dermaga Lori Penggilingan Batu Bara - Pukul 00.45 WIB',
         narrative:
-            'Mbah Broto mencoba meraih obor minyak untuk membakar tumpukan karung dan memusnahkan bukti!',
+            'Mbah Broto berlutut di tanah, namun masih menyeringai licik mencoba menyembunyikan buku catatan di balik jaket kumalnya.',
         speakerName: 'Mbah Broto',
-        speakerRole: 'Terpojok',
-        speakerAvatar: '😡',
+        speakerRole: 'Tersangka Tak Berkutik',
+        speakerAvatar: '🧙‍♂️',
         isBossFight: true,
         boss: BossConfrontation(
           name: 'Mbah Broto',
-          role: 'Boss',
-          avatar: '😡',
-          quote: 'Jangan mendekat atau kugosongkan tempat ini sekalian!',
-          maxHp: 50,
-          weakPoints: ['Cairan Sulfur'],
+          role: 'Tersangka Tersudut',
+          avatar: '🧙‍♂️',
+          quote: 'Kalian tidak akan pernah membuktikan uang ini hasil kejahatan!',
+          maxHp: 40,
+          weakPoints: ['Buku Catatan Hitam'],
         ),
         choices: [
           SceneChoice(
-            text: 'Siramkan air pasir ke obor dan pamerkan botol cairan sulfur pabrik!',
-            actionDetail: 'Memadamkan ancaman api dan membuktikan kejahatan lingkungan',
+            text: 'Rampas buku catatan setoran hitam yang mencatat penerima suap suplai arang!',
+            actionDetail: 'Mengamankan bukti pembukuan konspirasi angkringan',
             feedback:
-                'SKAKMAT! Obor padam, aparat polisi stasiun menyerbu masuk dari pintu samping. Mbah Broto tertunduk lesu di atas abunya sendiri!',
+                'KNOCKOUT! Seluruh alur distribusi ilegal terungkap terang benderang. Mbah Broto resmi dibekuk!',
             isCorrect: true,
-            bossDamage: 60,
+            bossDamage: 50,
           ),
           SceneChoice(
-            text: 'Maju menerjang obor api dengan tangan kosong',
-            actionDetail: 'Tindakan gegabah tanpa perhitungan',
+            text: 'Biarkan dia menyimpan bukunya asalkan mau meminta maaf',
+            actionDetail: 'Menunjukkan belas kasihan keliru pada penjahat',
             feedback:
-                'Bajumu terjilat api! Kamu bergulingan di tanah untuk memadamkan api dan menderita luka bakar ringan!',
+                'Dia langsung menyobek halaman penting dan menelannya! Kesempatan bukti hilang!',
             isCorrect: false,
             losesLife: true,
-            bossDamage: 10,
+            bossDamage: 0,
           ),
         ],
       ),
     ],
     goodEnding: CaseEnding(
-      title: 'KASUS TERPECAHKAN: Nyala Bara Murni Kopi Joss',
+      title: 'KASUS SELESAI: Bara Murni Kopi Joss Menyala Kembali',
       narrative:
-          'Gudang arang belerang disegel permanen. Lik Man kembali mendapatkan pasokan kayu sengon murni dari perbukitan Menoreh.\n\nMalam itu, cangkir kopi joss kembali berdesis syahdu diiringi petikan gitar pengamen Malioboro. Lik Man menyuguhkan kopi joss istimewa berkepul bara merah murni untuk sang Detektif.',
-      epilogue: 'Kamu mengamankan sertifikat Arang Higienis Malioboro dan naik pangkat menjadi Detektif Madya!',
-      badgeName: 'Penjaga Api Malioboro ☕',
-      rewardPoints: 400,
+          'Gudang arang belerang disegel permanen. Lik Man kembali menggunakan arang kayu sengon pilihan yang aman dan menyehatkan lambung.\n\nMalam di Stasiun Tugu kembali syahdu dengan kepulan asap kopi joss mendesis yang harum. Lik Man memberimu cangkir kopi kehormatan berukir lencana detektif!',
+      epilogue: 'Kepercayaan pelancong pada angkringan legendaris Jogja pulih seutuhnya berkat analisismu.',
+      badgeName: 'Penjaga Api Angkringan 🔥',
+      rewardPoints: 350,
     ),
     badEnding: CaseEnding(
       title: 'PENYELIDIKAN GAGAL: Kabut Beracun Menutup Angkringan',
@@ -467,100 +388,86 @@ final List<DetectiveCase> kDetectiveCases = [
   ),
 
   // =========================================================================
-  // KASUS 3: MERAPI COFFEE
+  // LEVEL 3: SOTO BATHOK (Mbah Katro Sambisari) - PEMULA
   // =========================================================================
   const DetectiveCase(
     level: 3,
-    id: 'case_merapi',
-    title: 'Jeratan Kabut Kopi Arabika Merapi',
-    subtitle: 'Pencurian biji kopi pusaka lereng gunung dan perburuan roastery bayangan',
-    location: 'Perkebunan Kopi Vulkanik Kaliurang & Gua Jepang',
-    targetRestaurant: 'Kopi Klothok Pakem',
-    suspectName: 'Madam Vania "Ratu Kafe Bayangan"',
-    difficulty: CaseDifficulty.menengah,
-    baseReward: 450,
-    iconEmoji: '🏔️',
+    id: 'case_soto_bathok',
+    title: 'Konspirasi Batok Keramat Candi Sambisari',
+    subtitle: 'Pencemaran kuah kaldu sapi bening dan pencurian batok kelapa bertuah',
+    location: 'Sawah Sambisari, Kalasan, Sleman',
+    targetRestaurant: 'Soto Bathok Mbah Katro',
+    suspectName: 'Ki Joyo "Pencuri Kaldu Bening"',
+    difficulty: CaseDifficulty.pemula,
+    baseReward: 400,
+    iconEmoji: '🥥',
     synopsis:
-        'Kopi Yellow Caturra Merapi langka yang hanya dipanen 20 kg setahun mendadak raib dari lumbung petani tua Pakem. Beberapa hari kemudian, sebuah kafe mewah di pusat kota memamerkan menu kopi jutaan rupiah dengan klaim eksklusif palsu.',
+        'Puluhan batok kelapa penyaji soto di warung Mbah Katro mendadak dilapisi cairan getah pahit yang merusak kaldu bening gurih. Di saat bersamaan, panci kaldu daging sapi rebusan 8 jam lenyap menjelang fajar.',
     scenes: [
       CaseScene(
         id: 'scene_1',
-        title: 'Misteri Lumbung Kopi Berkabut',
-        location: 'Lumbung Kopi Tradisional Pakem - Pukul 05.30 WIB',
+        title: 'Olah TKP Saung Tepi Sawah Sambisari',
+        location: 'Gazebo Bambu Warung Mbah Katro - Pukul 05.00 WIB',
         narrative:
-            'Hawa dingin menusuk tulang di kebun kopi lereng Merapi. Gembok lumbung terpotong rapi dengan cairan asam kimia. Karung biji kopi merah petik terpilih telah lenyap tak berbekas.',
-        speakerName: 'Pak Karto',
-        speakerRole: 'Petani Kopi Generasi Ketiga',
+            'Angin pagi berhembus dingin di tepi Candi Sambisari. Mbah Katro menatap sedih deretan mangkuk batok kelapa yang permukaannya lengket kehijauan dan berbau getah pohon jarak.',
+        speakerName: 'Mbah Katro',
+        speakerRole: 'Sesepuh Soto Bathok',
         speakerAvatar: '👴',
         choices: [
           SceneChoice(
-            text: 'Periksa sisa kulit biji kopi di lantai lumbung dengan kaca pembesar',
-            actionDetail: 'Mencari karakteristik biji kopi vulkanik yang tertinggal',
+            text: 'Kerik lapisan getah pada mangkuk batok kelapa untuk uji laboratorium',
+            actionDetail: 'Mengambil sampel getah pahit perusak rasa kaldu',
             feedback:
-                'Petunjuk emas! Biji kopi Yellow Caturra memiliki guratan urat kuning cerah alami dengan aroma nangka matang yang tak bisa ditiru varietas biasa.',
+                'Tepat sekali! Getah ini berasal dari pohon jarak pagar beracun yang sengaja dioleskan agar batok kelapa mengeluarkan rasa pahit pekat!',
             isCorrect: true,
             foundClue: CaseClue(
-              id: 'clue_karakter_biji',
-              title: 'Sampel Biji Yellow Caturra Murni',
-              description: 'Ciri fisik biji kopi vulkanik dengan notes buah nangka dan keasaman sitrun segar.',
-              icon: Icons.grain_rounded,
+              id: 'clue_getah_jarak',
+              title: 'Getah Jarak Pahit',
+              description: 'Cairan racun alami yang dioleskan untuk merusak cita rasa gurih batok kelapa.',
+              icon: Icons.eco_rounded,
             ),
             nextSceneId: 'scene_2',
           ),
           SceneChoice(
-            text: 'Tuduh monyet liar lereng Merapi yang mengambil karung kopi',
-            actionDetail: 'Menyalahkan satwa liar tanpa memeriksa jejak gembok',
+            text: 'Cuci mangkuk batok di selokan irigasi sawah',
+            actionDetail: 'Membersihkan mangkuk dengan air kotor sawah',
             feedback:
-                'Monyet tidak membawa pemotong gembok dan mobil bak terbuka! Analisis ngawurmu membuat petani menggeleng kecewa.',
+                'Mangkuk malah makin terkontaminasi bakteri lumpur! Mbah Katro menegurmu keras dan kamu kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
-            nextSceneId: 'scene_2',
-          ),
-          SceneChoice(
-            text: 'Lacak jejak ban mobil bak di tanah basah perkebunan',
-            actionDetail: 'Mengukur cetakan ban kendaraan pelaku',
-            feedback:
-                'Jejak ban truk pendingin berstempel logo kafe elit "Vania Roastery Skyline" mengarah turun ke arah Kaliurang.',
-            isCorrect: true,
-            foundClue: CaseClue(
-              id: 'clue_jejak_truk_vania',
-              title: 'Cekungan Ban Truk Pendingin Vania',
-              description: 'Jejak ban dengan serpihan abu vulkanik mengarah langsung ke kafe mewah tersangka.',
-              icon: Icons.alt_route_rounded,
-            ),
             nextSceneId: 'scene_2',
           ),
         ],
       ),
       CaseScene(
         id: 'scene_2',
-        title: 'Blind Taste Test di Kafe Mewah Vania',
-        location: 'Vania Luxury Coffee Lounge - Pukul 15.00 WIB',
+        title: 'Jejak Kereta Sorong Menuju Tebing Candi',
+        location: 'Parit Kuno Candi Sambisari - Pukul 06.30 WIB',
         narrative:
-            'Kamu menyamar sebagai pembeli kopi kaya raya dari luar negeri. Madam Vania dengan gaun sutra ungu menuangkan seduhan pour-over V60 di cangkir porselen seharga Rp500.000 per cangkir.',
-        speakerName: 'Madam Vania',
-        speakerRole: 'Kolektor Kafe Glamor',
-        speakerAvatar: '💃',
+            'Di tanah basah tepi parit candi, terlihat bekas roda tunggal kereta dorong berat. Tercecer potongan daging tetelan sapi dan serpihan bawang putih goreng gurih.',
+        speakerName: 'Warga Sekitar',
+        speakerRole: 'Petani Pagi',
+        speakerAvatar: '👨‍🌾',
         choices: [
           SceneChoice(
-            text: 'Analisis aroma dan rasa kopi: Tebak aroma nangka & notes sulfur vulkanik',
-            actionDetail: 'Melakukan cupping profesional untuk membuktikan asal biji kopi',
+            text: 'Ikuti jejak tetesan kuah kaldu sapi ke arah gubuk pembakaran bata',
+            actionDetail: 'Melacak jejak aroma gurih kaldu sapi rebusan',
             feedback:
-                'SKOR MAKSIMAL! Begitu kamu menyebut aroma nangka dan acidity vulkanik Pakem, cangkir di tangan Madam Vania bergetar hebat!',
+                'Jejak akurat! Di dalam gubuk bata, kamu memergoki Ki Joyo sedang menuangkan kuah kaldu Mbah Katro ke dalam jeriken plastik komersial!',
             isCorrect: true,
             foundClue: CaseClue(
-              id: 'clue_blind_cupping',
-              title: 'Bukti Rasa Cupping Identik',
-              description: 'Profil rasa kopi yang disajikan 100% sama dengan biji yang dicuri dari Pak Karto.',
-              icon: Icons.coffee_rounded,
+              id: 'clue_jeriken_kaldu',
+              title: 'Jeriken Kaldu Curian',
+              description: 'Jeriken penampung kaldu sapi asli warung Mbah Katro yang hendak dijual ke warung fiktif.',
+              icon: Icons.local_drink_rounded,
             ),
             nextSceneId: 'scene_boss',
           ),
           SceneChoice(
-            text: 'Langsung siramkan kopi panas ke wajah Madam Vania',
-            actionDetail: 'Tindakan kekerasan tanpa dasar hukum',
+            text: 'Cari panci kaldu dengan menerobos semak belukar berduri',
+            actionDetail: 'Berlari tanpa memperhatikan arah jejak roda',
             feedback:
-                'Pelanggaran etika berat! Satpam kafe membekukmu dan kamu terancam didepak dari kasus!',
+                'Kakimu terperosok ke lubang galian bata! Bajumu robek dan konsentrasi investigasimu buyar!',
             isCorrect: false,
             losesLife: true,
             nextSceneId: 'scene_boss',
@@ -569,38 +476,37 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss',
-        title: 'KONFRONTASI BOS: Madam Vania',
-        location: 'Ruang Roasting Rahasia Bawah Tanah Kafe Vania',
+        title: 'KONFRONTASI: Gagalkan Ki Joyo di Tungku Bata',
+        location: 'Gubuk Pembakaran Bata Kalasan - Pukul 07.15 WIB',
         narrative:
-            'Di ruang mesin roasting modern buatan Jerman, karung-karung biji kopi Pak Karto sedang siap dikemas ulang dengan merek luar negeri.',
-        speakerName: 'Madam Vania',
-        speakerRole: 'Ratu Kafe Bayangan (Boss)',
-        speakerAvatar: '💃',
+            'Ki Joyo berdiri menghadangmu di depan tungku bata panas dengan golok pemotong daging di tangannya. Dia berniat menjual formula kaldu Sambisari ke jaringan warung franchise.',
+        speakerName: 'Ki Joyo',
+        speakerRole: 'Pencuri Kaldu',
+        speakerAvatar: '😠',
         isBossFight: true,
         boss: BossConfrontation(
-          name: 'Madam Vania "Ratu Kafe Bayangan"',
-          role: 'Pencuri Hak Cipta Kopi Merapi',
-          avatar: '💃',
-          quote:
-              'Petani tua itu tidak tahu cara menjual karyanya! Di tanganku, biji kopi ini jadi lambang gengsi para bangsawan! Mau apa kamu, Detektif?',
+          name: 'Ki Joyo "Pencuri Kaldu"',
+          role: 'Pencuri Resep Sambisari',
+          avatar: '😠',
+          quote: 'Mbah Katro sudah terlalu tua! Kaldu bening ini bernilai miliaran jika kujual ke pabrik bumbu instan!',
           maxHp: 100,
-          weakPoints: ['Sampel Biji Asli', 'Cekungan Ban Truk', 'Bukti Blind Cupping'],
+          weakPoints: ['Jeriken Kaldu Curian', 'Getah Jarak'],
         ),
         choices: [
           SceneChoice(
-            text: 'Sandingkan sampel biji mentah Pak Karto dengan karung di mesin roaster-nya!',
-            actionDetail: 'Membuktikan nomor seri karung goni petani yang belum sempat diganti',
+            text: 'Konfrontasi dengan jeriken kaldu berlabel nomor panci Mbah Katro!',
+            actionDetail: 'Menunjukkan bukti kepemilikan panci bernomor seri dapur Sambisari',
             feedback:
-                'HANTAMAN DEDUKSI! Nomor seri karung jahitan tangan Pak Karto cocok sempurna! Madam Vania tak bisa berkutik!',
+                'SERANGAN TELAK! Ki Joyo terperangah melihat bukti segel nomor seri panci yang tidak bisa ia sangkal!',
             isCorrect: true,
             bossDamage: 55,
             nextSceneId: 'scene_boss_2',
           ),
           SceneChoice(
-            text: 'Tawar untuk membeli seluruh kopi dengan uang saku detektif',
-            actionDetail: 'Mencoba bernegosiasi dengan dana terbatas',
+            text: 'Bujuk dia untuk mencicipi kuah soto bersama-sama',
+            actionDetail: 'Mengajak berdamai di situasi bahaya',
             feedback:
-                'Madam Vania tertawa mencemooh: "Kamu kira aku butuh recehanmu?" Boss menyalakan alarm darurat!',
+                'Ki Joyo menyiramkan abu pembakaran bata panas ke arahmu! Kamu terluka dan kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
@@ -610,77 +516,261 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss_2',
-        title: 'PENGAKUAN RATU BAYANGAN',
-        location: 'Ruang Roasting Bawah Tanah',
+        title: 'LUMPUHKAN KI JOYO DI TANAH LIAT',
+        location: 'Halaman Gubuk Pembakaran Bata - Pukul 07.30 WIB',
         narrative:
-            'Madam Vania terkunci di sudut mesin roasting. Satpamnya telah melarikan diri saat melihat tim patroli detektif tiba!',
-        speakerName: 'Madam Vania',
-        speakerRole: 'Tersangka Utama',
-        speakerAvatar: '🥺',
+            'Ki Joyo mencoba melarikan diri melompati parit bata membawa botol sampel getah jarak!',
+        speakerName: 'Ki Joyo',
+        speakerRole: 'Buronan Terdesak',
+        speakerAvatar: '😰',
         isBossFight: true,
         boss: BossConfrontation(
-          name: 'Madam Vania',
-          role: 'Boss',
-          avatar: '🥺',
-          quote: 'Tolong jangan hancurkan reputasiku... aku hanya ingin diakui di dunia barista internasional...',
-          maxHp: 45,
-          weakPoints: ['Cekungan Ban Truk'],
+          name: 'Ki Joyo',
+          role: 'Pencuri Terpojok',
+          avatar: '😰',
+          quote: 'Jangan sentuh aku! Kaldu ini milikku sekarang!',
+          maxHp: 50,
+          weakPoints: ['Botol Getah Jarak'],
         ),
         choices: [
           SceneChoice(
-            text: 'Tunjukkan surat penyitaan resmi atas nama Perlindungan Varietas Kopi Lereng Merapi!',
-            actionDetail: 'Mengakhiri kasus secara bermartabat dan sah menurut hukum',
+            text: 'Rebut botol getah jarak dan kancingkan borgol detektif ke tangannya!',
+            actionDetail: 'Menjegal langkah pelaku di parit tanah liat licin',
             feedback:
-                'SEMPURNA! Madam Vania menyerahkan kunci brankas tempat sertifikat palsu disimpan. Kopi pusaka berhasil diselamatkan seutuhnya!',
+                'KNOCKOUT! Ki Joyo tersungkur di parit tanah liat, botol racun tersita, dan kaldu pusaka berhasil diselamatkan!',
             isCorrect: true,
             bossDamage: 60,
           ),
           SceneChoice(
-            text: 'Rusak mesin roaster jutaan dolar miliknya sebagai balas dendam',
-            actionDetail: 'Merusak barang bukti',
+            text: 'Lepaskan dia dan hanya amankan jeriken kaldunya saja',
+            actionDetail: 'Membiarkan pelaku kriminal lolos',
             feedback:
-                'Tindakan itu mencoreng nama baik biro investigasi dan kamu mendapat peringatan keras!',
+                'Ki Joyo berhasil kabur ke jalan raya dan bisa mengulangi kejahatannya!',
             isCorrect: false,
             losesLife: true,
-            bossDamage: 10,
+            bossDamage: 0,
           ),
         ],
       ),
     ],
     goodEnding: CaseEnding(
-      title: 'KASUS TERPECAHKAN: Kopi Pusaka Merapi Kembali ke Petani',
+      title: 'KASUS TERPECAHKAN: Batok Kelapa Sambisari Bersemi Kembali',
       narrative:
-          'Seluruh karung biji kopi Yellow Caturra dikembalikan kepada Pak Karto. Kafe Vania didenda dan diwajibkan bermitra adil dengan petani lokal.\n\nDi serambi kayu Pakem yang teduh, Pak Karto menyeduhkan cangkir kopi pertama hasil panen yang selamat, ditemani pisang goreng hangat bertabur gula semut aren.',
-      epilogue: 'Kamu dianugerahi Cangkir Keramik Merapi dan dipromosikan menjadi Detektif Rasa Utama!',
-      badgeName: 'Penjaga Kopi Vulkanik 🏔️',
-      rewardPoints: 500,
+          'Panci kaldu sapi bening dikembalikan utuh ke warung Mbah Katro. Batok kelapa dicuci menggunakan larutan asam kawak alami hingga bersih berkilau.\n\nPagi itu, ribuan pengunjung Candi Sambisari menikmati soto hangat dalam mangkuk batok dengan tempe garit renyah. Mbah Katro menghadiahkan Batok Kelapa Emas berukir namamu!',
+      epilogue: 'Misteri terselesaikan dengan sempurna dan sarapan warga Sleman kembali damai.',
+      badgeName: 'Pelindung Batok Sambisari 🥥',
+      rewardPoints: 400,
     ),
     badEnding: CaseEnding(
-      title: 'PENYELIDIKAN GAGAL: Monopoli Kafe Bayangan Berjaya',
+      title: 'PENYELIDIKAN GAGAL: Kaldu Mbah Katro Tercuri',
       narrative:
-          'Madam Vania berhasil mengekspor seluruh kopi ke luar negeri sebelum kamu sempat menyegelnya. Petani tua itu meratapi panen setahun yang hilang tanpa kompensasi.',
-      epilogue: 'Rasa pahit ini bukan dari kafein, tapi dari kegagalan menyelamatkan keringat petani.',
-      badgeName: 'Biji Tercecer 💔',
+          'Ki Joyo berhasil membawa lari kaldu dan menjualnya ke pabrik bumbu instan palsu. Warung soto batok kehilangan ciri khas rasa bening segarnya selamanya.',
+      epilogue: 'Penyelidikanmu di Kalasan berakhir dengan kegagalan pahit.',
+      badgeName: 'Batok Pecah 💔',
       rewardPoints: 0,
     ),
   ),
 
   // =========================================================================
-  // KASUS 4: SATE KLATHAK IMOGIRI
+  // LEVEL 4: MANGUT LELE (Mbah Marto Sewon Bantul) - PEMULA
   // =========================================================================
   const DetectiveCase(
     level: 4,
+    id: 'case_mangut_lele',
+    title: 'Hilangnya Kayu Asap Klampok Sewon',
+    subtitle: 'Pencurian kayu bakar langka dan pemalsuan aroma asap mangut lele legendaris',
+    location: 'Dusun Ngenep, Sewon, Bantul',
+    targetRestaurant: 'Mangut Lele Mbah Marto',
+    suspectName: 'Darmo "Tengkulak Asap Palsu"',
+    difficulty: CaseDifficulty.pemula,
+    baseReward: 450,
+    iconEmoji: '🐟',
+    synopsis:
+        'Aroma asap lele pawon Mbah Marto yang legendaris berasal dari kayu bakar pohon klampok tua berumur puluhan tahun. Semalam, seluruh pasokan kayu klampok hilang dan diganti kayu pinus beraroma terpentin yang membuat lele berbau cat minyak.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Pemeriksaan Pawon Asap Bantul',
+        location: 'Dapur Pawon Berasap Mbah Marto - Pukul 04.30 WIB',
+        narrative:
+            'Di dapur pawon tradisional berdinding gedek bambu, deretan lele asap yang digantung di atas tungku berbau sengak aneh. Asap yang mengepul berwarna putih pekat membuat mata perih tak tertahankan.',
+        speakerName: 'Mbah Marto',
+        speakerRole: 'Legenda Mangut Lele',
+        speakerAvatar: '👵',
+        choices: [
+          SceneChoice(
+            text: 'Periksa sisa pembakaran kayu di bawah tungku asap',
+            actionDetail: 'Mengidentifikasi jenis kayu penentu aroma mangut',
+            feedback:
+                'Analisis tepat! Kayu di tungku ternyata kayu pinus bergetah damar tinggi yang sengaja dimasukkan agar lele tercemar aroma terpentin kimia!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_kayu_pinus',
+              title: 'Gelondongan Kayu Pinus Kimia',
+              description: 'Kayu beraroma terpentin yang sengaja ditukar dengan kayu klampok asli.',
+              icon: Icons.forest_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Makan lele yang masih mengepul bau minyak cat',
+            actionDetail: 'Mencicipi ikan yang terpapar asap damar',
+            feedback:
+                'Kamu mual parah karena uap getah pinus! Kamu terbatuk hebat dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penyergapan di Pinggir Sungai Opak',
+        location: 'Pabrik Penggergajian Kayu Liar Sewon - Pukul 07.00 WIB',
+        narrative:
+            'Di tepi Sungai Opak, sebuah truk bak tertutup sedang memuat gelondongan kayu klampok tua berurat merah khas Bantul. Darmo terlihat sedang bernegosiasi dengan calo restoran modern.',
+        speakerName: 'Darmo',
+        speakerRole: 'Tengkulak Kayu Ilegal',
+        speakerAvatar: '🤠',
+        choices: [
+          SceneChoice(
+            text: 'Cocokkan tanda kapur nomor seri kayu klampok milik Mbah Marto',
+            actionDetail: 'Membuktikan kepemilikan kayu tebangan sah Sewon',
+            feedback:
+                'Bukti mutlak! Tanda kapur Mbah Marto tertera jelas di ujung gelondongan kayu beraroma manis buah ini!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_tanda_kapur',
+              title: 'Segel Kapur Kayu Klampok',
+              description: 'Bukti fisik kepemilikan kayu asap asli Mbah Marto yang hendak diselundupkan.',
+              icon: Icons.verified_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Lempar batu ke kaca truk untuk menghentikan sopir',
+            actionDetail: 'Tindakan destruktif tanpa rencana',
+            feedback:
+                'Batu memantul mengenai kepalamu sendiri! Sopir panik dan kamu terluka 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Hentikan Truk Darmo',
+        location: 'Jembatan Gantung Sewon Bantul - Pukul 08.00 WIB',
+        narrative:
+            'Truk Darmo terhenti di depan palang jembatan gantung. Darmo turun dengan kapak pemotong kayu di genggamannya.',
+        speakerName: 'Darmo',
+        speakerRole: 'Tengkulak Asap Palsu',
+        speakerAvatar: '🤠',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Darmo "Tengkulak Asap Palsu"',
+          role: 'Pencuri Kayu Klampok',
+          avatar: '🤠',
+          quote: 'Kayu klampok ini harganya sepuluh kali lipat di restoran kota! Orang tua di Ngenep itu tak pantas memakai kayu semahal ini!',
+          maxHp: 100,
+          weakPoints: ['Segel Kapur Kayu Klampok', 'Serat Pinus Kimia'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tunjukkan sampel getah pinus beracun dan ancaman pidana perusakan pangan!',
+            actionDetail: 'Membentangkan pasal pidana peracunan makanan tradisional',
+            feedback:
+                'CRITICAL DAMAGE! Darmo pucat pasi mendengar ancaman hukuman penjara 15 tahun atas pencemaran pangan!',
+            isCorrect: true,
+            bossDamage: 60,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Coba rebut kapak dari tangannya secara gegabah',
+            actionDetail: 'Menyerang tangan pelaku bersenjata tajam',
+            feedback:
+                'Gagang kapak menghantam bahumu! Kamu terpental dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'REBUT KUNCI KONTAK TRUK PENCURI',
+        location: 'Jembatan Gantung Sewon - Pukul 08.15 WIB',
+        narrative:
+            'Darmo mencoba melompat ke kursi kemudi untuk menabrak palang jembatan!',
+        speakerName: 'Darmo',
+        speakerRole: 'Tersangka Nekat',
+        speakerAvatar: '🤠',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Darmo',
+          role: 'Buronan Kabur',
+          avatar: '🤠',
+          quote: 'Minggir atau kutabrak kau detektif!',
+          maxHp: 40,
+          weakPoints: ['Kunci Kontak Truk'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tarik rem tangan dari jendela kabin dan cabut kunci kontak truk!',
+            actionDetail: 'Melumpuhkan armada pengangkut kayu curian',
+            feedback:
+                'KNOCKOUT! Truk mogok seketika, polisi Polsek Sewon datang mengepung, dan Darmo menyerah pasrah!',
+            isCorrect: true,
+            bossDamage: 50,
+          ),
+          SceneChoice(
+            text: 'Berdiri mematung di depan bumper truk',
+            actionDetail: 'Menahan truk berat dengan tubuh',
+            feedback:
+                'Kamu hampir tertabrak dan harus melompat ke semak-semak! Penuh luka!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Wangi Asap Klampok Pawon Sewon Abadi',
+      narrative:
+          'Seluruh muatan kayu klampok dikembalikan ke pawon Mbah Marto. Tungku kembali membara dengan asap harum manis khas kayu buah langka.\n\nLele asap berkuah santan cabai rawit pedas medok kembali tersaji sempurna untuk para pemburu kuliner nusantara. Mbah Marto menyajikan sepiring mangut lele terlezat untuk sarapan sang Detektif!',
+      epilogue: 'Warisan pawon tradisional Ngenep tetap terjaga berkat ketelitianmu.',
+      badgeName: 'Penjaga Asap Sewon 🐟',
+      rewardPoints: 450,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Padamnya Asap Mbah Marto',
+      narrative:
+          'Kayu klampok berhasil diselundupkan ke luar kota dan pawon Mbah Marto terpaksa ditutup karena tidak ada lagi kayu bakar beraroma khas.',
+      epilogue: 'Salah satu pusaka rasa paling ikonik di Bantul terancam punah.',
+      badgeName: 'Asap Hilang 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 5: SATE KLATHAK (Pak Pong Jejeran Imogiri) - MENENGAH [CHECKPOINT 1]
+  // =========================================================================
+  const DetectiveCase(
+    level: 5,
     id: 'case_sate_klathak',
     title: 'Hilangnya Jeruji Pusaka Sate Klathak',
     subtitle: 'Konspirasi pencurian tusuk besi sepeda ontel kuno sebelum festival akbar sate Jejeran',
     location: 'Sentra Sate Klathak Jejeran, Imogiri, Bantul',
     targetRestaurant: 'Sate Klathak Pak Pong',
-    suspectName: 'Ki Ageng Bismo "Kolektor Pusaka"',
-    difficulty: CaseDifficulty.sulit,
+    suspectName: 'Ki Ageng Bismo "Kolektor Pusaka Logam"',
+    difficulty: CaseDifficulty.menengah,
     baseReward: 550,
     iconEmoji: '🍢',
     synopsis:
-        'Jeruji besi sepeda ontel kuno peninggalan era kolonial milik juru bakar sate legendaris dicuri dari kotak brankas dapur. Tanpa jeruji besi berkonduksi panas tinggi ini, daging kambing muda tidak akan matang merata hingga ke bagian dalam.',
+        'Jeruji besi sepeda ontel kuno peninggalan era kolonial milik juru bakar sate legendaris dicuri dari brankas dapur. Tanpa jeruji besi berkonduksi panas tinggi ini, daging kambing muda tidak akan matang merata hingga ke bagian dalam.',
     scenes: [
       CaseScene(
         id: 'scene_1',
@@ -701,16 +791,16 @@ final List<DetectiveCase> kDetectiveCases = [
             foundClue: CaseClue(
               id: 'clue_minyak_keris',
               title: 'Residu Minyak Keris Pusaka',
-              description: 'Aroma minyak cendana pembersih pusaka menempel di engsel kotak.',
-              icon: Icons.auto_fix_high_rounded,
+              description: 'Minyak cendana wangi yang biasa dipakai merawat tosan aji kuno.',
+              icon: Icons.colorize_rounded,
             ),
             nextSceneId: 'scene_2',
           ),
           SceneChoice(
-            text: 'Ganti semua tusuk dengan tusukan bambu biasa',
-            actionDetail: 'Mencoba jalan pintas tanpa mencari pencuri',
+            text: 'Tuduh juru potong daging kambing mencuri jeruji besi',
+            actionDetail: 'Menuduh pekerja setia tanpa bukti sidik jari',
             feedback:
-                'Daging kambing bagian dalam tetap mentah berdarah saat dibakar! Pelanggan kecewa dan reputasi sate klathak tercoreng!',
+                'Tuduhan keliru membuat juru potong mogok kerja dan suasana dapur ricuh! Kamu kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
             nextSceneId: 'scene_2',
@@ -719,148 +809,33 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_2',
-        title: 'Penggerebekan Padepokan Barang Antik Imogiri',
-        location: 'Pendopo Antik Ki Ageng Bismo - Pukul 22.00 WIB',
+        title: 'Pelacakan ke Pasar Antik Klithikan',
+        location: 'Pasar Barang Antik Kasihan - Pukul 20.30 WIB',
         narrative:
-            'Di lereng bukit Imogiri, sebuah pendopo dipenuhi gamelan tua dan keris kuno. Di tengah ruangan, jeruji sepeda ontel Jejeran diletakkan di atas kain beludru merah!',
-        speakerName: 'Ki Ageng Bismo',
-        speakerRole: 'Kolektor Pusaka Antik (Boss)',
-        speakerAvatar: '🧙',
-        isBossFight: true,
-        boss: BossConfrontation(
-          name: 'Ki Ageng Bismo',
-          role: 'Kolektor Eksentrik',
-          avatar: '🧙',
-          quote:
-              'Besi ini bukan sekadar alat membakar daging, Detektif! Besi sepeda ontel 1920 ini mengandung daya konduksi magis yang harus kujadikan pusaka pribadiku!',
-          maxHp: 100,
-          weakPoints: ['Minyak Keris', 'Filosofi Fisika Kuliner'],
-        ),
-        choices: [
-          SceneChoice(
-            text: 'Jelaskan bahwa keajaiban besi itu adalah ilmu fisika konduksi panas, bukan klenik pusaka!',
-            actionDetail: 'Membongkar mitos dengan penjelasan sains kuliner yang logis',
-            feedback:
-                'ARGUMEN CERDAS! Ki Ageng terhenyak saat kamu mendemonstrasikan rumus distribusi panas besi pada serat daging!',
-            isCorrect: true,
-            bossDamage: 50,
-            nextSceneId: 'scene_boss_2',
-          ),
-          SceneChoice(
-            text: 'Rebut kain beludru sambil menendang meja dupa',
-            actionDetail: 'Menyerang tanpa strategi',
-            feedback:
-                'Ki Ageng melempar bubuk kemenyan ke matamu! Kamu terbatuk-batuk hebat di ruangan tertutup!',
-            isCorrect: false,
-            losesLife: true,
-            bossDamage: 0,
-            nextSceneId: 'scene_boss_2',
-          ),
-        ],
-      ),
-      CaseScene(
-        id: 'scene_boss_2',
-        title: 'PENGEMBALIAN BESI JEJERAN',
-        location: 'Pendopo Imogiri',
-        narrative:
-            'Ki Ageng Bismo terpojok memegangi bilah jeruji besi yang mulai bergetar karena kamu menyalakan bara batok kelapa di sampingnya.',
-        speakerName: 'Ki Ageng Bismo',
-        speakerRole: 'Kolektor Terdesak',
-        speakerAvatar: '🧙',
-        isBossFight: true,
-        boss: BossConfrontation(
-          name: 'Ki Ageng Bismo',
-          role: 'Boss',
-          avatar: '🧙',
-          quote: 'Jangan biarkan besi bersejarah ini hanya dipakai untuk menusuk sate...',
-          maxHp: 50,
-          weakPoints: ['Filosofi Rasa Rakyat'],
-        ),
-        choices: [
-          SceneChoice(
-            text: 'Katakan bahwa kehormatan tertinggi sebuah alat adalah memberi makan rakyat dengan nikmat!',
-            actionDetail: 'Menyentuh nurani terdalam sang kolektor',
-            feedback:
-                'SKAKMAT TELAK! Air mata menetes di pipi Ki Ageng. Dia menyerahkan seluruh jeruji besi sambil membungkuk hormat.',
-            isCorrect: true,
-            bossDamage: 60,
-          ),
-          SceneChoice(
-            text: 'Borgol dia dan seret ke pasar kambing',
-            actionDetail: 'Tindakan kasar berlebihan',
-            feedback:
-                'Pengikut padepokan menahanmu dan situasi menjadi ricuh tak terkendali!',
-            isCorrect: false,
-            losesLife: true,
-            bossDamage: 10,
-          ),
-        ],
-      ),
-    ],
-    goodEnding: CaseEnding(
-      title: 'KASUS TERPECAHKAN: Nyala Gurih Klathak Jejeran',
-      narrative:
-          'Seluruh 100 bilah jeruji besi sepeda ontel dikembalikan tepat saat festival dibuka. Asap putih harum rempah garam gurih membubung ke langit malam Imogiri.\n\nDaging kambing matang sempurna hingga ke urat terdalam berkat konduksi besi legendaris. Kamu dianugerahi porsi kehormatan Sate Klathak Juara!',
-      epilogue: 'Kamu menguasai sains dan filosofi kuliner dan dinobatkan sebagai Detektif Senior!',
-      badgeName: 'Penjaga Jeruji Jejeran 🍢',
-      rewardPoints: 600,
-    ),
-    badEnding: CaseEnding(
-      title: 'PENYELIDIKAN GAGAL: Hilangnya Cita Rasa Otentik',
-      narrative:
-          'Ki Ageng menyembunyikan jeruji besi ke dalam gua karst Imogiri. Festival sate terpaksa menggunakan tusuk bambu biasa, dan sensasi matang sempurna sate klathak hilang ditelan zaman.',
-      epilogue: 'Sebuah tradisi tak ternilai runtuh di bawah pengawasanmu.',
-      badgeName: 'Besi Berkarat 💔',
-      rewardPoints: 0,
-    ),
-  ),
-
-  // =========================================================================
-  // KASUS 5: PERJAMUAN KERATON
-  // =========================================================================
-  const DetectiveCase(
-    level: 5,
-    id: 'case_keraton',
-    title: 'Racun di Piring Perjamuan Ningrat',
-    subtitle: 'Konspirasi meracuni hidangan Bistik Jawa Sri Sultan menjelang gala diplomatik',
-    location: 'Bangsal Kencana Keraton & Resto Bale Raos',
-    targetRestaurant: 'Bale Raos Keraton',
-    suspectName: 'Gustave Laurent "Kritikus Angkuh"',
-    difficulty: CaseDifficulty.sulit,
-    baseReward: 700,
-    iconEmoji: '👑',
-    synopsis:
-        'Beberapa jam sebelum jamuan makan malam bersama Duta Besar UNESCO, saus bistik kesukaan Sultan terindikasi dicemari zat kimia pewarna tekstil berbahaya. Seorang kritikus kuliner Eropa berambisi menghancurkan nominasi kuliner Nusantara.',
-    scenes: [
-      CaseScene(
-        id: 'scene_1',
-        title: 'Inspeksi Meja Saji Bangsal Magangan',
-        location: 'Dapur Ageng Keraton - Pukul 17.00 WIB',
-        narrative:
-            'Piring perak bertatah lambang Praja Cihna tersusun rapi. Saus bistik cokelat kemilau mengeluarkan bau kimia asam tembaga yang samar di bawah aroma pala dan cengkeh.',
-        speakerName: 'Abdi Dalem Dapur',
-        speakerRole: 'Penata Hidangan Keraton',
+            'Di antara tumpukan sepeda Gazelle dan lampu dokar tua, seorang pedagang tosan aji menunjuk ke arah padepokan Ki Ageng Bismo di bukit Imogiri.',
+        speakerName: 'Pedagang Antik',
+        speakerRole: 'Informan Pasar',
         speakerAvatar: '🧓',
         choices: [
           SceneChoice(
-            text: 'Teteskan perasan jeruk nipis dan garam pada sampel saus bistik',
-            actionDetail: 'Reaksi kimia alami untuk menguji pewarna tekstil sintetis',
+            text: 'Beli informasi dengan menunjukkan lencana detektif dan foto residu minyak keris',
+            actionDetail: 'Mengonfirmasi pesanan jeruji besi sepeda kuno berkadar nikel tinggi',
             feedback:
-                'Reaksi instan! Saus berubah warna menjadi hijau lumut neon! Terbukti ada zat pewarna tekstil beracun yang sengaja dicampurkan!',
+                'Informasi sahih! Ki Bismo memesan jeruji besi ontel kuno untuk ditempa menjadi keris mistis pesanan konglomerat!',
             isCorrect: true,
             foundClue: CaseClue(
-              id: 'clue_uji_nipis',
-              title: 'Reaksi Uji Asam Pewarna Tekstil',
-              description: 'Bukti racun pewarna kimia berbahaya pada saus bistik kerajaan.',
-              icon: Icons.colorize_rounded,
+              id: 'clue_nota_klithikan',
+              title: 'Catatan Pesanan Penempa Keris',
+              description: 'Bukti transaksi Ki Bismo yang membutuhkan jeruji besi era 1940-an milik Pak Pong.',
+              icon: Icons.history_edu_rounded,
             ),
             nextSceneId: 'scene_boss',
           ),
           SceneChoice(
-            text: 'Sajikan saus tersebut ke tamu untuk melihat reaksinya',
-            actionDetail: 'Tindakan membahayakan nyawa tamu negara',
+            text: 'Menggeledah kios pedagang secara paksa',
+            actionDetail: 'Tindakan kasar di pasar rakyat',
             feedback:
-                'BENCANA BESAR! Duta besar bisa keracunan dan memicu insiden diplomatik! Kehormatanmu sebagai detektif hancur seketika!',
+                'Warga pasar melemparimu dengan botol bekas! Kamu diusir dan kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
             nextSceneId: 'scene_boss',
@@ -869,38 +844,37 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss',
-        title: 'KONFRONTASI BOS: Gustave Laurent',
-        location: 'Bale Raos VIP Dining Room - Pukul 19.30 WIB',
+        title: 'KONFRONTASI: Padepokan Besi Ki Bismo',
+        location: 'Padepokan Tosan Aji Bukit Imogiri - Pukul 22.00 WIB',
         narrative:
-            'Gustave Laurent duduk dengan setelan jas tuksedo sambil memegang pena emas. Dia siap menulis artikel penghancur reputasi kuliner keraton.',
-        speakerName: 'Gustave Laurent',
-        speakerRole: 'Kritikus Kuliner Internasional (Boss)',
-        speakerAvatar: '🧐',
+            'Di ruang perapian tempa berhawa panas, Ki Ageng Bismo sedang bersiap memasukkan bilah-bilah jeruji sepeda milik Pak Pong ke dalam tungku peleburan logam!',
+        speakerName: 'Ki Ageng Bismo',
+        speakerRole: 'Kolektor Pusaka Ambisius',
+        speakerAvatar: '🧙',
         isBossFight: true,
         boss: BossConfrontation(
-          name: 'Gustave Laurent',
-          role: 'Kritikus Arogan',
-          avatar: '🧐',
-          quote:
-              'Hidangan kerajaan ini barbar dan berbahaya! Lihat saja sausnya, bahkan standar kebersihannya tidak layak untuk pakan ternak di Paris!',
-          maxHp: 100,
-          weakPoints: ['Reaksi Kimia Uji Nipis', 'Botol Pewarna di Saku Jas'],
+          name: 'Ki Ageng Bismo',
+          role: 'Pencuri Jeruji Pusaka',
+          avatar: '🧙',
+          quote: 'Jeruji besi tua ini mengandung nikel murni Belanda! Lebih berharga kujadikan pusaka daripada hanya menusuk daging kambing!',
+          maxHp: 110,
+          weakPoints: ['Catatan Pesanan Klithikan', 'Minyak Keris Cendana'],
         ),
         choices: [
           SceneChoice(
-            text: 'Tunjukkan hasil uji kimia dan ungkap botol pewarna yang ia sembunyikan di saku jasnya!',
-            actionDetail: 'Membongkar bukti sabotase langsung di depan dewan juri kehormatan',
+            text: 'Siram air suci ke arang tempa dan bentangkan surat perintah penyitaan cagar budaya!',
+            actionDetail: 'Mencegah peleburan logam pusaka bersejarah',
             feedback:
-                'HANTAMAN EMAS! Gustave terperanjat saat kamu mengeluarkan botol pewarna kimia dari tas laptop miliknya!',
+                'SERANGAN CRITICAL! Tungku padam berasap dan Ki Bismo gemetar melihat pasal perusakan benda cagar budaya!',
             isCorrect: true,
             bossDamage: 60,
             nextSceneId: 'scene_boss_2',
           ),
           SceneChoice(
-            text: 'Kritik gaya berpakaian jas tuksedo miliknya yang kuno',
-            actionDetail: 'Menyerang penampilan fisik tersangka',
+            text: 'Pegang bilah jeruji besi yang baru dipanaskan dengan tangan telanjang',
+            actionDetail: 'Menyentuh logam bersuhu ratusan derajat',
             feedback:
-                'Gustave tertawa dingin: "Debat murahan dari orang tanpa argumen." Dia terus menulis fitnah di catatannya!',
+                'Telapak tanganmu melepuh terbakar! Sakit tak tertahankan dan kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
@@ -910,36 +884,36 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss_2',
-        title: 'PEMBERSIHAN NAMA BESAR KERATON',
-        location: 'Bale Raos',
+        title: 'REBUT KANTONG JERUJI KUNO',
+        location: 'Padepokan Tosan Aji - Pukul 22.20 WIB',
         narrative:
-            'Para duta besar mulai memasuki ruangan jamuan. Waktu tersisa tinggal 5 menit!',
-        speakerName: 'Gustave Laurent',
-        speakerRole: 'Boss Terdesak',
-        speakerAvatar: '😨',
+            'Ki Bismo meraih tongkat besi untuk memukulmu dan mempertahankan tas jeruji curiannya!',
+        speakerName: 'Ki Ageng Bismo',
+        speakerRole: 'Dalang Terdesak',
+        speakerAvatar: '🧙',
         isBossFight: true,
         boss: BossConfrontation(
-          name: 'Gustave Laurent',
-          role: 'Boss',
-          avatar: '😨',
-          quote: 'Jangan sentuh aku! Kalian tidak punya hak menggeledah kritikus ternama sepertiku!',
-          maxHp: 40,
-          weakPoints: ['Surat Tugas Dewan Kehormatan'],
+          name: 'Ki Ageng Bismo',
+          role: 'Boss Terpojok',
+          avatar: '🧙',
+          quote: 'Koleksiku tidak boleh gagal diselesaikan!',
+          maxHp: 50,
+          weakPoints: ['Tongkat Besi'],
         ),
         choices: [
           SceneChoice(
-            text: 'Tunjukkan surat tugas Biro Investigasi dan rekaman CCTV ia memasuki dapur tanpa izin!',
-            actionDetail: 'Bukti rekaman CCTV yang mengunci status tersangkanya',
+            text: 'Tangkis dengan perisai investigasi dan tendang tas jeruji ke tangan polisi!',
+            actionDetail: 'Melumpuhkan serangan senjata tumpul Ki Bismo',
             feedback:
-                'KEMENANGAN MUTLAK! Gustave terduduk lemas di kursinya. Paspampres langsung mengamankannya keluar dari bangsal jamuan!',
+                'FINISH! Ki Bismo terjatuh ke lantai tempa, seluruh 100 bilah jeruji besi ontel terselamatkan!',
             isCorrect: true,
-            bossDamage: 50,
+            bossDamage: 60,
           ),
           SceneChoice(
-            text: 'Batalkan seluruh jamuan makan malam secara sepihak',
-            actionDetail: 'Menyerah pada kepanikan',
+            text: 'Mundur menghindar keluar pintu tanpa menyelamatkan tas jeruji',
+            actionDetail: 'Kabur meninggalkan barang bukti utama',
             feedback:
-                'Keraton mengalami kerugian besar dan rasa malu internasional!',
+                'Ki Bismo sempat menendang tas itu ke sumur galian! Pencarian jadi makin sulit!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
@@ -948,69 +922,104 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
     ],
     goodEnding: CaseEnding(
-      title: 'KASUS TERPECAHKAN: Kejayaan Jamuan Rasa Ningrat',
+      title: 'CHECKPOINT 1 TERCAPAI: Jeruji Besi Jejeran Terselamatkan',
       narrative:
-          'Dapur Ageng berhasil menyiapkan bistik Jawa pengganti dengan kuah semur rempah pala asli dan kentang butter gurih. Seluruh duta besar memberikan tepuk tangan meriah dan memuji hidangan keraton sebagai puncak cita rasa harmoni Timur-Barat.\n\nSri Sultan menganugerahkan Samir Kehormatan Keraton dan mengangkatmu sebagai Inspektur Cita Rasa Kerajaan!',
-      epilogue: 'Reputasi internasional kuliner Nusantara terselamatkan dengan gemilang!',
-      badgeName: 'Bintang Jasa Keraton 👑',
-      rewardPoints: 800,
+          '100 bilah jeruji ontel kuno kembali ke panggangan Pak Pong. Daging kambing muda dipanggang di atas bara batok kelapa dengan taburan garam gurih merata.\n\nFestival Sate Klathak Imogiri berlangsung meriah luar biasa. Pak Pong menyematkan Pin Kehormatan Jeruji Perak di dadamu! Kamu berhasil mencapai CHECKPOINT 1 KAMPANYE DETEKTIF!',
+      epilogue: 'Progres permainanmu tersimpan aman di Checkpoint Level 5.',
+      badgeName: 'Ksatria Jeruji Klathak 🍢 [CHECKPOINT 1]',
+      rewardPoints: 600,
     ),
     badEnding: CaseEnding(
-      title: 'PENYELIDIKAN GAGAL: Tragedi Diplomatik Meja Makan',
+      title: 'PENYELIDIKAN GAGAL: Jeruji Besi Melebur Menjadi Keris',
       narrative:
-          'Zat pewarna tekstil terlanjur masuk ke hidangan utama. Acara makan malam dibatalkan di tengah skandal besar, dan delegasi asing melayangkan protes keras.',
-      epilogue: 'Kamu diberhentikan dengan tidak hormat dari penugasan kerajaan.',
-      badgeName: 'Mahkota Retak 💔',
+          'Kamu gagal mencegah peleburan logam. Jeruji legendaris Pak Pong lenyap menjadi lelehan besi, membuat sate klathak Jejeran kehilangan metode memasak otentiknya.',
+      epilogue: 'Kamu harus memulai kembali penyelidikan dari awal kasus.',
+      badgeName: 'Besi Hangus 💔',
       rewardPoints: 0,
     ),
   ),
 
   // =========================================================================
-  // KASUS 6: GRAND FINALE - SINDIKAT TOPENG GARAM
+  // LEVEL 6: BAKMI MBAH GITO (Kotagede) - MENENGAH
   // =========================================================================
   const DetectiveCase(
     level: 6,
-    id: 'case_topeng_garam',
-    title: 'Konspirasi Sindikat Topeng Garam',
-    subtitle: 'Penggerebekan markas rahasia pemalsu rempah pusaka Nusantara di Gua Bawah Tanah Pantai Selatan',
-    location: 'Labirin Gua Bawah Tanah Parangtritis',
-    targetRestaurant: 'Kawasan Kuliner Pesisir Pantai Selatan',
-    suspectName: 'The Grand Mastermind "Si Topeng Garam"',
-    difficulty: CaseDifficulty.master,
-    baseReward: 1000,
-    iconEmoji: '🎭',
+    id: 'case_bakmi_mbah_gito',
+    title: 'Teror Tungku Arang Anglo Kotagede',
+    subtitle: 'Sabotase telur bebek busuk dan zat pemadam bara di kedai kayu legendaris',
+    location: 'Kotagede, Yogyakarta',
+    targetRestaurant: 'Bakmi Jawa Mbah Gito',
+    suspectName: 'Mas Bowo "Si Lidah Instan"',
+    difficulty: CaseDifficulty.menengah,
+    baseReward: 600,
+    iconEmoji: '🍜',
     synopsis:
-        'Sindikat rahasia pimpinan "Topeng Garam" telah menculik 5 koki legendaris DIY-Jateng untuk memeras resep pusaka dan memonopoli bumbu sintesis di ribuan gerai kuliner. Kamu memimpin operasi penggerebekan pamungkas!',
+        'Suasana kedai kayu etnik Mbah Gito mendadak ricuh saat puluhan porsi bakmi godhog mengeluarkan aroma belerang telur busuk. Padahal ratusan pelanggan sedang mengantre santap malam. Dalang di balik ini ingin memaksakan produk mie instan kemasan pabrik miliknya.',
     scenes: [
       CaseScene(
         id: 'scene_1',
-        title: 'Mengurai Kode Rahasia Bumbu 5 Elemen',
-        location: 'Pintu Gerbang Gua Karst Parangtritis - Pukul 02.00 WIB',
+        title: 'Investigasi Dapur Tungku Anglo Kotagede',
+        location: 'Dapur Anglo Kayu Mbah Gito - Pukul 19.30 WIB',
         narrative:
-            'Di depan gerbang batu gua tersembunyi, terdapat 5 mangkuk batu berisi bumbu uji coba: Asin, Manis, Pedas, Asam, dan Umami. Pintu gerbang hanya terbuka jika urutan keseimbangan rasa tradisional Jawa disusun benar.',
+            'Di tengah hiruk pikuk pesanan bakmi nyemek dan godhog, koki utama menghentikan wajan. Telur bebek yang baru dipecahkan ke dalam kaldu berbusa hijau dan berbau busuk menusuk hidung.',
+        speakerName: 'Mbah Gito',
+        speakerRole: 'Maestro Bakmi Jawa',
+        speakerAvatar: '👴',
+        choices: [
+          SceneChoice(
+            text: 'Periksa peti penyimpanan telur bebek di rak dapur belakang',
+            actionDetail: 'Mengecek bekas suntikan bahan kimia pada cangkang telur',
+            feedback:
+                'Ditemukan lubang jarum suntik mikro pada cangkang telur bebek! Seseorang sengaja menyuntikkan larutan amonia pembusuk telur!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_suntikan_amonia',
+              title: 'Cangkang Telur Bersuntik Amonia',
+              description: 'Bukti sabotase kimia jarum mikro pada pasokan telur bebek Mbah Gito.',
+              icon: Icons.egg_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Tuduh peternak bebek lokal membawa telur busuk secara sengaja',
+            actionDetail: 'Menuduh mitra peternak tanpa memeriksa cangkang telur',
+            feedback:
+                'Peternak membuktikan telur yang dikirim pagi tadi bersertifikat segar! Kamu dipermalukan dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penggerebekan Mobil Distributor Mie Instan',
+        location: 'Parkiran Lorong Perak Kotagede - Pukul 20.45 WIB',
+        narrative:
+            'Di dekat deretan bengkel kerajinan perak Kotagede, sebuah mobil van hitam terparkir. Mas Bowo, sales agresif perusahaan mie instan instan, sedang membagikan brosur "Ganti Bakmi Anglo dengan Mie Cepat Saji".',
         speakerName: 'Detektif (Kamu)',
-        speakerRole: 'Memecahkan Sandi',
+        speakerRole: 'Mengintai',
         speakerAvatar: '🕵️',
         choices: [
           SceneChoice(
-            text: 'Susun urutan harmoni: Manis (Gula Aren) -> Asin (Garam Kusamba) -> Gurih (Kemiri) -> Asam (Kluwek) -> Pedas (Cabai Jawa)',
-            actionDetail: 'Menerapkan filosofi kuliner Panca Rasa Jawa kuno',
+            text: 'Geledah bagian belakang mobil van Mas Bowo',
+            actionDetail: 'Mencari jarum suntik dan botol larutan amonia cair',
             feedback:
-                'GERBANG TERBUKA! Suara mekanisme batu bergeser berat. Filosofi keseimbangan rasa membuka pintu rahasia sindikat!',
+                'Bukti tak terbantahkan! Ditemukan spuit jarum medis 50ml dan cairan amonia pekat berbau sama dengan telur busuk!',
             isCorrect: true,
             foundClue: CaseClue(
-              id: 'clue_panca_rasa',
-              title: 'Harmoni Kunci Panca Rasa',
-              description: 'Formula seimbang 5 rasa dasar yang mematahkan sistem keamanan sindikat.',
-              icon: Icons.vpn_key_rounded,
+              id: 'clue_jarum_medis',
+              title: 'Spuit Jarum Medis Sabotase',
+              description: 'Alat kejahatan yang digunakan Mas Bowo untuk merusak telur dapur Mbah Gito.',
+              icon: Icons.medication_rounded,
             ),
             nextSceneId: 'scene_boss',
           ),
           SceneChoice(
-            text: 'Ledakkan gerbang batu dengan granat asap',
-            actionDetail: 'Tindakan gegabah merusak pintu gua',
+            text: 'Bakar brosur mie instan di depan wajah Mas Bowo',
+            actionDetail: 'Melakukan provokasi kekanak-kanakan',
             feedback:
-                'Langit-langit gua runtuh menjatuhkan stalaktit tajam! Bahumu terluka tertimpa pecahan batu!',
+                'Api menyambar jas detektifmu sendiri! Kamu kalang kabut memadamkan api dan kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
             nextSceneId: 'scene_boss',
@@ -1019,38 +1028,37 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss',
-        title: 'FINAL CLIMAX: Pertarungan Kontra Topeng Garam',
-        location: 'Aula Tengah Pabrik Rahasia Bawah Tanah - Pukul 03.00 WIB',
+        title: 'KONFRONTASI: Hadapi Mas Bowo di Depan Pelanggan',
+        location: 'Pintu Masuk Kedai Kayu Mbah Gito - Pukul 21.30 WIB',
         narrative:
-            'Di tengah aula raksasa beralaskan garam kristal, sosok berjubah hitam mengenakan Topeng Garam Keramik berdiri di atas podium tungku raksasa. Para koki legendaris terikat di belakangnya!',
-        speakerName: 'Topeng Garam',
-        speakerRole: 'The Mastermind (Final Boss)',
-        speakerAvatar: '🎭',
+            'Mas Bowo berdiri di depan ratusan pelanggan yang mengantre, berusaha menghasut mereka agar meninggalkan kedai Mbah Gito.',
+        speakerName: 'Mas Bowo',
+        speakerRole: 'Saboteur Mie Instan',
+        speakerAvatar: '👨‍💼',
         isBossFight: true,
         boss: BossConfrontation(
-          name: 'The Grand Mastermind "Topeng Garam"',
-          role: 'Penguasa Pasar Gelap Kuliner',
-          avatar: '🎭',
-          quote:
-              'Selamat datang, Detektif! Resep tradisional kalian terlalu lambat dan rumit. Dengan bumbu instan sintetisku, aku akan menguasai setiap lidah di Nusantara ini!',
-          maxHp: 100,
-          weakPoints: ['Kunci Panca Rasa', 'Kesaksian Para Maestro'],
+          name: 'Mas Bowo "Si Lidah Instan"',
+          role: 'Agen Sabotase Korporasi',
+          avatar: '👨‍💼',
+          quote: 'Lihat bapak ibu! Bakmi tradisional ini jorok dan bau busuk! Beralihlah ke mie kemasan kami yang steril dan cepat saji!',
+          maxHp: 110,
+          weakPoints: ['Spuit Jarum Medis', 'Cangkang Telur Amonia'],
         ),
         choices: [
           SceneChoice(
-            text: 'Ungkap bahwa bumbu kimianya merusak saraf lidah dan buktikan dengan formula Panca Rasa!',
-            actionDetail: 'Menyerang ideologi jahatnya dengan sains rasa autentik',
+            text: 'Angkat spuit jarum medis dan cangkang telur bersuntik di depan para pelanggan!',
+            actionDetail: 'Membongkar konspirasi busuk di depan publik secara terang benderang',
             feedback:
-                'HANTAMAN CRITICAL! Topeng Garam mundur terhuyung saat formula kimianya kamu buktikan berbahaya bagi kesehatan generasi masa depan!',
+                'CRITICAL DAMAGE! Ratusan pelanggan menyoraki Mas Bowo dengan murka! Alibi palsunya hancur berkeping-keping!',
             isCorrect: true,
-            bossDamage: 50,
+            bossDamage: 65,
             nextSceneId: 'scene_boss_2',
           ),
           SceneChoice(
-            text: 'Tawarkan kerja sama untuk membagi keuntungan 50:50',
-            actionDetail: 'Mencoba berkompromi dengan penjahat',
+            text: 'Ajak Mas Bowo makan semangkuk bakmi bersantan busuk',
+            actionDetail: 'Menantang makan racun sendiri tanpa bukti hukum',
             feedback:
-                'Topeng Garam tertawa sinis dan menyemprotkan uap mercon ke arahmu! Detektif sejati tidak pernah menjual integritas!',
+                'Mas Bowo menepis mangkuk itu ke arah kemejamu! Kotor dan memalukan!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
@@ -1060,36 +1068,1692 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
       CaseScene(
         id: 'scene_boss_2',
-        title: 'PECAHNYA TOPENG KEPALSUAN',
-        location: 'Podium Tungku Bawah Tanah',
+        title: 'BEKUK MAS BOWO DI LORONG KAYU',
+        location: 'Lorong Kayu Kedai Mbah Gito - Pukul 21.45 WIB',
         narrative:
-            'Topeng Garam meraih tuas peledak untuk menghancurkan seluruh gua beserta resep para maestro!',
+            'Mas Bowo berusaha melarikan diri ke arah motor matic-nya sambil melemparkan kardus mie instan!',
+        speakerName: 'Mas Bowo',
+        speakerRole: 'Pelaku Terpojok',
+        speakerAvatar: '😰',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Mas Bowo',
+          role: 'Tersangka Kabur',
+          avatar: '😰',
+          quote: 'Kalian tidak bisa menahanku! Perusahaanku punya pengacara hebat!',
+          maxHp: 45,
+          weakPoints: ['Kunci Motor'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tendang standar motor matic-nya dan kunci pergelangan tangannya ke tiang kayu jati!',
+            actionDetail: 'Melumpuhkan buronan di lorong etnik',
+            feedback:
+                'KNOCKOUT! Mas Bowo terbanting ke tumpukan kardus dan diserahkan ke Polsek Kotagede!',
+            isCorrect: true,
+            bossDamage: 55,
+          ),
+          SceneChoice(
+            text: 'Lemparkan sendok bebek ke arah helmnya',
+            actionDetail: 'Melempar alat makan secara sia-sia',
+            feedback:
+                'Sendok patah memantul dan Mas Bowo hampir lolos ke jalan raya!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Gurih Wangi Anglo Kotagede Menyala Lagi',
+      narrative:
+          'Dapur Mbah Gito dibersihkan dan pasokan telur bebek organik murni diantarkan langsung oleh kelompok tani binaan. Suara spatula menari di atas wajan baja beralas bara arang kembali bergemerincing merdu.\n\nPelanggan menikmati bakmi godhog kaldu kental gurih dengan senyum puas. Mbah Gito menghadiahkan Sendok Anglo Tembaga Kuno sebagai kenang-kenangan!',
+      epilogue: 'Keaslian rasa bakmi arang Kotagede terlindungi dari cengkeraman industri curang.',
+      badgeName: 'Penyelamat Anglo Kotagede 🍜',
+      rewardPoints: 600,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Padamnya Tungku Mbah Gito',
+      narrative:
+          'Berita telur busuk menjadi viral dan membuat kedai Mbah Gito sepi ditinggalkan pelanggan. Mas Bowo berhasil memonopoli pasokan mie di Kotagede.',
+      epilogue: 'Kamu gagal melindungi tradisi kuliner berusia puluhan tahun.',
+      badgeName: 'Mie Basi 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 7: OSENG MERCON (Bu Narti Kauman) - MENENGAH
+  // =========================================================================
+  const DetectiveCase(
+    level: 7,
+    id: 'case_oseng_mercon',
+    title: 'Formula Cabai Sintetis Peledak Kauman',
+    subtitle: 'Zat kimia kapsaisin murni ilegal yang melukai lidah pecinta kuliner malam',
+    location: 'Jl. KH. Ahmad Dahlan, Kauman, Yogyakarta',
+    targetRestaurant: 'Oseng Mercon Bu Narti',
+    suspectName: 'Nyai Gandari "Ratu Kimia Pedas"',
+    difficulty: CaseDifficulty.menengah,
+    baseReward: 650,
+    iconEmoji: '🌶️',
+    synopsis:
+        'Kelezatan oseng mercon koyor sapi Bu Narti mendadak disabotase dengan cairan ekstrak cabai kimia berbahaya berkekuatan 5 juta Scoville. Beberapa pelanggan mengalami luka lambung parah. Pelakunya ingin membuktikan bahwa kuliner pedas tradisional berbahaya.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Olah TKP Tenda Lesehan Bu Narti',
+        location: 'Lesehan Tenda Merah Kauman - Pukul 22.00 WIB',
+        narrative:
+            'Uap cabai merah mengepul pekat dari wajan raksasa. Namun aroma yang keluar bukan gurih rempah bawang merah dan koyor, melainkan uap asam belerang kimia yang menyengat paru-paru.',
+        speakerName: 'Bu Narti',
+        speakerRole: 'Perintis Oseng Mercon',
+        speakerAvatar: '👵',
+        choices: [
+          SceneChoice(
+            text: 'Ambil sampel kuah minyak kemerahan dengan pipet kaca detektif',
+            actionDetail: 'Menguji konsentrasi kapsaisin dan pelarut kimia sintetis',
+            feedback:
+                'Hasil uji spektrometri kimia positif! Ditemukan cairan pelarut etil alkohol dan bubuk ekstrak cabai murni non-pangan berkekuatan racun!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_kapsaisin_murni',
+              title: 'Ekstrak Kapsaisin 5 Juta SHU',
+              description: 'Bahan kimia pelarut ekstrak pedas mematikan yang tidak layak konsumsi.',
+              icon: Icons.science_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Hirup uap wajan sedalam-dalamnya untuk memastikan jenis cabainya',
+            actionDetail: 'Menghirup uap kimia konsentrasi tinggi',
+            feedback:
+                'Paru-parumu serasa terbakar! Kamu terbatuk darah dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penyelidikan Laboratorium Kosmetik Gelap',
+        location: 'Ruko Kosmetik Ilegal Wirobrajan - Pukul 23.45 WIB',
+        narrative:
+            'Jejak botol pelarut membawamu ke lantai dua ruko kosmetik gelap milik Nyai Gandari. Di atas meja terlihat puluhan botol bertuliskan "Bahan Kimia Peledak Lambung Bu Narti".',
+        speakerName: 'Detektif (Kamu)',
+        speakerRole: 'Menerobos',
+        speakerAvatar: '🕵️',
+        choices: [
+          SceneChoice(
+            text: 'Amankan buku formula dan sisa jeriken kapsaisin sintetis',
+            actionDetail: 'Mengumpulkan bukti materiil laboratorium ilegal',
+            feedback:
+                'Barang bukti sangat lengkap! Tertulis jelas rencana meracuni 5 warung mercon legendaris Jogja untuk menjual obat lambung buatannya sendiri!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_buku_formula',
+              title: 'Buku Formula Konspirasi Obat',
+              description: 'Rencana jahat meracuni warung mercon demi memonopoli penjualan obat maag racikan.',
+              icon: Icons.menu_book_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Hancurkan semua botol kaca di laboratorium secara membabi buta',
+            actionDetail: 'Merusak TKP tanpa mencatat barang bukti',
+            feedback:
+                'Pecahan kaca melukai tanganmu dan uap pedas menyebar di ruangan tertutup! Kamu terluka 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Bekuk Nyai Gandari di Ruko',
+        location: 'Ruang Produksi Ruko Wirobrajan - Pukul 00.30 WIB',
+        narrative:
+            'Nyai Gandari keluar dari ruang brankas sambil memegang botol semprotan cairan kapsaisin pekat!',
+        speakerName: 'Nyai Gandari',
+        speakerRole: 'Ratu Kimia Pedas',
+        speakerAvatar: '👩‍🔬',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Nyai Gandari "Ratu Kimia"',
+          role: 'Dalang Racun Pedas',
+          avatar: '👩‍🔬',
+          quote: 'Orang-orang bodoh itu rela antre berjam-jam demi mercon pedas! Biar lambung mereka robek dan mereka harus sujud membeli obat mujarabku!',
+          maxHp: 110,
+          weakPoints: ['Buku Formula Obat', 'Uji Kapsaisin 5 Juta SHU'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Bantah dengan Buku Formula Konspirasi dan segel resmi BPOM!',
+            actionDetail: 'Menunjukkan bukti konspirasi jahat penjualan obat palsu',
+            feedback:
+                'CRITICAL STRIKE! Nyai Gandari terkesiap melihat buku hariannya berada di tanganmu! Nyalinya ciut!',
+            isCorrect: true,
+            bossDamage: 60,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Maju menerjang tanpa mengenakan masker pelindung mata',
+            actionDetail: 'Menghadapi semprotan kimia tanpa pelindung',
+            feedback:
+                'Semprotan cabai mengenai wajahmu! Matamu perih luar biasa dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'LUMPUHKAN SEMPROTAN RACUN',
+        location: 'Ruang Produksi Ruko - Pukul 00.45 WIB',
+        narrative:
+            'Nyai Gandari panik dan bersiap melempar botol kapsaisin ke arah jendela agar menguap ke pemukiman warga!',
+        speakerName: 'Nyai Gandari',
+        speakerRole: 'Dalang Terdesak',
+        speakerAvatar: '👩‍🔬',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Nyai Gandari',
+          role: 'Boss Tersudut',
+          avatar: '👩‍🔬',
+          quote: 'Kalau aku hancur, satu kampung Kauman harus ikut terbakar matanya!',
+          maxHp: 50,
+          weakPoints: ['Botol Semprotan'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tembak botol itu dengan jaring detektif dan kunci kedua tangannya dengan borgol!',
+            actionDetail: 'Menyelamatkan keselamatan warga pemukiman dari gas cabai',
+            feedback:
+                'KNOCKOUT! Botol berhasil diamankan utuh, Nyai Gandari terborgol rapat dan dijebloskan ke tahanan!',
+            isCorrect: true,
+            bossDamage: 60,
+          ),
+          SceneChoice(
+            text: 'Tutup mata dan tiarap di lantai',
+            actionDetail: 'Menyerah pasrah di hadapan ancaman',
+            feedback:
+                'Botol pecah di dalam ruangan dan membuatmu sesak napas parah!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Ledakan Gurih Pedas Bu Narti Kembali Jaya',
+      narrative:
+          'Laboratorium ilegal disita negara. Bu Narti menanak kembali oseng mercon koyor sapi asli dengan cabai rawit merah segar pilihan dari petani lereng Merapi.\n\nTenda Kauman kembali dipadati ribuan pecinta kuliner dengan keringat nikmat dan senyum kepuasan. Bu Narti menghadiahkan Ulekan Batu Merapi Kehormatan untukmu!',
+      epilogue: 'Sensasi pedas otentik Nusantara terlindungi dari racun kimia komersial.',
+      badgeName: 'Penjinak Mercon Kauman 🌶️',
+      rewardPoints: 650,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Kabut Racun Menghanguskan Kauman',
+      narrative:
+          'Cairan kapsaisin meledak dan mencemari udara Kauman. Puluhan warga dilarikan ke rumah sakit dan kawasan kuliner malam terpaksa ditutup berminggu-minggu.',
+      epilogue: 'Kegagalan ini membekas luka bakar di reputasi biro investigasimu.',
+      badgeName: 'Mercon Meledak 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 8: BAKMI PAK PALE (Alun-Alun Utara) - MENENGAH
+  // =========================================================================
+  const DetectiveCase(
+    level: 8,
+    id: 'case_bakmi_pak_pale',
+    title: 'Sandera Juru Racik Nyemek Alun-Alun Utara',
+    subtitle: 'Penculikan koki rahasia dan ancaman pemusnahan bumbu kaldu bebek keraton',
+    location: 'Pelataran Alun-Alun Utara Kraton Yogyakarta',
+    targetRestaurant: 'Bakmi Jawa Pak Pale',
+    suspectName: 'Bos Viktor "Mafia Kuliner Malam"',
+    difficulty: CaseDifficulty.menengah,
+    baseReward: 700,
+    iconEmoji: '🍲',
+    synopsis:
+        'Pak Pale, juru masak bakmi nyemek paling legendaris di pojok Alun-alun Utara, diculik bersama buku catatan takaran kaldu bebek pusaka saat fajar usai berbelanja di pasar. Sindikat mafia malam menuntut tebusan berupa pengalihan hak merk dagang.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Olah TKP Gerobak Kosong Alun-Alun',
+        location: 'Sudut Alun-Alun Utara Kraton - Pukul 06.00 WIB',
+        narrative:
+            'Gerobak kayu hijau Pak Pale terparkir miring di bawah pohon beringin kembar. Bumbu kemiri ulek dan kecap asin tumpah di tanah berpasir alun-alun.',
+        speakerName: 'Mas Danu',
+        speakerRole: 'Asisten Gerobak',
+        speakerAvatar: '👦',
+        choices: [
+          SceneChoice(
+            text: 'Analisis jejak ban mobil van di pasir alun-alun dengan kompas geologi',
+            actionDetail: 'Menentukan rute pelarian penculik ke arah barat kota',
+            feedback:
+                'Jejak ban teridentifikasi mengarah ke kawasan pergudangan tua eks Pabrik Gula Madukismo!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_jejak_madukismo',
+              title: 'Jejak Pasir Pabrik Gula',
+              description: 'Partikel tebu kering dan aspal tua mengindikasikan lokasi penyanderaan di Madukismo.',
+              icon: Icons.tire_repair_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Tuduh pengamen jalanan yang tidur di dekat beringin',
+            actionDetail: 'Menuduh saksi tuna wisma tanpa alibi masuk akal',
+            feedback:
+                'Saksi tersebut justru melihat mobil van hitam berlogo elang! Kamu membuang waktu dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penyusupan ke Gudang Karung Madukismo',
+        location: 'Gudang Penggilingan Tebu Tua - Pukul 08.30 WIB',
+        narrative:
+            'Di dalam gudang berbau tetes tebu manis pekat, Pak Pale terikat di kursi kayu. Bos Viktor sedang memaksanya menandatangani akta penyerahan resep rahasia di bawah ancaman pisau.',
+        speakerName: 'Pak Pale',
+        speakerRole: 'Korban Sandera',
+        speakerAvatar: '👴',
+        choices: [
+          SceneChoice(
+            text: 'Lepaskan katup uap penggilingan tebu untuk membuat kabut pengalih perhatian',
+            actionDetail: 'Memanfaatkan instalasi uap pabrik tua untuk infiltrasi',
+            feedback:
+                'Taktik brilian! Ruangan dipenuhi uap tebal seketika, anak buah Viktor panik dan kamu berhasil memotong tali pengikat Pak Pale!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_akta_palsu',
+              title: 'Akta Perampasan Resep Fiktif',
+              description: 'Dokumen perjanjian paksa yang hendak dipakai Bos Viktor untuk menguasai merk Pak Pale.',
+              icon: Icons.description_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Langsung dobrak pintu depan sambil berteriak nama polisi',
+            actionDetail: 'Menyerbu tanpa perlindungan di sarang bersenjata',
+            feedback:
+                'Anak buah Viktor melempar karung gula seberat 50kg ke arahmu! Kamu tertimpa dan terluka 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Hancurkan Bos Viktor',
+        location: 'Ruang Mesin Pabrik Gula Tua - Pukul 09.15 WIB',
+        narrative:
+            'Bos Viktor mencabut pistol revolver dan mengarahkannya ke arahmu sambil menggenggam buku catatan resep kaldu bebek Pak Pale!',
+        speakerName: 'Bos Viktor',
+        speakerRole: 'Mafia Kuliner Malam',
+        speakerAvatar: '🤵',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Bos Viktor "Mafia Malam"',
+          role: 'Penculik Berdarah Dingin',
+          avatar: '🤵',
+          quote: 'Resep bakmi nyemek ini akan menjadi tambang uang bagi kelompokku! Kau tidak akan pernah keluar hidup-hidup dari pabrik ini!',
+          maxHp: 120,
+          weakPoints: ['Akta Perampasan Palsu', 'Buku Resep Kaldu Bebek'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tembak tuas katrol rantai derek tepat di atas kepala Viktor!',
+            actionDetail: 'Menjatuhkan rantai derek baja untuk melumpuhkan senjata api',
+            feedback:
+                'CRITICAL IMPACT! Rantai baja menghantam tangan Viktor, revolvernya terlempar jauh ke saluran tetes tebu!',
+            isCorrect: true,
+            bossDamage: 65,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Maju menghadang peluru pistol dengan tangan kosong',
+            actionDetail: 'Tindakan bunuh diri melawan senjata api',
+            feedback:
+                'Peluru menyerempet lengan kirimu! Darah mengucur dan kamu kehilangan 1 nyawa berharga!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'REBUT KEMBALI BUKU RESEP PUSAKA',
+        location: 'Ruang Mesin Madukismo - Pukul 09.30 WIB',
+        narrative:
+            'Viktor yang terluka mencoba membakar buku resep kaldu bebek dengan pemantik zippo!',
+        speakerName: 'Bos Viktor',
+        speakerRole: 'Mafia Nekat',
+        speakerAvatar: '🤵',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Bos Viktor',
+          role: 'Boss Terpojok',
+          avatar: '🤵',
+          quote: 'Kalau aku tidak dapat resep ini, kalian juga tidak boleh memilikinya!',
+          maxHp: 55,
+          weakPoints: ['Pemantik Api'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Semprotkan tabung pemadam api busa tepat ke arah tangan dan pemantiknya!',
+            actionDetail: 'Memadamkan api seketika dan mengamankan buku kuno',
+            feedback:
+                'PERFECT FINISH! Api padam total, buku resep terselamatkan utuh tanpa terbakar sedikitpun, dan Viktor diringkus tim Brimob!',
+            isCorrect: true,
+            bossDamage: 65,
+          ),
+          SceneChoice(
+            text: 'Coba tiup api dari kejauhan',
+            actionDetail: 'Tindakan konyol memadamkan api besar dengan tiupan mulut',
+            feedback:
+                'Halaman sampul buku sempat terbakar hangus dan jarimu melepuh!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Aroma Nyemek Alun-Alun Utara Kembali Mengepul',
+      narrative:
+          'Pak Pale berhasil diselamatkan tanpa luka berarti. Seluruh sindikat mafia malam digulung tuntas ke meja hijau.\n\nMalam harinya di bawah langit beringin kembar Alun-alun Utara, wajan arang kembali mendidih dengan kuah nyemek telur bebek gurih keemasan. Pak Pale menyematkan Mangkuk Tembaga Kraton di sertifikat investigasimu!',
+      epilogue: 'Malam di jantung kota Yogyakarta kembali aman dan penuh kenikmatan rasa.',
+      badgeName: 'Penyelamat Maestro Alun-Alun 🍲',
+      rewardPoints: 700,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Hilangnya Resep Warisan Selamanya',
+      narrative:
+          'Buku resep terbakar hangus dan Pak Pale trauma berat untuk memasak kembali. Gerobak legendaris di Alun-alun Utara tutup permanen.',
+      epilogue: 'Satu lagi warisan kuliner tak ternilai hilang dari peradaban kota.',
+      badgeName: 'Resep Hangus 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 9: NASI PECEL BU WIRYO (Agro UGM 1959) - SULIT
+  // =========================================================================
+  const DetectiveCase(
+    level: 9,
+    id: 'case_pecel_bu_wiryo',
+    title: 'Racun Jamur Bumbu Kacang Agro UGM',
+    subtitle: 'Kontaminasi aflatoksin sengaja pada stok kacang tanah sangrai legendaris',
+    location: 'Kawasan Lembah Agro UGM, Bulaksumur, Sleman',
+    targetRestaurant: 'Warung Nasi Pecel Bu Wiryo 1959',
+    suspectName: 'Dr. Aris "Ahli Biokimia Pangan Ilegal"',
+    difficulty: CaseDifficulty.sulit,
+    baseReward: 750,
+    iconEmoji: '🥜',
+    synopsis:
+        'Bumbu pecel kacang kental siraman hangat Bu Wiryo yang terkenal sejak 1959 mendadak terkontaminasi jamur beracun Aspergillus flavus penghasil aflatoksin mematikan. Seorang ilmuwan pangan yang dipecat kampus berusaha memfitnah warung legendaris tempat mahasiswa berkumpul.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Analisis Laboratorium Bumbu Kacang',
+        location: 'Warung Pecel Bu Wiryo Bulaksumur - Pukul 07.30 WIB',
+        narrative:
+            'Di meja penyajian bumbu kacang encer hangat beraroma daun jeruk, beberapa piring pecel ditolak pengunjung karena terasa pahit metalik dan membuat pusing seketika.',
+        speakerName: 'Bu Wiryo',
+        speakerRole: 'Penerus Resep 1959',
+        speakerAvatar: '👵',
+        choices: [
+          SceneChoice(
+            text: 'Uji sampel kacang sangrai dengan lampu ultraviolet (UV Blacklight)',
+            actionDetail: 'Mendeteksi pendaran fluoresensi racun aflatoksin jamur',
+            feedback:
+                'Fluoresensi hijau neon berpendar di bawah sinar UV! Ini membuktikan spora jamur aflatoksin murni sengaja disemprotkan ke karung kacang sangrai!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_pendaran_uv',
+              title: 'Pendaran Jamur Aflatoksin UV',
+              description: 'Bukti spora racun mikotoksin yang disemprotkan secara laboratoris pada kacang tanah.',
+              icon: Icons.lightbulb_circle_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Makan sepiring nasi pecel komplit dengan empal untuk membuktikan racun',
+            actionDetail: 'Mengkonsumsi makanan yang terindikasi racun aflatoksin',
+            feedback:
+                'Tubuhmu demam tinggi dan penglihatanmu mengabur! Kamu kehilangan 1 nyawa dan harus minum air kelapa netralisir!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Pengintaian Laboratorium Liar Sekitar Selokan Mataram',
+        location: 'Gedung Inkubator Riset Terbengkalai - Pukul 10.00 WIB',
+        narrative:
+            'Di sebuah laboratorium sewa dekat Selokan Mataram, Dr. Aris sedang membiakkan kultur jamur beracun dalam botol-botol biakan agar-agar.',
+        speakerName: 'Detektif (Kamu)',
+        speakerRole: 'Menyusup',
+        speakerAvatar: '🕵️',
+        choices: [
+          SceneChoice(
+            text: 'Fotokopi catatan log inkubasi jamur dan botol semprot aerosil',
+            actionDetail: 'Mengumpulkan bukti scientific tampering racun pangan',
+            feedback:
+                'Bukti laboratorium sangat telak! Tercantum tanggal penyemprotan karung kacang gudang Bu Wiryo!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_log_inkubasi',
+              title: 'Log Biakan Jamur Dr. Aris',
+              description: 'Catatan ilmiah sabotase biokimia pangan yang ditandatangani pelaku.',
+              icon: Icons.biotech_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Sentuh cawan petri biakan jamur beracun tanpa sarung tangan lateks',
+            actionDetail: 'Menyentuh agen biologi berbahaya secara langsung',
+            feedback:
+                'Spora masuk ke pori-pori kulitmu dan menyebabkan gatal membakar! Kamu kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Bungkam Dr. Aris di Laboratorium',
+        location: 'Ruang Sterilisasi Inkubator - Pukul 11.00 WIB',
+        narrative:
+            'Dr. Aris memegang labu erlenmeyer berisi asam pekat dan mengancam akan menyiramkannya jika kamu berani melangkah maju!',
+        speakerName: 'Dr. Aris',
+        speakerRole: 'Ahli Biokimia Jahat',
+        speakerAvatar: '👨‍🔬',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Dr. Aris "Si Ahli Kimia"',
+          role: 'Pelaku Bioteror Pangan',
+          avatar: '👨‍🔬',
+          quote: 'Kampus ini menolak penelitianku! Maka akan kutunjukkan pada mereka bahwa kuliner kebanggaan mereka bisa kuhancurkan dalam semalam!',
+          maxHp: 120,
+          weakPoints: ['Log Biakan Jamur', 'Pendaran UV Aflatoksin'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tunjukkan hasil uji UV fluoresensi dan surat penahanan dari Polda DIY!',
+            actionDetail: 'Menghancurkan legitimasi akademisnya dengan bukti forensik',
+            feedback:
+                'CRITICAL DAMAGE! Dr. Aris terpaku gemetar saat tahu kejahatannya terbukti secara metodologi ilmiah tak terbantahkan!',
+            isCorrect: true,
+            bossDamage: 65,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Debat teori biologi tanpa menunjukkan bukti fisik',
+            actionDetail: 'Berdebat omong kosong dengan profesor gila',
+            feedback:
+                'Dr. Aris menyiramkan cairan asam ke mejamu! Percikan asam mengenai bajumu dan melukaimu!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'AMANKAN LABU ASAM BERBAHAYA',
+        location: 'Ruang Sterilisasi - Pukul 11.20 WIB',
+        narrative:
+            'Dr. Aris hendak membanting labu erlenmeyer berisi cairan asam ke saluran pembuangan agar bukti musnah!',
+        speakerName: 'Dr. Aris',
+        speakerRole: 'Tersangka Kalap',
+        speakerAvatar: '👨‍🔬',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Dr. Aris',
+          role: 'Boss Terpojok',
+          avatar: '👨‍🔬',
+          quote: 'Jangan sentuh cawan risetku!',
+          maxHp: 55,
+          weakPoints: ['Labu Erlenmeyer'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Gunakan penjepit kimia isolasi untuk merebut labu erlenmeyer dan dorong Dr. Aris ke ruang dekontaminasi!',
+            actionDetail: 'Prosedur pengamanan zat berbahaya standar laboratorium',
+            feedback:
+                'KNOCKOUT! Zat berbahaya terkunci aman di kotak isolasi, Dr. Aris terkunci di ruang dekontaminasi sampai polisi tiba!',
+            isCorrect: true,
+            bossDamage: 65,
+          ),
+          SceneChoice(
+            text: 'Tangkap botol asam yang melayang dengan baju kaosmu',
+            actionDetail: 'Menadah zat korosif dengan kain tipis',
+            feedback:
+                'Kain bajumu tembus terbakar asam dan kulitmu melepuh! Kecerobohan fatal!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Gurih Manis Pecel Bu Wiryo Kembali Segar',
+      narrative:
+          'Seluruh karung kacang yang terkontaminasi dimusnahkan di insinerator limbah medis. Bu Wiryo mendatangkan kacang tanah tuban segar bersertifikat bebas racun.\n\nKawasan Agro UGM kembali dipenuhi gelak tawa mahasiswa dan dosen yang menikmati sarapan nasi pecel legendaris dengan kuah kacang gurih pedas manis yang sempurna. Bu Wiryo memberimu Cobek Kayu Jati 1959!',
+      epilogue: 'Keamanan pangan ribuan mahasiswa dan akademisi Yogyakarta terselamatkan.',
+      badgeName: 'Benteng Pangan Bulaksumur 🥜',
+      rewardPoints: 750,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Keracunan Massal di Kampus',
+      narrative:
+          'Kamu gagal membuktikan sabotase tepat waktu. Puluhan mahasiswa dilarikan ke rumah sakit dan warung pecel bersejarah sejak 1959 itu disegel aparat.',
+      epilogue: 'Nama baikmu di kalangan akademisi runtuh seketika.',
+      badgeName: 'Kacang Beracun 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 10: TENGKLENG GAJAH (Kaliurang Km 9.3) - SULIT [CHECKPOINT 2]
+  // =========================================================================
+  const DetectiveCase(
+    level: 10,
+    id: 'case_tengkleng_gajah',
+    title: 'Skandal Balungan Oplosan Kaliurang',
+    subtitle: 'Penyelundupan balungan ternak bangkai berbahaya ke kuali jumbo tengkleng gajah',
+    location: 'Jl. Kaliurang Km 9.3, Sleman, Yogyakarta',
+    targetRestaurant: 'Tengkleng Gajah Bu Hj. Bejo',
+    suspectName: 'Juragan Tejo "Raja Balungan Gelap"',
+    difficulty: CaseDifficulty.sulit,
+    baseReward: 850,
+    iconEmoji: '🍖',
+    synopsis:
+        'Porsi jumbo balungan kambing tengkleng gajah yang terkenal dengan sumsum gurih melimpah disabotase dengan tulang ternak busuk yang mengandung bakteri antraks mati. Juragan Tejo ingin menjatuhkan warung agar rumah pemotongan hewan miliknya menguasai seluruh Bantul dan Sleman.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Pemeriksaan Kuali Balungan Raksasa',
+        location: 'Pawon Kuali Baja Tengkleng Gajah - Pukul 11.00 WIB',
+        narrative:
+            'Di atas tungku api besar, kuah gulai tengkleng mendidih bergolak. Namun sumsum tulang yang disedot mengeluarkan bau anyir busuk dan cairan kehitaman.',
+        speakerName: 'Bu Hj. Bejo',
+        speakerRole: 'Pemilik Tengkleng Gajah',
+        speakerAvatar: '🧕',
+        choices: [
+          SceneChoice(
+            text: 'Gunakan bor tulang mikro untuk mengambil sampel sumsum kehitaman',
+            actionDetail: 'Menguji keberadaan toksin dan bakteri patogen bangkai',
+            feedback:
+                'Analisis jitu! Sumsum tersebut berasal dari ternak mati kemarin yang sengaja dicampur ke pengiriman balungan segar pagi tadi!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_sumsum_busuk',
+              title: 'Sampel Sumsum Tulang Gelap',
+              description: 'Tulang kambing bangkai oplosan dengan kandungan bakteri berbahaya.',
+              icon: Icons.coronavirus_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Sedot sumsum tulang itu dengan sedotan bambu',
+            actionDetail: 'Mencoba menguji rasa sumsum busuk secara langsung',
+            feedback:
+                'Bakteri racun seketika membuatmu muntah hebat dan pingsan! Kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penggerebekan Cold Storage Ilegal Kaliurang',
+        location: 'Gudang Es Tersembunyi Kaliurang Atas - Pukul 13.00 WIB',
+        narrative:
+            'Di gudang berpendingin gelap di kaki bukit, puluhan ton tulang ternak tak bersertifikat tersusun dalam karung bertuliskan "RPA Gelap Tejo". Juragan Tejo sedang mengawasi truk pengantar.',
+        speakerName: 'Juragan Tejo',
+        speakerRole: 'Tengkulak Daging Ilegal',
+        speakerAvatar: '🧔',
+        choices: [
+          SceneChoice(
+            text: 'Temukan buku manifes pengiriman palsu di kantor pos satpam gudang',
+            actionDetail: 'Mencari catatan nomor polisi truk pengirim tulang bangkai ke resto',
+            feedback:
+                'Bukti nomor polisi truk pengantar tepat identik dengan rekaman CCTV dapur Tengkleng Gajah pagi tadi!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_manifes_truk',
+              title: 'Buku Manifes Truk Oplosan',
+              description: 'Catatan pengiriman tulang kambing tanpa surat karantina hewan ke resto-resto Sleman.',
+              icon: Icons.local_shipping_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Matikan generator listrik cold storage tanpa persiapan',
+            actionDetail: 'Mencoba membuat gudang mati lampu',
+            feedback:
+                'Korsleting listrik menyengat tanganmu! Kamu terkejut hebat dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Bekuk Juragan Tejo di Ruang Es',
+        location: 'Ruang Beku Cold Storage - Pukul 14.00 WIB',
+        narrative:
+            'Di tengah balok es dan uap beku -15 derajat celcius, Juragan Tejo mencabut kapak jagal raksasa dan menantangmu!',
+        speakerName: 'Juragan Tejo',
+        speakerRole: 'Raja Balungan Gelap',
+        speakerAvatar: '🧔',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Juragan Tejo "Raja Oplosan"',
+          role: 'Mafia Daging & Tulang',
+          avatar: '🧔',
+          quote: 'Restoran itu menolak membeli balungan dariku! Sekarang lihat, reputasi mereka akan hancur dan mereka akan mengemis pasokan dari tanganku!',
+          maxHp: 130,
+          weakPoints: ['Manifes Truk Oplosan', 'Sampel Sumsum Bakteri'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Banting bukti Manifes Pengiriman dan Hasil Uji Karantina Hewan ke depan mukanya!',
+            actionDetail: 'Menunjukkan bukti pelanggaran undang-undang peternakan & karantina nasional',
+            feedback:
+                'CRITICAL DAMAGE! Juragan Tejo terhenyak melihat stempel resmi kepolisian dan karantina hewan!',
+            isCorrect: true,
+            bossDamage: 70,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Tantang dia adu kuat membongkar balok es besar',
+            actionDetail: 'Tindakan sia-sia yang menghabiskan stamina',
+            feedback:
+                'Kapak jagal Tejo memecahkan balok es dan serpihannya melukai keningmu!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'KUNCI JURAGAN TEJO DI RUANG ISOLASI',
+        location: 'Ruang Pembongkaran Daging - Pukul 14.20 WIB',
+        narrative:
+            'Tejo mengayunkan kapak jagalnya membabi buta mencoba menerobos pintu keluar darurat!',
+        speakerName: 'Juragan Tejo',
+        speakerRole: 'Tersangka Mengamuk',
+        speakerAvatar: '🧔',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Juragan Tejo',
+          role: 'Boss Terpojok',
+          avatar: '🧔',
+          quote: 'Jangan berani halangi jalanku!',
+          maxHp: 60,
+          weakPoints: ['Kapak Jagal'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Gunakan tongkat kejut listrik detektif pada kapak logamnya dan gembok pintu keluar dari luar!',
+            actionDetail: 'Melumpuhkan senjata logam dengan arus listrik',
+            feedback:
+                'KNOCKOUT! Arus listrik melumpuhkan otot lengannya, kapak terjatuh, dan Tejo terkurung di ruang isolasi sampai tim Reskrim tiba!',
+            isCorrect: true,
+            bossDamage: 70,
+          ),
+          SceneChoice(
+            text: 'Lompat ke punggungnya untuk mencekiknya',
+            actionDetail: 'Menyerang tersangka berbadan gempal dari belakang tanpa pelindung',
+            feedback:
+                'Tejo membantingmu ke lantai beku dengan keras! Punggungmu memar parah!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'CHECKPOINT 2 TERCAPAI: Sumsum Gurih Gajah Kembali Menggelegar',
+      narrative:
+          'Seluruh gudang oplosan disita dan dimusnahkan. Kuali raksasa Tengkleng Gajah dibersihkan total dan diisi kembali dengan balungan kambing muda segar bersertifikat sehat dari peternakan terpercaya.\n\nAroma rempah kuah gulai dan tengkleng goreng kembali semerbak memikat ratusan pelancong di jalan Kaliurang. Bu Hj. Bejo menyematkan Piagam Balungan Emas untukmu! SELAMAT, KAMU MENCAPAI CHECKPOINT 2 KAMPANYE DETEKTIF!',
+      epilogue: 'Progres permainanmu tersimpan kokoh di Checkpoint Level 10.',
+      badgeName: 'Penakluk Balungan Gajah 🍖 [CHECKPOINT 2]',
+      rewardPoints: 850,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Skandal Daging Mengguncang Kaliurang',
+      narrative:
+          'Berita daging oplosan merebak liar tanpa penangkapan dalang. Restoran-restoran legendaris di sepanjang Kaliurang sepi pengunjung dan mengalami kerugian miliaran rupiah.',
+      epilogue: 'Kamu gagal mengungkap mafia daging terbesar di lereng gunung.',
+      badgeName: 'Tulang Busuk 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 11: ES DAWET (Ibu Titi Pasar Ngasem) - SULIT
+  // =========================================================================
+  const DetectiveCase(
+    level: 11,
+    id: 'case_es_dawet',
+    title: 'Misteri Pewarna Tekstil Cendol Pandan Kraton',
+    subtitle: 'Zat kimia hijau metanil beracun yang diselundupkan ke dalam juruh cendol segar',
+    location: 'Pasar Burung Ngasem & Tamansari, Kraton Yogyakarta',
+    targetRestaurant: 'Es Dawet Ibu Titi',
+    suspectName: 'Madam Siska "Ratu Kosmetik Beracun"',
+    difficulty: CaseDifficulty.sulit,
+    baseReward: 900,
+    iconEmoji: '🍧',
+    synopsis:
+        'Cendol hijau pandan suji yang kenyal segar di warung Es Dawet Ibu Titi mendadak berubah warna menjadi hijau menyala terang benderang dengan rasa pahit getir. Beberapa turis asing mengalami ruam kulit dan muntah darah setelah mencicipinya.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Olah TKP Gentong Tanah Liat Dawet',
+        location: 'Kios Es Dawet Pasar Ngasem - Pukul 10.30 WIB',
+        narrative:
+            'Di dalam gentong tanah liat pendingin dawet, butiran cendol pandan mengapung dengan warna hijau neon tidak wajar. Juruh gula kelapa aren berbusa asam.',
+        speakerName: 'Ibu Titi',
+        speakerRole: 'Pembuat Dawet Alami',
+        speakerAvatar: '👵',
+        choices: [
+          SceneChoice(
+            text: 'Teteskan larutan klorin dan asam cuka ke butiran cendol',
+            actionDetail: 'Reaksi kimia untuk menguji zat pewarna tekstil Fast Green / Malachite Green',
+            feedback:
+                'Reaksi positif instan! Warna hijau tidak memudar sama sekali, membuktikan ini pewarna cat kain tekstil sintetis berbahaya!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_pewarna_tekstil',
+              title: 'Zat Hijau Metanil Tekstil',
+              description: 'Pewarna kain sintetis non-pangan berkadar karsinogenik tinggi yang diselundupkan ke adonan cendol.',
+              icon: Icons.colorize_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Teguk segelas es dawet hijau neon itu sampai habis',
+            actionDetail: 'Menenggak racun pewarna tekstil',
+            feedback:
+                'Kerongkonganmu membengkak parah dan napasmu tersengal-sengal! Kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Pelacakan ke Toko Pewarna Tamansari',
+        location: 'Lorong Bawah Tanah Tamansari - Pukul 12.00 WIB',
+        narrative:
+            'Di lorong sunyi dekat pemandian air Tamansari, Madam Siska terlihat sedang membuang botol-botol kaleng bekas pewarna kimia ke sumur tua.',
+        speakerName: 'Madam Siska',
+        speakerRole: 'Penyelundup Zat Kimia Tekstil',
+        speakerAvatar: '💃',
+        choices: [
+          SceneChoice(
+            text: 'Tangkap botol kaleng yang hendak dibuang dengan kait teleskopik',
+            actionDetail: 'Menyelamatkan bukti fisik berlabel pabrik pewarna kain',
+            feedback:
+                'Bukti nomor batch pabrik tekstil berhasil diamankan utuh sebelum menyentuh dasar sumur!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_kaleng_pewarna',
+              title: 'Kaleng Pewarna Tekstil Tamansari',
+              description: 'Kaleng kimia beracun dengan sidik jari Madam Siska yang identik di gentong Ibu Titi.',
+              icon: Icons.sanitizer_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Lompat langsung ke dalam sumur tua untuk mengambil botol',
+            actionDetail: 'Melompat ke sumur berbahaya sedalam 10 meter',
+            feedback:
+                'Kamu terjebak di air sumur yang kotor dan dingin! Kakimu terkilir dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Hadapi Madam Siska di Pemandian',
+        location: 'Pelataran Kolam Tamansari - Pukul 13.00 WIB',
+        narrative:
+            'Madam Siska berbalik dengan kipas bertatah duri racun beracun. Dia tersenyum angkuh di depan kolam peninggalan Sultan.',
+        speakerName: 'Madam Siska',
+        speakerRole: 'Ratu Kosmetik & Racun',
+        speakerAvatar: '💃',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Madam Siska',
+          role: 'Peracun Dawet Kraton',
+          avatar: '💃',
+          quote: 'Daun pandan dan suji itu merepotkan! Pewarna buatanku membuat cendol hijau berkilau abadi tanpa perlu memetik daun segar!',
+          maxHp: 130,
+          weakPoints: ['Kaleng Pewarna Tamansari', 'Zat Hijau Metanil Tekstil'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tunjukkan hasil uji Malachite Green dan botol kaleng berlabel sidik jarinya!',
+            actionDetail: 'Membongkar alibi di hadapan petugas keamanan cagar budaya',
+            feedback:
+                'CRITICAL DAMAGE! Senyum sinis Madam Siska runtuh melihat bukti kaleng dengan sidik jari manisnya yang tercetak jelas!',
+            isCorrect: true,
+            bossDamage: 70,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Puji kecantikannya agar dia mau mengaku sukarela',
+            actionDetail: 'Rayuan bodoh pada penjahat berbahaya',
+            feedback:
+                'Madam Siska menyabetkan kipas berdurinya ke lenganmu! Racun membuatmu lunglai 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'KUNCI MADAM SISKA DI GERBANG TAMANSARI',
+        location: 'Gerbang Gapura Panggung Tamansari - Pukul 13.20 WIB',
+        narrative:
+            'Madam Siska berlari ke tangga panggung atas hendak menyebarkan bubuk racun ke kolam pemandian umum!',
+        speakerName: 'Madam Siska',
+        speakerRole: 'Dalang Terdesak',
+        speakerAvatar: '💃',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Madam Siska',
+          role: 'Boss Tersudut',
+          avatar: '💃',
+          quote: 'Jangan sentuh gaun sutraku!',
+          maxHp: 60,
+          weakPoints: ['Kipas Berduri'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Gunakan semprotan air pemadam untuk merontokkan bubuk racun di tangannya dan borgol kedua tangannya!',
+            actionDetail: 'Melumpuhkan bubuk kimia sebelum menyebar ke kolam',
+            feedback:
+                'KNOCKOUT! Bubuk racun larut tak berbahaya di lantai batu, kipas berduri disita, dan Madam Siska digiring ke tahanan wanita!',
+            isCorrect: true,
+            bossDamage: 70,
+          ),
+          SceneChoice(
+            text: 'Tarik gaun sutranya dari bawah tangga',
+            actionDetail: 'Menarik kain licin secara ceroboh',
+            feedback:
+                'Gaun terlepas dan dia menendang wajahmu dengan sepatu hak tingginya!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Segar Harum Pandan Dawet Ngasem Berseri',
+      narrative:
+          'Gentong tanah liat dibersihkan dengan air perasan daun jeruk purut. Ibu Titi memeras kembali daun pandan suji segar dari kebun sendiri, menghasilkan butiran cendol lembut beraroma harum alami yang tiada tanding.\n\nPelancong di Pasar Ngasem kembali menyeruput es dawet durian yang manis creamy dan menyegarkan tenggorokan. Ibu Titi memberimu Cangkir Tempurung Dawet bertatah ukiran bunga melati!',
+      epilogue: 'Keaslian minuman tradisional kraton tetap suci dari racun tekstil.',
+      badgeName: 'Penjaga Kesegaran Ngasem 🍧',
+      rewardPoints: 900,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Racun Kimia Menodai Tamansari',
+      narrative:
+          'Air kolam Tamansari dan kios dawet tercemar zat pewarna tekstil permanen. Seluruh sentra wisata Pasar Ngasem ditutup untuk investigasi forensik berbulan-bulan.',
+      epilogue: 'Kamu gagal melindungi kebersihan mata air bersejarah.',
+      badgeName: 'Cendol Keruh 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 12: AYAM GORENG MBAH CEMPLUNG (Kasihan Bantul) - SULIT
+  // =========================================================================
+  const DetectiveCase(
+    level: 12,
+    id: 'case_mbah_cemplung',
+    title: 'Pencurian Kuali Tanah Liat 70 Tahun Bantul',
+    subtitle: 'Sabotase wajan keramat penghasil kulit ayam super renyah resep leluhur',
+    location: 'Sembungan, Bangunjiwo, Kasihan, Bantul',
+    targetRestaurant: 'Ayam Goreng Mbah Cemplung',
+    suspectName: 'Ki Suro "Dukun Kuali Pusaka"',
+    difficulty: CaseDifficulty.sulit,
+    baseReward: 950,
+    iconEmoji: '🍗',
+    synopsis:
+        'Kuali tanah liat tebal berusia 70 tahun milik Mbah Cemplung yang digunakan untuk teknik cemplung ayam kampung minyak kelapa mendadak dicuri dari pawon tungku kayu. Tanpa kuali tanah liat penahan panas stabil ini, ayam goreng akan gosong di luar dan mentah berdarah di dalam.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'TKP Pawon Tungku Api Kasihan',
+        location: 'Pawon Tungku Tanah Liat Mbah Cemplung - Pukul 03.30 WIB',
+        narrative:
+            'Di tengah dinginnya fajar desa Kasihan, abu tungku masih hangat membara. Wajan kuali tanah liat hitam berdiameter satu meter telah raib dari dudukan batu bata pawon.',
+        speakerName: 'Cucu Mbah Cemplung',
+        speakerRole: 'Penerus Ayam Goreng',
+        speakerAvatar: '👨',
+        choices: [
+          SceneChoice(
+            text: 'Periksa serpihan tanah liat dan abu tapak gerobak dorong di pintu pawon',
+            actionDetail: 'Menganalisis tanah liat khas Kasongan yang menempel di lantai',
+            feedback:
+                'Serpihan tanah liat menunjukkan jejak pembuat gerabah Kasongan! Pelaku membawa kuali menggunakan gerobak beroda kayu jati menuju sentra gerabah!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_tanah_kasongan',
+              title: 'Serpihan Tanah Liat Kasongan',
+              description: 'Debu tanah liat merah berkarakteristik khusus desa gerabah Kasongan.',
+              icon: Icons.grain_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Goreng ayam kampung menggunakan wajan teflon tipis biasa',
+            actionDetail: 'Mencoba menggoreng tanpa kuali tanah liat',
+            feedback:
+                'Minyak meletup membakar tanganmu dan ayam gosong pahit! Kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penelusuran ke Pabrik Pembakaran Gerabah Kasongan',
+        location: 'Tungku Pembakaran Raksasa Kasongan - Pukul 06.00 WIB',
+        narrative:
+            'Di dalam bengkel pembakaran gerabah gelap, kuali pusaka Mbah Cemplung disembunyikan di bawah tumpukan guci terakota. Ki Suro sedang menyiapkan dupa mantra klenik.',
+        speakerName: 'Ki Suro',
+        speakerRole: 'Dukun Pengumpul Pusaka',
+        speakerAvatar: '🧙‍♂️',
+        choices: [
+          SceneChoice(
+            text: 'Cocokkan cap tanda tangan ukir Mbah Cemplung tahun 1954 di bibir kuali',
+            actionDetail: 'Membuktikan kepemilikan kuali bersejarah',
+            feedback:
+                'Cap ukir 1954 terbaca jelas di bawah sorotan lampu senter detektif! Bukti tak terbantahkan!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_cap_kuali_1954',
+              title: 'Cap Ukir Kuali 1954',
+              description: 'Tanda ukiran tangan Mbah Cemplung asli pada bibir tanah liat kuali.',
+              icon: Icons.history_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Tendang dupa mantra Ki Suro sampai berserakan',
+            actionDetail: 'Tindakan kasar memicu konfrontasi tanpa persiapan',
+            feedback:
+                'Asap dupa beracun mengenai matamu! Penglihatanmu buram dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Gagalkan Ki Suro di Tungku Pembakaran',
+        location: 'Halaman Tungku Kasongan - Pukul 07.00 WIB',
+        narrative:
+            'Ki Suro mencabut keris luk sembilan dan mengancam akan menghancurkan kuali pusaka berkeping-keping dengan palu godam jika kamu berani merebutnya!',
+        speakerName: 'Ki Suro',
+        speakerRole: 'Dukun Kuali Pusaka',
+        speakerAvatar: '🧙‍♂️',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Ki Suro "Dukun Kuali"',
+          role: 'Pencuri Berbahaya',
+          avatar: '🧙‍♂️',
+          quote: 'Kuali ini menyerap minyak keberuntungan selama 70 tahun! Dengan kuali ini, aku bisa membuka pesugihan warung makan terkaya di tanah Jawa!',
+          maxHp: 135,
+          weakPoints: ['Cap Ukir Kuali 1954', 'Palu Godam'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tembak palu godam di tangannya dengan tali lasso pelumpuh detektif!',
+            actionDetail: 'Mencegah kehancuran kuali tanah liat pusaka',
+            feedback:
+                'CRITICAL SHOT! Palu godam terlempar jauh dari jangkauannya, kuali keramat aman dari ancaman kehancuran!',
+            isCorrect: true,
+            bossDamage: 70,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Maju menangkis keris dengan papan kayu rapuh',
+            actionDetail: 'Menahan senjata tajam dengan kayu lapuk',
+            feedback:
+                'Keris menembus papan dan melukai pundakmu! Kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'LUMPUHKAN KI SURO DI TUNGKU TERAKOTA',
+        location: 'Ruang Pembakaran Gerabah - Pukul 07.20 WIB',
+        narrative:
+            'Ki Suro yang terdesak hendak menyalakan blower gas pembakaran untuk membakar seisi bengkel!',
+        speakerName: 'Ki Suro',
+        speakerRole: 'Pelaku Kalap',
+        speakerAvatar: '🧙‍♂️',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Ki Suro',
+          role: 'Boss Tersudut',
+          avatar: '🧙‍♂️',
+          quote: 'Semua akan hangus bersamaku!',
+          maxHp: 65,
+          weakPoints: ['Selang Gas Blower'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Putus regulator selang gas blower dan gulingkan drum air pembasuh ke arah kakinya!',
+            actionDetail: 'Mencegah ledakan gas dan menjatuhkan tersangka',
+            feedback:
+                'KNOCKOUT! Ki Suro terpeleset di lantai tanah liat basah dan terkunci rapat dalam borgol baja!',
+            isCorrect: true,
+            bossDamage: 70,
+          ),
+          SceneChoice(
+            text: 'Tarik selang gas yang menyembur api dengan tangan',
+            actionDetail: 'Menyentuh api gas bersuhu tinggi',
+            feedback:
+                'Tanganmu terbakar parah dan api membakar jas detektifmu!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Gurih Renyah Ayam Cemplung Mengudara Lagi',
+      narrative:
+          'Kuali tanah liat 70 tahun dibawa pulang dengan selamat ke dapur Kasihan beralaskan jerami empuk. Minyak kelapa murni kembali dituang ke dalam kuali yang mendidih stabil dengan kayu bakar.\n\nAyam kampung utuh dicemplungkan ke dalam wajan menghasilkan kulit yang garing renyah keemasan dan daging gurih beraroma bawang ketumbar yang tiada duanya. Keluarga Mbah Cemplung menyematkan Lencana Kuali Emas Bantul untukmu!',
+      epilogue: 'Teknik memasak tradisional paling unik di Bantul berhasil diselamatkan.',
+      badgeName: 'Penjaga Kuali Cemplung 🍗',
+      rewardPoints: 950,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Pecahnya Kuali Pusaka Leluhur',
+      narrative:
+          'Kuali tanah liat pecah berkeping-keping dalam insiden ledakan gas. Ayam goreng Mbah Cemplung kehilangan alat masak terpentingnya yang tidak bisa digantikan oleh wajan modern.',
+      epilogue: 'Warisan kuliner 70 tahun hancur berkeping-keping.',
+      badgeName: 'Kuali Pecah 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 13: OLIVE FRIED CHICKEN (Gejayan) - MASTER
+  // =========================================================================
+  const DetectiveCase(
+    level: 13,
+    id: 'case_olive_chicken',
+    title: 'Spionase Formula 12 Rempah Tepung Krispi',
+    subtitle: 'Pencurian formula rahasia ayam krispi legendaris oleh agen korporasi cepat saji multinasional',
+    location: 'Jl. Affandi Gejayan, Sleman, Yogyakarta',
+    targetRestaurant: 'Olive Fried Chicken Gejayan',
+    suspectName: 'Agent X "Spionase Korporasi Fastfood"',
+    difficulty: CaseDifficulty.master,
+    baseReward: 1000,
+    iconEmoji: '🍟',
+    synopsis:
+        'Formula rahasia 12 bumbu rempah tepung krispi Olive yang dicintai jutaan mahasiswa Jogja berhasil diretas dan dicuri dari brankas pusat bumbu Gejayan oleh seorang mata-mata korporasi cepat saji multinasional. Mereka berniat mematenkan resep ini di luar negeri dan menuntut penutupan seluruh outlet lokal.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Olah TKP Brankas Pencampuran Bumbu',
+        location: 'Ruang Rahasia Outlet Gejayan - Pukul 23.30 WIB',
+        narrative:
+            'Di ruang kedap udara tempat menakar tepung bumbu, pintu brankas titanium terbuka dengan teknik pembobolan digital canggih. Flashdisk master berisi takaran mikrogram 12 rempah telah lenyap.',
+        speakerName: 'Kepala Racik Olive',
+        speakerRole: 'Penjaga Resep Tepung',
+        speakerAvatar: '👨‍🍳',
+        choices: [
+          SceneChoice(
+            text: 'Periksa port USB brankas dengan pemindai cyber forensik detektif',
+            actionDetail: 'Mengekstrak data log perangkat peretas yang tertinggal',
+            feedback:
+                'Alamat MAC perangkat peretas berhasil dilacak! Sinyal transmisi mengarah ke kamar hotel bintang lima di Jalan Kaliurang!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_log_hacker',
+              title: 'Log Transmisi Data Agent X',
+              description: 'Jejak digital transfer file formula tepung bumbu ke server bayangan di luar negeri.',
+              icon: Icons.computer_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Tuduh kasir kasir yang masih menghitung uang setoran',
+            actionDetail: 'Menuduh staf tanpa memahami teknologi peretasan digital',
+            feedback:
+                'Kasir tidak memiliki akses ke sistem digital brankas! Kamu membuang waktu dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penyusupan ke Kamar Suite Hotel Mewah',
+        location: 'Penthouse Hotel Bintang Lima Sleman - Pukul 01.00 WIB',
+        narrative:
+            'Di kamar mewah yang remang-remang, kamu menemukan koper berpelindung sinyal EMP. Di layar laptop, progress bar upload file "Secret_Olive_Formula.enc" sudah mencapai 85%!',
+        speakerName: 'Detektif (Kamu)',
+        speakerRole: 'Mencegat',
+        speakerAvatar: '🕵️',
+        choices: [
+          SceneChoice(
+            text: 'Tancapkan USB pemutus sinyal jammer dan gagalkan upload data rahasia',
+            actionDetail: 'Menghentikan transmisi formula ke server luar negeri',
+            feedback:
+                'Berhasil gemilang! Upload terputus seketika pada angka 99%, dan hard disk penyimpan data berhasil disita!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_harddisk_enkripsi',
+              title: 'Harddisk Enkripsi Formula Olive',
+              description: 'Harddisk militer milik Agent X yang berisi bukti kontrak pencurian resep senilai 2 juta dolar.',
+              icon: Icons.memory_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Cabut kabel stopkontak listrik dinding secara kasar',
+            actionDetail: 'Mengabaikan sistem baterai cadangan laptop militer',
+            feedback:
+                'Laptop menggunakan baterai internal anti-padam dan alarm keamanan kamar meraung! Kamu kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Hadapi Agent X di Helipad Atap Hotel',
+        location: 'Helipad Rooftop Hotel Gejayan - Pukul 01.30 WIB',
+        narrative:
+            'Di atap gedung di bawah deru baling-baling helikopter pelarian, Agent X mengenakan setelan taktis hitam dan mencabut pistol stun gun tegangan tinggi!',
+        speakerName: 'Agent X',
+        speakerRole: 'Spionase Korporasi Asing',
+        speakerAvatar: '🕴️',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Agent X "The Phantom Spion"',
+          role: 'Agen Bayaran Korporasi',
+          avatar: '🕴️',
+          quote: 'Formula 12 rempah ini bernilai triliunan rupiah di pasar global! Restoran ayam lokal murah seperti ini tidak pantas memilikinya!',
+          maxHp: 140,
+          weakPoints: ['Harddisk Enkripsi', 'Log Transmisi Data'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tembakkan EMP Disrupter ke arah helikopter dan paparkan bukti kontrak intelijen!',
+            actionDetail: 'Melumpuhkan instrumen elektronik helikopter dan menyudutkan pelaku',
+            feedback:
+                'CRITICAL STRIKE! Helikopter terpaksa mendarat darurat di landasan dan Agent X kehilangan sarana pelariannya!',
+            isCorrect: true,
+            bossDamage: 75,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Coba rebut koper dengan melompat ke bilah baling-baling helikopter',
+            actionDetail: 'Manuver bodoh mendekati baling-baling berputar',
+            feedback:
+                'Hembusan angin helikopter melemparmu ke lantai beton! Tulang rusukmu nyeri dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'LUMPUHKAN AGENT X DI TEPI ATAP GEDUNG',
+        location: 'Helipad Rooftop - Pukul 01.45 WIB',
+        narrative:
+            'Agent X menodongkan senjata ke arah harddisk berniat menembaknya agar hancur bersama!',
+        speakerName: 'Agent X',
+        speakerRole: 'Agen Terdesak',
+        speakerAvatar: '🕴️',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Agent X',
+          role: 'Boss Terpojok',
+          avatar: '🕴️',
+          quote: 'Kalau aku tidak membawanya, tidak ada yang boleh memilikinya!',
+          maxHp: 65,
+          weakPoints: ['Stun Gun'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Lakukan bantingan judo taktis dan borgol Agent X ke tiang lampu landasan!',
+            actionDetail: 'Teknik bela diri jarak dekat melumpuhkan agen rahasia',
+            feedback:
+                'KNOCKOUT! Senjata terlempar ke jaring pengaman, Agent X terkapar tak berdaya, dan flashdisk formula kembali aman!',
+            isCorrect: true,
+            bossDamage: 75,
+          ),
+          SceneChoice(
+            text: 'Bernegosiasi minta royalti 10%',
+            actionDetail: 'Tindakan pengkhianatan integritas detektif',
+            feedback:
+                'Agent X menyetrum dadamu dengan pistol tegangan tinggi! Tubuhmu kejang!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Ayam Krispi Kebanggaan Rakyat Terselamatkan',
+      narrative:
+          'Formula 12 rempah dikembalikan utuh ke brankas pusat bumbu Gejayan dengan pengamanan enkripsi ganda tingkat militer. Agent X dan jaringannya dituntut di pengadilan internasional atas spionase ekonomi.\n\nKeesokan paginya, seluruh cabang Olive kembali menyajikan ayam goreng tepung super renyah gurih dengan harga terjangkau bagi jutaan pelajar dan warga. Manajemen Olive menghadiahkan Kartu Makan Emas Seumur Hidup untuk sang Detektif!',
+      epilogue: 'Kuliner penyelamat kantong mahasiswa Jogja tetap berdiri teguh.',
+      badgeName: 'Pahlawan Krispi Gejayan 🍟',
+      rewardPoints: 1000,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Formula Dipatenkan Asing',
+      narrative:
+          'Data formula terupload sempurna ke server luar negeri. Korporasi asing mendaftarkan hak paten dan menuntut jaringan ayam goreng lokal ditutup total.',
+      epilogue: 'Salah satu simbol kuliner rakyat Jogja terampas oleh keserakahan korporasi.',
+      badgeName: 'Resep Terampas 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 14: KLINIK KOPI (Kaliurang) - MASTER
+  // =========================================================================
+  const DetectiveCase(
+    level: 14,
+    id: 'case_klinik_kopi',
+    title: 'Manipulasi Biji Kopi Langka Wamena Papua',
+    subtitle: 'Penyelundupan sianida organik pada biji kopi micro-lot fermentasi anaerobik',
+    location: 'Jl. Kaliurang Km 7.8, Ngaglik, Sleman',
+    targetRestaurant: 'Klinik Kopi Kaliurang',
+    suspectName: 'Mr. Black "Smuggler Kopi Ilegal"',
+    difficulty: CaseDifficulty.master,
+    baseReward: 1100,
+    iconEmoji: '☕',
+    synopsis:
+        'Klinik Kopi yang terkenal dengan edukasi narasi kopi nusantara mendadak diancam teror mematikan. Biji kopi single origin Wamena Papua hasil kurasi langsung dari petani pedalaman dicemari senyawa glikosida sianida organik yang aktif saat diekstraksi suhu 93 derajat celcius. Target pembunuhan adalah juri festival kopi dunia.',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Olah TKP Bar Seduh Manual V60',
+        location: 'Meja Seduh Kayu Klinik Kopi - Pukul 15.00 WIB',
+        narrative:
+            'Aroma kopi arabika yang baru digiling mengeluarkan aroma bunga melati yang manis, namun setelah disiram air panas mendidih, tercium bau samar almond pahit yang sangat berbahaya.',
+        speakerName: 'Mas Pepeng',
+        speakerRole: 'Storyteller & Roaster',
+        speakerAvatar: '🧔',
+        choices: [
+          SceneChoice(
+            text: 'Gunakan kertas deteksi ion sianida pada tetesan filter pertama',
+            actionDetail: 'Mengidentifikasi senyawa glikosida sianida mematikan',
+            feedback:
+                'Kertas uji langsung berubah menjadi biru prusia pekat! Terbukti ada zat sianida yang sengaja dilapisi pada kulit tanduk biji kopi sebelum disangrai!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_sianida_kopi',
+              title: 'Tetesan Filter Sianida Prusia',
+              description: 'Senyawa racun sianida organik yang dirancang membunuh penikmat kopi saat cangkir pertama diteguk.',
+              icon: Icons.dangerous_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Cicipi hasil seduhan kopi dengan teknik slurping kencang',
+            actionDetail: 'Menyeruput kopi yang terindikasi racun sianida',
+            feedback:
+                'Racun sianida langsung memblokir oksigen di darahmu! Kamu kejang hebat dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Pengintaian Roastery Gelap Selokan Mataram',
+        location: 'Gudang Mesin Roasting Ilegal - Pukul 17.30 WIB',
+        narrative:
+            'Di gudang berisik mesin pemanggang kopi, Mr. Black sedang mengawasi proses penyemprotan larutan racun pada 50 toples kopi bertuliskan nama-nama juri festival internasional.',
+        speakerName: 'Detektif (Kamu)',
+        speakerRole: 'Menyusup',
+        speakerAvatar: '🕵️',
+        choices: [
+          SceneChoice(
+            text: 'Amankan daftar nama target pembunuhan dan tabung semprotan kimia',
+            actionDetail: 'Menyita bukti konspirasi pembunuhan berencana',
+            feedback:
+                'Bukti sangat mengerikan! Mr. Black dibayar oleh sindikat pasar gelap untuk menyingkirkan juri agar biji kopi oplosannya memenangkan tender ekspor jutaan dolar!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_daftar_target',
+              title: 'Daftar Target Juri Festival',
+              description: 'Dokumen berdarah yang mencatat nama-nama ahli kopi dunia yang hendak diracuni.',
+              icon: Icons.list_alt_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Buka pintu tungku pemanggang kopi yang sedang membara 220 derajat',
+            actionDetail: 'Membuka tungku panas tanpa sarung tangan pemadam',
+            feedback:
+                'Semburan bara panas menyambar wajahmu! Kamu terluka bakar dan kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'KONFRONTASI: Hentikan Mr. Black di Atas Tumpukan Karung',
+        location: 'Gudang Ekspedisi Kargo Kopi - Pukul 19.00 WIB',
+        narrative:
+            'Mr. Black berdiri di atas tumpukan karung goni sambil memegang detonator bom uap beracun!',
+        speakerName: 'Mr. Black',
+        speakerRole: 'Smuggler Kopi Sianida',
+        speakerAvatar: '🕶️',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Mr. Black "The Poison Roaster"',
+          role: 'Penyelundup & Pembunuh Bayaran',
+          avatar: '🕶️',
+          quote: 'Industri specialty coffee adalah ladang uang raksasa! Siapapun yang menghalangi kopi oplosanku harus mati dalam cangkir terakhir mereka!',
+          maxHp: 145,
+          weakPoints: ['Daftar Target Juri', 'Kertas Uji Sianida'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Tunjukkan bukti Daftar Target Juri dan rekaman suara transaksinya dengan sindikat!',
+            actionDetail: 'Membongkar jaringan konspirasi pasar gelap kopi',
+            feedback:
+                'CRITICAL DAMAGE! Mr. Black panik menyadari seluruh jaringan kargo gelapnya telah disergap Bea Cukai di pelabuhan!',
+            isCorrect: true,
+            bossDamage: 75,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Tawarkan uang tebusan agar dia membatalkan niatnya',
+            actionDetail: 'Bernegosiasi finansial dengan pembunuh berdarah dingin',
+            feedback:
+                'Mr. Black tertawa sinis dan menembakkan peluru gas beracun ke arahmu!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'LUMPUHKAN DETONATOR RACUN',
+        location: 'Gudang Kargo - Pukul 19.20 WIB',
+        narrative:
+            'Mr. Black hendak menekan tombol detonator untuk meledakkan tabung gas sianida!',
+        speakerName: 'Mr. Black',
+        speakerRole: 'Boss Terpojok',
+        speakerAvatar: '🕶️',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Mr. Black',
+          role: 'Buronan Internasional',
+          avatar: '🕶️',
+          quote: 'Semua harus mencium aroma kematian bersamaku!',
+          maxHp: 70,
+          weakPoints: ['Detonator'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Lemparkan pisau pemotong karung tepat memutus kabel detonator dan terjang Mr. Black ke tumpukan karung kopi!',
+            actionDetail: 'Memutus sambungan picu ledak secara presisi milimeter',
+            feedback:
+                'KNOCKOUT! Kabel detonator putus, bom gagal meledak, dan Mr. Black dilumpuhkan seketika oleh tim Gegana!',
+            isCorrect: true,
+            bossDamage: 80,
+          ),
+          SceneChoice(
+            text: 'Lari keluar gudang meninggalkan bom',
+            actionDetail: 'Meninggalkan area berpenduduk tanpa perlindungan',
+            feedback:
+                'Ledakan gas sempat bocor dan uap beracun meracuni dadamu!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+          ),
+        ],
+      ),
+    ],
+    goodEnding: CaseEnding(
+      title: 'KASUS SELESAI: Kejujuran Rasa Kopi Nusantara Berjaya',
+      narrative:
+          'Seluruh toples beracun diamankan dan dimusnahkan oleh tim gegana biokimia. Mas Pepeng kembali menyangrai biji kopi Wamena Papua asli dengan profil seduh sempurna bernuansa floral aroma jeruk nipis dan madu hutan.\n\nFestival kopi internasional berlangsung sukses gilang gemilang dan kopi Indonesia dinobatkan sebagai biji kopi terbaik di dunia. Mas Pepeng memberimu Dripper Keramik V60 bertanda tangan seluruh petani kopi Wamena!',
+      epilogue: 'Integritas dan nyawa para ahli rasa dunia terselamatkan oleh tangan dinginmu.',
+      badgeName: 'Penjaga Jiwa Kopi Nusantara ☕',
+      rewardPoints: 1100,
+    ),
+    badEnding: CaseEnding(
+      title: 'PENYELIDIKAN GAGAL: Tragedi Hitam Festival Kopi',
+      narrative:
+          'Bom gas meledak dan mencemari ribuan ton biji kopi Indonesia. Nama baik kopi nusantara hancur di mata dunia internasional selama beberapa dekade.',
+      epilogue: 'Dunia kopi berkabung atas kegagalan analisismu.',
+      badgeName: 'Cangkir Kematian 💔',
+      rewardPoints: 0,
+    ),
+  ),
+
+  // =========================================================================
+  // LEVEL 15: BALE RAOS KERATON & FINALE - MASTER [CHECKPOINT 3 / GRAND FINALE]
+  // =========================================================================
+  const DetectiveCase(
+    level: 15,
+    id: 'case_bale_raos_finale',
+    title: 'Konspirasi Perjamuan Agung Sri Sultan & Runtuhnya Topeng Garam',
+    subtitle: 'Kudeta rasa perjamuan diplomatik keraton dan penangkapan sang dalang utama sindikat kriminal',
+    location: 'Bangsal Kencana Keraton & Resto Bale Raos Kraton Yogyakarta',
+    targetRestaurant: 'Bale Raos Keraton',
+    suspectName: 'Mastermind "Topeng Garam"',
+    difficulty: CaseDifficulty.master,
+    baseReward: 1500,
+    iconEmoji: '👑',
+    synopsis:
+        'Puncak dari seluruh kejahatan di 14 level sebelumnya bermuara malam ini! Sang dalang misterius bergelar "Topeng Garam" merencanakan sabotase besar pada hidangan Bistik Jawa dan Bebek Suwar-Suwir kesukaan Sri Sultan di Bale Raos menjelang jamuan diplomatik Duta Besar Dunia. Seluruh biro investigasi mengandalkan intuisimu untuk membongkar identitas asli dan meruntuhkan sindikat ini selamanya!',
+    scenes: [
+      CaseScene(
+        id: 'scene_1',
+        title: 'Inspeksi Meja Saji Bangsal Kencana',
+        location: 'Dapur Ageng Bale Raos Keraton - Pukul 18.00 WIB',
+        narrative:
+            'Di bawah kemegahan ukiran emas Bangsal Kencana, piring-piring perak pusaka bertatah lambang Praja Cihna telah tersusun. Di dalam saus bistik pala Sri Sultan dan saus kedondong bebek, tercium desis kimiawi halus yang hampir tak terdeteksi.',
+        speakerName: 'Abdi Dalem Wedana',
+        speakerRole: 'Kepala Dapur Keraton',
+        speakerAvatar: '🧓',
+        choices: [
+          SceneChoice(
+            text: 'Teteskan reagen kristal garam murni peninggalan 14 kasus sebelumnya',
+            actionDetail: 'Reagen gabungan seluruh barang bukti yang telah kamu kumpulkan',
+            feedback:
+                'REAKSI REVELASI EMAS! Saus bistik bereaksi mengeluarkan buih hitam keperakan bertanda lambang rahasia "Topeng Garam"! Seluruh jejak 14 kasus terhubung ke satu sosok!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_reagen_sindikat',
+              title: 'Residu Kristal Sindikat Topeng Garam',
+              description: 'Bukti pamungkas zat perusak rasa yang menghubungkan seluruh 15 kejahatan kuliner.',
+              icon: Icons.auto_awesome_rounded,
+            ),
+            nextSceneId: 'scene_2',
+          ),
+          SceneChoice(
+            text: 'Cicipi langsung sesendok saus bistik Sultan',
+            actionDetail: 'Mencicipi hidangan perjamuan agung beracun',
+            feedback:
+                'Zat pelumpuh saraf langsung membuat tenggorokanmu kaku dan detak jantungmu melonjak! Kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_2',
+        title: 'Penerobosan ke Menara Lonceng Rahasia Tamansari',
+        location: 'Bawah Tanah Gerbang Gedhong Panggung - Pukul 19.30 WIB',
+        narrative:
+            'Jejak reagen membawamu ke ruang kubah bawah tanah kedap suara. Di sana, seorang sosok bertopeng porselen putih bertatahkan butiran kristal garam sedang memegang detonator pemusnah arsip resep keraton.',
         speakerName: 'Topeng Garam',
-        speakerRole: 'Final Boss Terdesak',
+        speakerRole: 'Pemimpin Tertinggi Sindikat',
+        speakerAvatar: '🎭',
+        choices: [
+          SceneChoice(
+            text: 'Tembak kamera drone perekam dan sambungkan siaran langsung ke hadapan Sri Sultan & Kapolda!',
+            actionDetail: 'Membuka tabir kejahatan langsung ke pengadilan tertinggi keraton',
+            feedback:
+                'Layar raksasa di ruang sidang keraton menyala menampilkan wajah dan suara Topeng Garam yang sedang mempersiapkan kudeta kuliner!',
+            isCorrect: true,
+            foundClue: CaseClue(
+              id: 'clue_siaran_langsung',
+              title: 'Bukti Siaran Langsung Konspirasi',
+              description: 'Rekaman pengakuan Topeng Garam yang disaksikan seluruh pembesar istana.',
+              icon: Icons.videocam_rounded,
+            ),
+            nextSceneId: 'scene_boss',
+          ),
+          SceneChoice(
+            text: 'Minta dia bernegosiasi secara empat mata tanpa saksi',
+            actionDetail: 'Mencoba bernegosiasi dengan psikopat narsistik',
+            feedback:
+                'Topeng Garam menembakkan gas air mata kristal garam ke matamu! Kamu terhuyung kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            nextSceneId: 'scene_boss',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss',
+        title: 'BATTLE AKHIR FASE 1: Runtuhkan Keangkuhan Topeng Garam',
+        location: 'Kubah Bawah Tanah Tamansari - Pukul 20.00 WIB',
+        narrative:
+            'Topeng Garam melompat ke podium altar kristal garam sambil menghunus pedang rapier perak beracun!',
+        speakerName: 'Topeng Garam',
+        speakerRole: 'Final Boss Kampanye',
+        speakerAvatar: '🎭',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Topeng Garam (The Grand Mastermind)',
+          role: 'Penguasa Sindikat Kuliner Hitam',
+          avatar: '🎭',
+          quote: 'Aku telah merusak gudeg Wijilan, mencemari kopi joss, memalsukan mangut lele, dan merampas jeruji klathak! Malam ini kuliner keraton akan tamat dan duniaku yang akan berkuasa!',
+          maxHp: 160,
+          weakPoints: ['Residu Kristal Sindikat', 'Bukti Siaran Langsung'],
+        ),
+        choices: [
+          SceneChoice(
+            text: 'Hantamkan Lencana Master Detektif dan sebarkan bubuk penawar resep murni ke udara altar!',
+            actionDetail: 'Menetralisir gas beracun dan meremukkan pertahanan mental sang dalang',
+            feedback:
+                'CRITICAL GODLIKE HIT! Kristal garam beracun di altar hancur berkeping-keping dan pedang rapiernya patah terbelah dua!',
+            isCorrect: true,
+            bossDamage: 85,
+            nextSceneId: 'scene_boss_2',
+          ),
+          SceneChoice(
+            text: 'Tantang adu pedang dengan tangan kosong tanpa senjata',
+            actionDetail: 'Melawan pedang perak dengan tangan terbuka',
+            feedback:
+                'Sabetan pedang merobek lengan jas detektifmu! Darah menetes dan kamu kehilangan 1 nyawa!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: 'scene_boss_2',
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_2',
+        title: 'BATTLE AKHIR FASE 2: Hancurkan Topeng Porselen Kepalsuan!',
+        location: 'Altar Bawah Tanah Tamansari - Pukul 20.20 WIB',
+        narrative:
+            'Topeng Garam terhuyung berdarah di atas lututnya, namun tangannya masih berusaha meraih saklar peledak terakhir!',
+        speakerName: 'Topeng Garam',
+        speakerRole: 'Dalang Terpojok',
         speakerAvatar: '🎭',
         isBossFight: true,
         boss: BossConfrontation(
           name: 'Topeng Garam',
-          role: 'Final Boss',
+          role: 'Dalang Terakhir',
           avatar: '🎭',
-          quote: 'Jika aku tidak bisa memilikinya, tidak ada yang boleh mencicipi resep warisan ini selamanya!',
-          maxHp: 50,
-          weakPoints: ['Penyelamatan Maestro'],
+          quote: 'Tidak! Rencanaku selama dua puluh tahun tidak boleh berakhir di tangan seorang detektif!',
+          maxHp: 75,
+          weakPoints: ['Topeng Porselen'],
         ),
         choices: [
           SceneChoice(
-            text: 'Tebas tali pengikat para maestro dan lemparkan bumbu garam murni ke tuas peledak!',
-            actionDetail: 'Menyelamatkan sandera dan melumpuhkan detonator',
+            text: 'Lepaskan tendangan sapuan pamungkas, hancurkan topeng porselennya berkeping-keping, dan amankan detonator!',
+            actionDetail: 'Membuka identitas aslinya di hadapan dunia dan melucuti senjata peledak',
             feedback:
-                'FINISH HIM! Tuas korsleting, para maestro bersatu merebut kendali, dan topeng keramiknya pecah berkeping-keping mengungkap wajah aslinya!',
+                'LEGENDARY FINISH! Topeng keramik hancur berkeping-keping! Wajah aslinya terungkap, detonator tersita, dan pasukan pengawal Kraton menyergapnya!',
             isCorrect: true,
-            bossDamage: 60,
+            bossDamage: 90,
           ),
           SceneChoice(
-            text: 'Lari keluar gua sendirian menyelamatkan diri',
-            actionDetail: 'Meninggalkan para koki yang disandera',
+            text: 'Tutup mata dan berdoa tanpa merebut saklar peledak',
+            actionDetail: 'Pasrah di saat-saat paling krusial',
             feedback:
-                'Tindakan pengecut! Gua meledak dan kamu menanggung rasa bersalah seumur hidup!',
+                'Percikan api saklar membakar sekitarmu dan kamu terpental ke dinding!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
@@ -1098,19 +2762,19 @@ final List<DetectiveCase> kDetectiveCases = [
       ),
     ],
     goodEnding: CaseEnding(
-      title: 'TAMAT SEMPURNA: Kemenangan Cita Rasa Nusantara',
+      title: 'TAMAT SEMPURNA: Kemenangan Agung Cita Rasa Mataraman',
       narrative:
-          'Sindikat Topeng Garam runtuh total! Seluruh pabrik rahasia disita oleh negara, dan para koki legendaris kembali dengan selamat ke pawon masing-masing.\n\nDi alun-alun Yogyakarta, diadakan Pesta Rakyat Kenduri Akbar 1.000 Rasa. Seluruh warga dan pelancong merayakan kebebasan cita rasa otentik Nusantara. Namamu diukir dengan tinta emas sebagai GRAND MASTER DETEKTIF KULINER SEPANJANG MASA!',
-      epilogue: 'Kamu telah menamatkan seluruh buku misteri kuliner dengan kehormatan tertinggi!',
-      badgeName: 'Grand Master Detektif Nusantara 🌟🏆',
-      rewardPoints: 1200,
+          'Identitas Topeng Garam terbongkar tuntas! Dia adalah mantan juru masak istana yang dipecat puluhan tahun lalu karena keserakahan bisnis hitam. Seluruh sindikat dari Wijilan hingga Kaliurang dibongkar hingga ke akar-akarnya.\n\nDi Bangsal Kencana Bale Raos, Perjamuan Agung Diplomatik Keraton berlangsung dengan keagungan tiada tara. Sri Sultan Hamengku Buwono sendiri menyematkan Bintang Jasa Mahaputera Kuliner Nusantara di dadamu.\n\nNamamu tercatat abadi dalam lembaran babad sejarah Yogyakarta sebagai DETEKTIF KULINER LEGENDA SEPANJANG MASA!',
+      epilogue: 'SELAMAT! KAMU TELAH MENAMATKAN SELURUH 15 KASUS DENGAN KEMENANGAN MUTLAK!',
+      badgeName: 'Bintang Mahaputera Kuliner Nusantara 🏆👑🌟',
+      rewardPoints: 2000,
     ),
     badEnding: CaseEnding(
-      title: 'PENYELIDIKAN GAGAL: Kegelapan Rasa Abadi',
+      title: 'PENYELIDIKAN GAGAL: Runtuhnya Martabat Jamuan Keraton',
       narrative:
-          'Sindikat berhasil melarikan diri membawa formula rahasia dan menenggelamkan gua ke dasar samudra. Sejak hari itu, kuliner otentik perlahan punah digantikan makanan cepat saji tanpa jiwa.',
-      epilogue: 'Biro Investigasi Rasa ditutup. Sejarah meratapi hilangnya deduksi terbaikmu.',
-      badgeName: 'Bayangan Garam 💔',
+          'Ledakan menghancurkan altar bawah tanah dan racun merusak seluruh jamuan diplomatik. Topeng Garam lolos ke laut selatan dan sejarah mencatat kegagalan terbesar detektif di tanah Jawa.',
+      epilogue: 'Kamu gagal di langkah paling akhir. Bangkit dan ulangi dari Checkpoint 3!',
+      badgeName: 'Mahkota Retak 💔',
       rewardPoints: 0,
     ),
   ),

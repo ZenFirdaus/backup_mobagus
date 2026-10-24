@@ -1782,7 +1782,7 @@ class _ProfileTabState extends State<ProfileTab>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Game Tebak Kuliner',
+                    'Mini Games Kuliner',
                     style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
@@ -1790,7 +1790,7 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Mainkan tantangan kuis kuliner harian',
+                    '2 Game: Kuis Rasa Mataraman & Detektif Kuliner',
                     style:
                         TextStyle(fontSize: 11, color: AppColors.textMuted),
                   ),
