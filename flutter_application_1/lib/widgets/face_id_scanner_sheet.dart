@@ -507,23 +507,24 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
             // Informasi Akun Pengguna (Clean & Reassuring)
             const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.line),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    Icons.shield_rounded,
+                    Icons.lock_person_rounded,
                     size: 15,
-                    color: AppColors.slateBlue,
+                    color: AppColors.orange,
                   ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      '${widget.userName} • ${widget.userEmail}',
+                      '1 Akun Khusus 1 Wajah • ${widget.userEmail}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
