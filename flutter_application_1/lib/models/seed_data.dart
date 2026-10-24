@@ -365,20 +365,60 @@ final kDefaultFoods = <String, List<Food>>{
       id: 'food_ff_1',
       restaurantId: 'resto_fastfood_1',
       name: 'Paket Sayap + Nasi + Es Teh',
-      description: 'Ayam goreng tepung renyah bumbu khas Olive dengan nasi pulen dan es teh',
+      description:
+          '1 potong sayap ayam krispi bumbu gurih rempah khas Olive dengan nasi pulen hangat dan es teh manis',
       price: 15000,
       category: 'Makanan Utama',
-      imageUrl: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80',
+      imageUrl:
+          'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_ff_2',
       restaurantId: 'resto_fastfood_1',
       name: 'Paket Paha Atas Krispi',
-      description: 'Potongan paha atas krispi gurih dengan saus sambal khas',
+      description:
+          '1 potong paha atas ayam goreng tepung renyah beraroma gurih renyah dengan sambal khas',
       price: 18000,
       category: 'Makanan Utama',
-      imageUrl: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=600&q=80',
+      imageUrl:
+          'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_ff_3',
+      restaurantId: 'resto_fastfood_1',
+      name: 'Ayam Geprek Sambal Korek Olive',
+      description:
+          'Ayam krispi digeprek dengan ulekan cabai rawit pedas gurih bawang putih',
+      price: 20000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_ff_4',
+      restaurantId: 'resto_fastfood_1',
+      name: 'Burger Ayam Krispi',
+      description:
+          'Burger dengan patty fillet ayam krispi tebal, selada segar, dan saus mayones khas',
+      price: 16000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_ff_5',
+      restaurantId: 'resto_fastfood_1',
+      name: 'French Fries Bumbu Gurih',
+      description:
+          'Kentang goreng stik renyah garing keemasan dengan taburan bumbu rempah gurih',
+      price: 12000,
+      category: 'Camilan',
+      imageUrl:
+          'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -386,21 +426,49 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_fc_1',
       restaurantId: 'resto_foodcourt_1',
-      name: 'Dry Ramen Kranggan',
-      description: 'Ramen kering gurih dengan topping chashu ayam, daun bawang, dan telur onsen',
-      price: 28000,
+      name: 'Mie Kering Chili Oil Tjap 1000 Tahun',
+      description:
+          'Mie kenyal racikan khas Pasar Kranggan dengan chili oil aromatik, ayam cincang, dan pangsit renyah',
+      price: 26000,
       category: 'Makanan Utama',
-      imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+      imageUrl:
+          'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_fc_2',
       restaurantId: 'resto_foodcourt_1',
-      name: 'Pastry Croissant Cokelat',
-      description: 'Butter croissant renyah dengan isian cokelat Belgia lumer',
+      name: 'Pain Au Chocolat Bake Me to The Moon',
+      description:
+          'Pastry butter Prancis renyah berlapis dengan isian cokelat Belgia pekat lumer',
       price: 22000,
-      category: 'Jajanan',
-      imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+      category: 'Camilan',
+      imageUrl:
+          'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_fc_3',
+      restaurantId: 'resto_foodcourt_1',
+      name: 'Dimsum Siomay Mentai Bakar',
+      description:
+          '4 buah dimsum siomay daging udang ayam tebal dengan siraman saus mentai bakar torched gurih creamy',
+      price: 24000,
+      category: 'Camilan',
+      imageUrl:
+          'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_fc_4',
+      restaurantId: 'resto_foodcourt_1',
+      name: 'Es Kopi Susu Gula Aren Kranggan',
+      description:
+          'Espresso house blend robusta arabika dengan susu segar creamy dan gula aren organik',
+      price: 18000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -408,11 +476,61 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_cafe_1',
       restaurantId: 'resto_cafe_1',
-      name: 'Single Origin Filter Coffee',
-      description: 'Kopi seduh manual metode V60 dengan biji arabika lokal pilihan',
-      price: 25000,
+      name: 'V60 Single Origin Wamena Enade',
+      description:
+          'Kopi seduh manual V60 arabika Papua Wamena dengan aroma melati segar, apel merah, dan aftertaste bersih',
+      price: 35000,
       category: 'Minuman',
-      imageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=80',
+      imageUrl:
+          'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_cafe_2',
+      restaurantId: 'resto_cafe_1',
+      name: 'Kopi Tubruk Bajawa Flores',
+      description:
+          'Kopi tubruk aromatik dataran tinggi Flores dengan body kental mantap serta sentuhan cokelat karamel',
+      price: 30000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_cafe_3',
+      restaurantId: 'resto_cafe_1',
+      name: 'Single Origin Temanggung Darma',
+      description:
+          'Manual brew biji Temanggung proses natural dengan sensasi rasa manis madu alami dan buah berry segar',
+      price: 35000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_cafe_4',
+      restaurantId: 'resto_cafe_1',
+      name: 'Orange Tart Artisan Pastry',
+      description:
+          'Tart renyah buatan artisan dengan krim custard citrus segar pendamping seduhan kopi',
+      price: 28000,
+      category: 'Camilan',
+      imageUrl:
+          'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_cafe_5',
+      restaurantId: 'resto_cafe_1',
+      name: 'Cold Drip Filter Reserve',
+      description:
+          'Ekstraksi tetesan kopi dingin selama 12 jam menghasilkan karakter rasa kopi bersih yang intens menyegarkan',
+      price: 38000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -421,10 +539,72 @@ final kDefaultFoods = <String, List<Food>>{
       id: 'food_resto_1',
       restaurantId: 'resto_restoran_1',
       name: 'Bistik Jawa Keraton',
-      description: 'Daging sapi empuk dengan saus manis gurih rempah kraton dan setup sayuran',
-      price: 45000,
+      description:
+          'Hidangan favorit Sri Sultan Hamengku Buwono VIII berupa bistik lidah/daging sapi empuk saus rempah pala manis dengan selada wortel buncis',
+      price: 68000,
       category: 'Makanan Utama',
-      imageUrl: 'https://images.unsplash.com/photo-1695658519636-5fc41203df9a?auto=format&fit=crop&w=600&q=80',
+      imageUrl:
+          'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_resto_2',
+      restaurantId: 'resto_restoran_1',
+      name: 'Bebek Suwar-Suwir Saus Kedondong',
+      description:
+          'Daging bebek suwir empuk bumbu rempah gurih khas Keraton dengan siraman saus asam segar buah kedondong asli',
+      price: 62000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1514944298352-78d4924c5b2a?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_resto_3',
+      restaurantId: 'resto_restoran_1',
+      name: 'Gecok Ganem Daging Sapi',
+      description:
+          'Bulatan daging sapi cincang lembut berkuah santan belimbing wuluh segar kegemaran Sri Sultan HB IX',
+      price: 58000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_resto_4',
+      restaurantId: 'resto_restoran_1',
+      name: 'Sup Timlo Ningrat',
+      description:
+          'Sup kaldu ayam bening kaya rasa dengan potongan sosis solo, telur pindang bebek, jamur kuping, dan suwiran ayam',
+      price: 42000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_resto_5',
+      restaurantId: 'resto_restoran_1',
+      name: 'Beer Djawa',
+      description:
+          'Minuman rempah non-alkohol khas Sultan berbusa jeruk nipis, jahe, serai, cengkeh, kayu manis yang disajikan dingin menyegarkan',
+      price: 22000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_resto_6',
+      restaurantId: 'resto_restoran_1',
+      name: 'Manuk Nom Puding Tape',
+      description:
+          'Puding tape ketan hijau lembut disajikan dengan emping melinjo gurih manis renyah sebagai penutup santap agung ningrat',
+      price: 25000,
+      category: 'Camilan',
+      imageUrl:
+          'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -432,45 +612,58 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_1_1',
       restaurantId: 'resto_1',
-      name: 'Paket Nasi Gudeg Komplit',
+      name: 'Nasi Gudeg Komplit Wijilan',
       description:
-          'Nasi gudeg krecek mercon, telur pindang, tahu bacem, suwir ayam kampung',
-      price: 25000,
+          'Gudeg nangka merah manis gurih, sambal krecek pedas berkuah areh kental, telur bebek bacem, suwir ayam kampung, dan tahu tempe',
+      price: 42000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_1_2',
       restaurantId: 'resto_1',
-      name: 'Paket Gudeg Paha Atas',
+      name: 'Gudeg Kendil Paha Atas & Dada',
       description:
-          'Gudeg dengan paha ayam kampung bakar bumbu areh kental gurih',
-      price: 38000,
+          'Kemasan kendil tanah liat khas berisi gudeg kering, 2 paha atas/dada ayam kampung, 5 butir telur bebek pindang, dan sambal krecek',
+      price: 180000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_1_3',
       restaurantId: 'resto_1',
-      name: 'Besek Gudeg Kendil 5 Porsi',
+      name: 'Nasi Gudeg Telur Suwir',
       description:
-          'Gudeg kendil lengkap porsi keluarga untuk oleh-oleh tahan 24 jam',
-      price: 120000,
-      category: 'Oleh-oleh',
+          'Nasi gudeg nangka muda manis legit, sambal goreng krecek pedas cabai rawit, 1 butir telur pindang bacem, dan suwir ayam kampung',
+      price: 25000,
+      category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_1_4',
       restaurantId: 'resto_1',
-      name: 'Es Teh Manis Hangat',
-      description: 'Teh tubruk pilihan dengan gula aren lokal Bantul',
-      price: 5000,
+      name: 'Sambal Goreng Krecek Mercon',
+      description:
+          'Porsi krecek kulit sapi empuk kenyal dengan cabai rawit merah utuh kuah santan areh gurih pedas nampol',
+      price: 20000,
+      category: 'Pelengkap',
+      imageUrl:
+          'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_1_5',
+      restaurantId: 'resto_1',
+      name: 'Wedang Uwuh Rempah Komplit',
+      description:
+          'Minuman seduh kayu secang, jahe geprek, cengkeh, kayu manis, dan daun pala disajikan dengan gula batu murni',
+      price: 10000,
       category: 'Minuman',
       imageUrl:
           'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
@@ -483,34 +676,59 @@ final kDefaultFoods = <String, List<Food>>{
       restaurantId: 'resto_2',
       name: 'Mangut Lele Asap Pawon',
       description:
-          'Lele asap kayu klampok disiram kuah santan cabai rawit pedas gurih',
+          'Ikan lele sungai diasap dengan kayu klampok, dimasak kuah santan cabai rawit merah medok khas pawon Mbah Marto',
       price: 25000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_2_2',
       restaurantId: 'resto_2',
-      name: 'Paket Nasi Gudeg Manggar',
+      name: 'Garang Asem Ayam Kampung',
       description:
-          'Gudeg bunga kelapa khas Bantul dengan areh santan kental',
-      price: 20000,
+          'Ayam kampung kukus bungkus daun pisang dengan belimbing wuluh, santan encer segar berkuah pedas gurih asam',
+      price: 30000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_2_3',
       restaurantId: 'resto_2',
-      name: 'Sambal Bawang Bajak',
-      description: 'Sambal rawit merah bajak dengan bawang merah goreng renyah',
-      price: 3000,
+      name: 'Opor Ayam Kampung Pawon',
+      description:
+          'Potongan ayam kampung kuah opor kuning kental gurih aroma kayu bakar khas dapur tradisional Bantul',
+      price: 28000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_2_4',
+      restaurantId: 'resto_2',
+      name: 'Gudeg Daun Pepaya & Krecek',
+      description:
+          'Sayur daun pepaya rebus tanpa rasa pahit disajikan dengan kuah sambal krecek pedas gurih',
+      price: 12000,
       category: 'Pelengkap',
       imageUrl:
-          'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_2_5',
+      restaurantId: 'resto_2',
+      name: 'Es Beras Kencur Segar',
+      description:
+          'Jamu beras kencur alami racikan tradisional manis segar pereda lelah',
+      price: 7000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -518,35 +736,61 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_3_1',
       restaurantId: 'resto_3',
-      name: 'Soto Daging Bathok Kelapa',
+      name: 'Soto Sapi Bathok Bening',
       description:
-          'Soto kuah bening segar disajikan dalam batok kelapa dengan irisan daging sapi empuk',
+          'Soto daging sapi kuah kaldu bening gurih segar disajikan otentik di dalam batok kelapa beralas mangkok',
       price: 12000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_3_2',
       restaurantId: 'resto_3',
-      name: 'Tempe Garit Goreng Hangat',
-      description: 'Tempe bergarit bumbu bawang ketumbar gurih renyah',
+      name: 'Tempe Garit Goreng Panas',
+      description:
+          'Tempe kedelai bergarit digoreng dadakan renyah gurih bumbu bawang ketumbar khas Sambisari',
       price: 2000,
       category: 'Pelengkap',
       imageUrl:
-          'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_3_3',
       restaurantId: 'resto_3',
-      name: 'Soto Ayam Kampung Bathok',
-      description: 'Versi ayam kampung dengan kuah kuning kunyit segar',
-      price: 10000,
-      category: 'Makanan Utama',
+      name: 'Sate Telur Puyuh Bacem',
+      description:
+          'Tusukan telur puyuh bumbu bacem manis legit kecap gurih khas Jawa',
+      price: 4000,
+      category: 'Pelengkap',
       imageUrl:
-          'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_3_4',
+      restaurantId: 'resto_3',
+      name: 'Sate Usus Ayam Bumbu Kuning',
+      description:
+          'Tusukan sate usus ayam bersih empuk dengan bumbu kuning kunyit gurih',
+      price: 3000,
+      category: 'Pelengkap',
+      imageUrl:
+          'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_3_5',
+      restaurantId: 'resto_3',
+      name: 'Es Jeruk Peras Segar',
+      description:
+          'Jeruk peras murni dengan es batu dan gula pasir asli pelepas dahaga sarapan soto',
+      price: 5000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -556,8 +800,8 @@ final kDefaultFoods = <String, List<Food>>{
       restaurantId: 'resto_4',
       name: 'Bakmi Godhog Telur Bebek',
       description:
-          'Bakmi rebus kuah kaldu ayam kampung kental dimasak dengan arang kayu',
-      price: 28000,
+          'Bakmi kuning dan bihun dimasak tungku arang anglo dengan telur bebek kental, suwiran ayam kampung, kekian, dan kol tomat',
+      price: 32000,
       category: 'Makanan Utama',
       imageUrl:
           'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
@@ -566,25 +810,49 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_4_2',
       restaurantId: 'resto_4',
-      name: 'Bakmi Goreng Arang Mbah Gito',
+      name: 'Bakmi Goreng Spesial Anglo',
       description:
-          'Bakmi goreng kering dengan ayam kampung suwir dan telur omelette tipis',
-      price: 30000,
+          'Bakmi goreng manis gurih beraroma asap wajan arang dengan suwiran ayam kampung dan taburan bawang merah goreng renyah',
+      price: 32000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_4_3',
       restaurantId: 'resto_4',
-      name: 'Wedang Uwuh Rempah Imogiri',
+      name: 'Nasi Magelangan Mbah Gito',
       description:
-          'Minuman rempah daun secang, kayu manis, jahe, dan gula batu khas Imogiri',
-      price: 10000,
+          'Perpaduan nasi dan bakmi dimasak anglo dengan bumbu gurih manis pedas, telur bebek, dan suwir ayam kampung',
+      price: 30000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_4_4',
+      restaurantId: 'resto_4',
+      name: 'Rica-Rica Balungan Ayam Kampung',
+      description:
+          'Balungan dan sayap ayam kampung bumbu rica pedas pekat dengan aroma daun kemangi segar',
+      price: 35000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_4_5',
+      restaurantId: 'resto_4',
+      name: 'Teh Poci Gula Batu',
+      description:
+          'Teh hitam wangi melati diseduh dalam poci tanah liat disajikan dengan cangkir tanah liat dan gula batu',
+      price: 12000,
       category: 'Minuman',
       imageUrl:
-          'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -594,35 +862,59 @@ final kDefaultFoods = <String, List<Food>>{
       restaurantId: 'resto_5',
       name: 'Kopi Joss Arang Membara',
       description:
-          'Kopi tubruk robusta diselipkan arang kayu membara menciptakan aroma karamel smoky',
+          'Kopi hitam tubruk manis khas Angkringan Lik Man dicelup bongkahan arang kayu membara yang mendesis',
       price: 8000,
       category: 'Minuman',
       imageUrl:
-          'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_5_2',
       restaurantId: 'resto_5',
-      name: 'Nasi Kucing Sambal Teri',
+      name: 'Kopi Susu Joss',
       description:
-          'Nasi porsi kecil bungkus daun pisang dengan sambal teri gurih pedas',
-      price: 4000,
-      category: 'Makanan Utama',
+          'Kopi tubruk kental berpadu susu kental manis dan celupan bara arang panas untuk rasa lembut gurih karamel',
+      price: 10000,
+      category: 'Minuman',
       imageUrl:
-          'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_5_3',
       restaurantId: 'resto_5',
-      name: 'Gorengan Angkringan Mix',
+      name: 'Sego Kucing Sambal Teri',
       description:
-          'Ote-ote, bakwan jagung, tahu isi, dan pisang goreng pilihan',
-      price: 2000,
-      category: 'Jajanan',
+          'Nasi bungkus daun pisang porsi pas dengan oseng ikan teri gurih dan sambal tomat pedas nikmat',
+      price: 4000,
+      category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_5_4',
+      restaurantId: 'resto_5',
+      name: 'Sate Usus & Kulit Bakar Angkringan',
+      description:
+          'Sate usus dan kulit ayam dibakar kecap manis di atas anglo arang bumbu meresap',
+      price: 4000,
+      category: 'Pelengkap',
+      imageUrl:
+          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_5_5',
+      restaurantId: 'resto_5',
+      name: 'Tempe Mendoan Hangat',
+      description:
+          'Tempe mendoan tepung berbalut daun bawang disajikan panas dengan cabai rawit hijau segar',
+      price: 3000,
+      category: 'Camilan',
+      imageUrl:
+          'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -632,34 +924,59 @@ final kDefaultFoods = <String, List<Food>>{
       restaurantId: 'resto_6',
       name: 'Oseng Mercon Daging Koyor',
       description:
-          'Koyor sapi empuk ditumis dengan racikan cabai rawit merah membara yang meledak di lidah',
+          'Daging sapi, kikil, dan tetelan koyor empuk dioseng dengan puluhan cabai rawit pedas menggelegar',
       price: 30000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_6_2',
       restaurantId: 'resto_6',
-      name: 'Oseng Mercon Tahu Tempe',
+      name: 'Oseng Mercon Babat & Paru',
       description:
-          'Tahu dan tempe goreng dengan bumbu mercon versi vegetarian yang tak kalah pedas',
-      price: 20000,
+          'Potongan babat dan paru sapi kenyal gurih berbumbu cabai rawit pedas meledak di lidah',
+      price: 32000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_6_3',
       restaurantId: 'resto_6',
-      name: 'Es Jeruk Peras Segar',
-      description: 'Penawar pedas! Jeruk peras segar dengan gula aren dingin',
-      price: 8000,
+      name: 'Ayam Goreng Bumbu Mercon',
+      description:
+          'Ayam goreng gurih disiram bumbu oseng mercon pedas gurih rawit cabai merah',
+      price: 26000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_6_4',
+      restaurantId: 'resto_6',
+      name: 'Tahu & Tempe Bacem Legit',
+      description:
+          'Baceman tahu dan tempe manis gurih untuk peredam pedas dahsyat oseng mercon',
+      price: 4000,
+      category: 'Pelengkap',
+      imageUrl:
+          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_6_5',
+      restaurantId: 'resto_6',
+      name: 'Es Jeruk Nipis Murni',
+      description:
+          'Es jeruk nipis segar pelepas dahaga dan peredam rasa pedas oseng mercon',
+      price: 6000,
       category: 'Minuman',
       imageUrl:
-          'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -667,25 +984,49 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_7_1',
       restaurantId: 'resto_7',
-      name: 'Bakmi Nyemek Spesial Kraton',
+      name: 'Bakmi Nyemek Telur Bebek',
       description:
-          'Perpaduan mi kuah kental basah dengan bumbu bawang putih khas kraton dan suwir ayam',
-      price: 25000,
+          'Bakmi kuah kental sedikit berkuah rempah dimasak wajan arang dengan suwiran ayam kampung dan telur bebek gurih',
+      price: 28000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_7_2',
+      restaurantId: 'resto_7',
+      name: 'Bakmi Godhog Kaldu Gurih',
+      description:
+          'Bakmi rebus kuah kaldu ayam kampung gurih alami dengan kol segar, seledri, dan taburan bawang goreng',
+      price: 28000,
       category: 'Makanan Utama',
       imageUrl:
           'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
-      id: 'food_7_2',
+      id: 'food_7_3',
       restaurantId: 'resto_7',
-      name: 'Bakmi Goreng Kering Alun-alun',
+      name: 'Nasi Goreng Babat Alun-Alun',
       description:
-          'Bakmi goreng kering dengan bumbu kuat dan topping ceker ayam',
-      price: 27000,
+          'Nasi goreng kecap khas Jawa dimasak wajan arang dengan potongan babat sapi kenyal gurih',
+      price: 30000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_7_4',
+      restaurantId: 'resto_7',
+      name: 'Teh Nasgitel Panas Melati',
+      description:
+          'Teh panas khas Jawa: panas, legi (manis), dan kentel beraroma melati untuk menemani santap malam',
+      price: 6000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -693,35 +1034,61 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_8_1',
       restaurantId: 'resto_8',
-      name: 'Sate Klatak Jeruji Besi 2 Tusuk',
+      name: 'Sate Klathak Jeruji Besi',
       description:
-          'Daging kambing muda hanya dibumbui garam dan bawang, dipanggang di atas jeruji besi sepeda',
-      price: 35000,
+          '2 tusuk sate daging kambing muda empuk dipanggang jeruji besi sepeda berbalut garam & kuah gulai gurih',
+      price: 33000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_8_2',
       restaurantId: 'resto_8',
-      name: 'Gule Kambing Muda Spesial',
-      description: 'Kuah rempah kaya dengan potongan tulang kambing sumsum',
-      price: 45000,
+      name: 'Tongseng Daging Kambing Muda',
+      description:
+          'Daging kambing muda empuk dimasak kuah gulai kecap manis gurih dengan irisan kol, tomat, dan cabai rawit utuh',
+      price: 33000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_8_3',
       restaurantId: 'resto_8',
-      name: 'Nasi Putih + Krupuk Emping',
-      description: 'Nasi putih panas pulen dengan krupuk emping melinjo renyah',
-      price: 5000,
-      category: 'Pelengkap',
+      name: 'Kicik Daging Kambing',
+      description:
+          'Daging kambing cincang bumbu kecap rempah gurih pedas manis pekat tanpa kuah beraroma bawang merah melimpah',
+      price: 33000,
+      category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_8_4',
+      restaurantId: 'resto_8',
+      name: 'Tengkleng Balungan Pak Pong',
+      description:
+          'Tulang iga dan balungan kambing empuk berkuah gulai gurih kaya rempah khas Imogiri Bantul',
+      price: 38000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_8_5',
+      restaurantId: 'resto_8',
+      name: 'Sarsaparilla / Saparella Dingin',
+      description:
+          'Minuman soda herbal sarsaparilla klasik khas Yogyakarta dingin dengan aroma rempah menyegarkan',
+      price: 12000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -729,10 +1096,10 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_9_1',
       restaurantId: 'resto_9',
-      name: 'Nasi Pecel Komplit Spesial',
+      name: 'Nasi Pecel Komplit Bu Wiryo',
       description:
-          'Nasi dengan sayuran rebus segar disiram sambal kacang kental dan pilihan lauk',
-      price: 15000,
+          'Nasi hangat diselimuti sayur bayam, kangkung, kecambah, kacang panjang disiram kuah sambal pecel kacang kental gurih pedas manis',
+      price: 22000,
       category: 'Makanan Utama',
       imageUrl:
           'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
@@ -741,12 +1108,49 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_9_2',
       restaurantId: 'resto_9',
-      name: 'Empal Gentong Sapi',
-      description: 'Empal sapi bumbu kuning digoreng kering renyah gurih',
-      price: 8000,
-      category: 'Lauk',
+      name: 'Nasi Sop Daging Sapi Bening',
+      description:
+          'Sop kaldu sapi bening segar dengan potongan wortel, kentang, buncis, dan irisan daging sapi empuk khas UGM',
+      price: 25000,
+      category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_9_3',
+      restaurantId: 'resto_9',
+      name: 'Empal Daging Sapi Bacem',
+      description:
+          'Daging sapi goreng gurih manis empuk bumbu rempah bacem meresap sempurna',
+      price: 18000,
+      category: 'Pelengkap',
+      imageUrl:
+          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_9_4',
+      restaurantId: 'resto_9',
+      name: 'Tempe & Tahu Bacem Bu Wiryo',
+      description:
+          'Tempe kedelai dan tahu bacem khas bumbu ketumbar gula kelapa legit gurih',
+      price: 5000,
+      category: 'Pelengkap',
+      imageUrl:
+          'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_9_5',
+      restaurantId: 'resto_9',
+      name: 'Es Kolak Pisang Kepok',
+      description:
+          'Kolak pisang kepok santan gula aren wangi daun pandan disajikan dingin menyegarkan',
+      price: 10000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -754,25 +1158,61 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_10_1',
       restaurantId: 'resto_10',
-      name: 'Tengkleng Gajah Porsi Jumbo',
+      name: 'Tengkleng Gajah Kuah Gulai Jumbo',
       description:
-          'Tulang kambing kuah rempah kaya dengan sumsum lezat, porsi untuk 2-3 orang',
-      price: 65000,
+          'Porsi jumbo balungan kambing dengan sumsum melimpah dalam kuah gulai rempah pekat gurih kaya rasa',
+      price: 52000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_10_2',
       restaurantId: 'resto_10',
-      name: 'Tengkleng Regular',
+      name: 'Tengkleng Gajah Goreng Rempah',
       description:
-          'Porsi standar dengan pilihan daging dan iga kambing muda',
+          'Balungan kambing dipanggang dan digoreng dengan bumbu kecap rempah manis gurih karamel gurih',
+      price: 52000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_10_3',
+      restaurantId: 'resto_10',
+      name: 'Sate Goreng Daging Kambing',
+      description:
+          'Daging kambing empuk tanpa tusuk ditumis bumbu kecap pedas gurih dengan kol dan tomat segar',
+      price: 45000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_10_4',
+      restaurantId: 'resto_10',
+      name: 'Nasi Goreng Kambing Gajah',
+      description:
+          'Nasi goreng bumbu rempah gulai kambing dengan suwiran daging kambing melimpah dan acar segar',
       price: 38000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_10_5',
+      restaurantId: 'resto_10',
+      name: 'Es Timun Serut Selasih',
+      description:
+          'Serutan mentimun segar berpadu biji selasih dan sirup melon dingin peredam kolesterol',
+      price: 10000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -780,24 +1220,49 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_11_1',
       restaurantId: 'resto_11',
-      name: 'Es Dawet Ayu Original',
+      name: 'Es Dawet Ayu Cendol Pandan',
       description:
-          'Dawet cendol pandan hijau dengan santan segar dan gula merah cair',
-      price: 8000,
+          'Cendol daun pandan suji kenyal dengan santan kelapa murni gurih dan juruh gula aren kental harum nangka',
+      price: 10000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_11_2',
+      restaurantId: 'resto_11',
+      name: 'Es Dawet Durian Asli',
+      description:
+          'Es dawet cendol komplet disajikan dengan 1 butir buah durian asli manis creamy legit',
+      price: 22000,
       category: 'Minuman',
       imageUrl:
           'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
-      id: 'food_11_2',
+      id: 'food_11_3',
       restaurantId: 'resto_11',
-      name: 'Es Dawet Durian Special',
-      description: 'Dawet dengan topping daging durian montong premium lokal',
-      price: 12000,
+      name: 'Rujak Es Krim Malioboro',
+      description:
+          'Serutan buah mangga, kedondong, bengkuang, pepaya berbumbu rujak pedas manis asam ditutup es puter kelapa lembut',
+      price: 15000,
+      category: 'Camilan',
+      imageUrl:
+          'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_11_4',
+      restaurantId: 'resto_11',
+      name: 'Es Cincau Hitam Gula Aren',
+      description:
+          'Cincau hitam kenyal alami disiram santan kelapa segar dan kuah juruh gula aren harum',
+      price: 8000,
       category: 'Minuman',
       imageUrl:
-          'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],
@@ -805,10 +1270,10 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_12_1',
       restaurantId: 'resto_12',
-      name: 'Ayam Goreng Cemplung Utuh',
+      name: 'Ayam Kampung Utuh Goreng Cemplung',
       description:
-          'Ayam kampung utuh goreng dengan teknik cemplung wajan tanah liat, kulit super renyah',
-      price: 50000,
+          '1 ekor ayam kampung utuh bumbu bawang putih ketumbar digoreng dalam kuali tanah liat api kayu bakar, kulit renyah daging juicy',
+      price: 135000,
       category: 'Makanan Utama',
       imageUrl:
           'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
@@ -817,24 +1282,49 @@ final kDefaultFoods = <String, List<Food>>{
     Food(
       id: 'food_12_2',
       restaurantId: 'resto_12',
-      name: 'Paha + Dada Goreng Cemplung',
+      name: 'Paket Paha / Dada Cemplung + Nasi',
       description:
-          'Potongan paha atas dan dada ayam kampung goreng bumbu kunyit ketumbar meresap',
-      price: 30000,
+          'Potongan ayam kampung paha atau dada renyah di luar juicy di dalam disajikan dengan nasi pulen hangat',
+      price: 35000,
       category: 'Makanan Utama',
       imageUrl:
-          'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
     Food(
       id: 'food_12_3',
       restaurantId: 'resto_12',
-      name: 'Lalapan Segar + Sambal Tomat',
-      description: 'Lalapan timun, kemangi, kacang panjang dengan sambal tomat segar',
+      name: 'Sambal Korek Ulek Bawang',
+      description:
+          'Sambal cabai rawit merah segar diulek dadakan dengan bawang putih dan siraman minyak panas kelapa gurih',
       price: 5000,
       category: 'Pelengkap',
       imageUrl:
           'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_12_4',
+      restaurantId: 'resto_12',
+      name: 'Sayur Asem Segar Kasihan',
+      description:
+          'Sayur asem khas Jawa manis asam segar dengan melinjo, jagung manis, kacang panjang, dan kacang tanah',
+      price: 8000,
+      category: 'Makanan Utama',
+      imageUrl:
+          'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
+      createdAt: DateTime(2025, 1, 1),
+    ),
+    Food(
+      id: 'food_12_5',
+      restaurantId: 'resto_12',
+      name: 'Es Kelapa Muda Gula Jawa',
+      description:
+          'Air kelapa muda dan daging kelapa keruk disajikan dengan gula kelapa cair asli dan es batu',
+      price: 10000,
+      category: 'Minuman',
+      imageUrl:
+          'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
       createdAt: DateTime(2025, 1, 1),
     ),
   ],

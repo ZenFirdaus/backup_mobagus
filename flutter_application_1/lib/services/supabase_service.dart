@@ -589,7 +589,12 @@ class SupabaseService {
       final list = (res as List).map((e) => Food.fromJson(e)).toList();
       if (list.isNotEmpty) return list;
     } catch (_) {}
-    return kDefaultFoods[restaurantId] ?? [];
+    return kDefaultFoods[restaurantId] ??
+        kDefaultFoods['resto_$restaurantId'] ??
+        (restaurantId.startsWith('resto_')
+            ? kDefaultFoods[restaurantId.replaceFirst('resto_', '')]
+            : null) ??
+        [];
   }
 
   // ─── FAVORITES ───
