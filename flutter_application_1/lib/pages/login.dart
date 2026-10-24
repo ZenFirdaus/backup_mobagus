@@ -80,15 +80,7 @@ class _LoginPageState extends State<LoginPage> {
       await _saveUserSession(name, _email.text.trim(), pwd);
       await SupabaseService.instance.initStorage(force: true);
 
-      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
-        email: _email.text.trim(),
-      );
-      if (!isEnrolled) {
-        if (!mounted) return;
-        _showEnrollBiometricPrompt(name, _email.text.trim(), pwd);
-      } else {
-        _goHome(name, biometricOn: true);
-      }
+      await _handlePostLoginNavigation(name, _email.text.trim(), pwd);
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -110,15 +102,7 @@ class _LoginPageState extends State<LoginPage> {
         SupabaseService.instance.setDemoUser(_email.text.trim());
         await SupabaseService.instance.initStorage(force: true);
 
-        final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
-          email: _email.text.trim(),
-        );
-        if (!isEnrolled) {
-          if (!mounted) return;
-          _showEnrollBiometricPrompt(name, _email.text.trim(), pwd);
-        } else {
-          _goHome(name, biometricOn: true);
-        }
+        await _handlePostLoginNavigation(name, _email.text.trim(), pwd);
         return;
       }
 
@@ -139,15 +123,7 @@ class _LoginPageState extends State<LoginPage> {
       SupabaseService.instance.setDemoUser(_email.text.trim());
       await SupabaseService.instance.initStorage(force: true);
 
-      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
-        email: _email.text.trim(),
-      );
-      if (!isEnrolled) {
-        if (!mounted) return;
-        _showEnrollBiometricPrompt(resolvedName, _email.text.trim(), pwd);
-      } else {
-        _goHome(resolvedName, biometricOn: true);
-      }
+      await _handlePostLoginNavigation(resolvedName, _email.text.trim(), pwd);
     }
   }
 
@@ -361,85 +337,197 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// Dialog penawaran daftarkan wajah setelah pengguna berhasil login manual
-  void _showEnrollBiometricPrompt(String name, String email,
-      [String? password]) {
+  Future<void> _handlePostLoginNavigation(
+    String name,
+    String email,
+    String pwd,
+  ) async {
+    final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
+      email: email,
+    );
+    if (!mounted) return;
+    _showPostLoginBiometricPrompt(
+      name: name,
+      email: email,
+      password: pwd,
+      alreadyEnrolled: isEnrolled,
+    );
+  }
+
+  /// Dialog penawaran daftarkan wajah setelah pengguna berhasil login email
+  void _showPostLoginBiometricPrompt({
+    required String name,
+    required String email,
+    required String password,
+    required bool alreadyEnrolled,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.6),
       builder: (ctx) => Container(
-        padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 30),
         decoration: const BoxDecoration(
           color: AppColors.background,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: SafeArea(
           top: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Handle Bar
               Container(
-                width: 42,
+                width: 44,
                 height: 4.5,
                 decoration: BoxDecoration(
                   color: AppColors.line,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
+
+              // Icon Visual Premium
               Container(
-                width: 68,
-                height: 68,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.orange, 0.12),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.tint(AppColors.orange, 0.28),
+                    width: 1.5,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.face_retouching_natural_rounded,
-                  size: 34,
-                  color: AppColors.orange,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                decoration: BoxDecoration(
-                  color: AppColors.cream,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'FITUR LOGIN CEPAT & AMAN',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: AppColors.charcoal,
+                child: const Center(
+                  child: Icon(
+                    Icons.face_unlock_rounded,
+                    size: 38,
+                    color: AppColors.orange,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+
+              // Security Pill Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      alreadyEnrolled
+                          ? Icons.check_circle_rounded
+                          : Icons.shield_rounded,
+                      size: 13,
+                      color: alreadyEnrolled ? AppColors.greenDark : AppColors.orange,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      alreadyEnrolled
+                          ? 'FACE ID TELAH AKTIF DI AKUN INI'
+                          : '1 AKUN KHUSUS 1 WAJAH TERDAFTAR',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: alreadyEnrolled
+                            ? AppColors.greenDark
+                            : AppColors.charcoal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Judul & Deskripsi
               Text(
-                'Daftarkan Wajah Anda?',
+                alreadyEnrolled
+                    ? 'Perbarui Face ID Anda?'
+                    : 'Daftarkan Wajah Face ID?',
                 textAlign: TextAlign.center,
-                style: AppText.display(20),
+                style: AppText.display(22),
               ),
               const SizedBox(height: 8),
               Text(
-                'Sugeng rawuh, $name! Anda telah berhasil masuk. Daftarkan wajah Anda sekarang agar di kunjungan berikutnya bisa masuk dengan 1-ketukan instan tanpa kata sandi.',
+                alreadyEnrolled
+                    ? 'Akun $email telah memiliki data wajah terdaftar. Anda dapat memperbarui rekaman wajah atau langsung lanjut ke beranda.'
+                    : 'Halo $name! Daftarkan pemindaian wajah Anda sekarang agar kunjungan berikutnya bisa masuk instan 1-ketukan tanpa kata sandi.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13,
                   height: 1.5,
                   color: AppColors.textMuted,
                 ),
               ),
+              const SizedBox(height: 18),
+
+              // Feature Security Box
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppColors.tint(AppColors.orange, 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.lock_person_rounded,
+                        size: 20,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Perlindungan Wajah Eksklusif',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '1 akun hanya terikat pada 1 wajah pemilik sah. Wajah orang lain akan otomatis ditolak.',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
+
+              // Action Buttons
               PrimaryButton(
-                label: 'Daftarkan Wajah Sekarang',
-                icon: Icons.face_retouching_natural_rounded,
+                label: alreadyEnrolled
+                    ? 'Pindai & Perbarui Wajah'
+                    : 'Daftarkan Wajah Sekarang',
+                icon: Icons.camera_alt_rounded,
                 onPressed: () {
                   Navigator.pop(ctx);
                   _openEnrollFaceSheet(name, email, password);
@@ -447,10 +535,11 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 10),
               SoftButton(
-                label: 'Nanti Saja (Masuk ke Beranda)',
+                label: 'Langsung Masuk ke Beranda',
+                icon: Icons.arrow_forward_rounded,
                 onPressed: () {
                   Navigator.pop(ctx);
-                  _goHome(name, biometricOn: false);
+                  _goHome(name, biometricOn: alreadyEnrolled);
                 },
               ),
             ],
