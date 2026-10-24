@@ -520,20 +520,8 @@ class RewardBorderService {
       debugPrint('Auto-recovery point tx error: $e');
     }
 
-    // 4. Default jika masih kosong sama sekali
-    if (map.isEmpty) {
-      final welcomeTx = PointTransaction(
-        id: 'tx_welcome',
-        userId: uid,
-        amount: 100,
-        transactionType: 'game_reward',
-        referenceId: null,
-        idempotencyKey: 'welcome_bonus',
-        metadata: {'game_name': 'Bonus Kurator'},
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      );
-      map[welcomeTx.id] = welcomeTx;
-    }
+    // Bersihkan entri dummy 'Bonus Kurator' jika ada di cache
+    map.remove('tx_welcome');
 
     final list = map.values.toList();
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));

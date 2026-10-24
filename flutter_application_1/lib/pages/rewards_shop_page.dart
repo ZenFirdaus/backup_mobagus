@@ -152,7 +152,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     tabs: [
                       Tab(text: 'Toko (${_allBorders.length})'),
                       Tab(text: 'Koleksi (${_ownedBorders.length})'),
-                      const Tab(text: 'Riwayat & Chain'),
+                      const Tab(text: 'Riwayat & Sertifikat'),
                     ],
                   ),
                 ),
@@ -237,29 +237,6 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                       ),
                     ),
                   ],
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF627EEA).withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFF627EEA).withValues(alpha: 0.5)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.link_rounded, color: Color(0xFF627EEA), size: 14),
-                SizedBox(width: 4),
-                Text(
-                  'Sepolia EVM',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
                 ),
               ],
             ),
@@ -582,9 +559,9 @@ class _RewardsShopPageState extends State<RewardsShopPage>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Seksi Bukti On-Chain
+        // Seksi Bukti Sertifikat Digital
         const Text(
-          'BUKTI KEPEMILIKAN ON-CHAIN (SEPOLIA)',
+          'BUKTI SERTIFIKAT KEPEMILIKAN DIGITAL',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -603,7 +580,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               border: Border.all(color: AppColors.line),
             ),
             child: const Text(
-              'Belum ada bukti transaksi blockchain. Transaksi pencatatan ke Sepolia otomatis dibuat saat membeli border.',
+              'Belum ada sertifikat digital. Sertifikat kepemilikan otomatis diterbitkan saat Anda menukar border.',
               style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           )
@@ -684,11 +661,11 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Bukti On-Chain: $borderName',
+                        'Sertifikat Digital: $borderName',
                         style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
                       ),
                       Text(
-                        'Block #${bTx.blockNumber ?? 7054231} • Sepolia Testnet',
+                        'Block #${bTx.blockNumber ?? 7054231} • Jaringan Blockchain',
                         style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
                       ),
                     ],
@@ -799,7 +776,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               ),
               const SizedBox(height: 3),
               const Text(
-                'On-Chain Proof of Existence • Ethereum Sepolia',
+                'Bukti Sah Kepemilikan Digital • Jaringan Blockchain',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
               ),
@@ -1059,21 +1036,21 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.line),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(Icons.shield_outlined, color: Color(0xFF627EEA), size: 18),
-                    const SizedBox(width: 10),
+                    Icon(Icons.verified_outlined, color: AppColors.greenDark, size: 20),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Verifikasi Blockchain Sepolia',
+                          Text(
+                            'Sertifikat Kepemilikan Digital Resmi',
                             style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                           ),
                           Text(
-                            'Kepemilikan border diverifikasi on-chain di smart contract ${BlockchainService.contractAddress.substring(0, 8)}...',
-                            style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                            'Border eksklusif ini diverifikasi permanen dengan bukti kepemilikan digital berbasis Blockchain.',
+                            style: TextStyle(fontSize: 10, color: AppColors.textMuted),
                           ),
                         ],
                       ),
