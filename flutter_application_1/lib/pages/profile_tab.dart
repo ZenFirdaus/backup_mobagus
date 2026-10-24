@@ -12,6 +12,7 @@ import '../models/user_ai_profile.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/ai_recommendation_service.dart';
+import '../services/face_biometric_service.dart';
 import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
@@ -166,9 +167,12 @@ class _ProfileTabState extends State<ProfileTab>
 
   Future<void> _loadPrefs() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _biometric =
-          prefs.getBool('foodie_biometric_enabled') ?? widget.biometricOn;
+      final currentEmail = Supabase.instance.client.auth.currentUser?.email;
+      if (currentEmail != null && currentEmail.isNotEmpty) {
+        _biometric = await FaceBiometricService.instance.isFaceEnrolled(email: currentEmail);
+      } else {
+        _biometric = await FaceBiometricService.instance.isFaceEnrolled();
+      }
       _notif = HiveService.instance.isNotificationsEnabled();
 
       final mealPref = HiveService.instance.getMealReminderPreference();
@@ -183,11 +187,14 @@ class _ProfileTabState extends State<ProfileTab>
   }
 
   Future<void> _toggleBiometric(bool val) async {
-    if (val) {
-      final currentEmail =
-          Supabase.instance.client.auth.currentUser?.email ?? 'kurator@foodie.id';
-      final currentName = _profile?.displayName ?? 'Foodie Kurator';
+    final currentEmail =
+        Supabase.instance.client.auth.currentUser?.email ??
+        (_profile?.displayName != null
+            ? '${_profile!.displayName.toLowerCase().replaceAll(' ', '.')}@foodie.id'
+            : 'kurator@foodie.id');
+    final currentName = _profile?.displayName ?? widget.name;
 
+    if (val) {
       // Buka FaceIdScannerSheet dengan preview kamera depan
       showModalBottomSheet(
         context: context,
@@ -201,27 +208,21 @@ class _ProfileTabState extends State<ProfileTab>
           onSuccess: () async {
             Navigator.of(ctx).pop();
             setState(() => _biometric = true);
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('foodie_biometric_enabled', true);
-              await prefs.setString('foodie_last_user_name', currentName);
-              await prefs.setString('foodie_last_user_email', currentEmail);
-            } catch (_) {}
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Row(
                     children: [
-                      Icon(Icons.face_unlock_rounded, color: Colors.white, size: 20),
-                      SizedBox(width: 10),
+                      const Icon(Icons.face_unlock_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: Text('Apple Face ID berhasil diaktifkan.'),
+                        child: Text('Apple Face ID berhasil diaktifkan untuk $currentName.'),
                       ),
                     ],
                   ),
                   backgroundColor: AppColors.greenDark,
                   behavior: SnackBarBehavior.floating,
-                  duration: Duration(seconds: 2),
+                  duration: const Duration(seconds: 2),
                 ),
               );
             }
@@ -233,8 +234,7 @@ class _ProfileTabState extends State<ProfileTab>
 
     setState(() => _biometric = false);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('foodie_biometric_enabled', false);
+      await FaceBiometricService.instance.removeEnrolledFace(email: currentEmail);
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -204,6 +204,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
         inputImage: inputImage,
         isEnrollment: widget.isEnrollment,
         luminance: luminance,
+        targetEmail: widget.userEmail,
       );
 
       if (!mounted || !_isStreaming) {

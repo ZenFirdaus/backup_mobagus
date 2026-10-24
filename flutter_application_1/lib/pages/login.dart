@@ -80,7 +80,9 @@ class _LoginPageState extends State<LoginPage> {
       await _saveUserSession(name, _email.text.trim(), pwd);
       await SupabaseService.instance.initStorage(force: true);
 
-      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
+      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
+        email: _email.text.trim(),
+      );
       if (!isEnrolled) {
         if (!mounted) return;
         _showEnrollBiometricPrompt(name, _email.text.trim(), pwd);
@@ -108,7 +110,9 @@ class _LoginPageState extends State<LoginPage> {
         SupabaseService.instance.setDemoUser(_email.text.trim());
         await SupabaseService.instance.initStorage(force: true);
 
-        final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
+        final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
+          email: _email.text.trim(),
+        );
         if (!isEnrolled) {
           if (!mounted) return;
           _showEnrollBiometricPrompt(name, _email.text.trim(), pwd);
@@ -130,12 +134,14 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _loading = false);
       final fallbackName = _email.text.trim().split('@').first;
       final resolvedName =
-          fallbackName.isEmpty ? 'Dimas Dananjaya' : fallbackName;
+          fallbackName.isEmpty ? 'Kurator Rasa' : fallbackName;
       await _saveUserSession(resolvedName, _email.text.trim(), pwd);
       SupabaseService.instance.setDemoUser(_email.text.trim());
       await SupabaseService.instance.initStorage(force: true);
 
-      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
+      final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
+        email: _email.text.trim(),
+      );
       if (!isEnrolled) {
         if (!mounted) return;
         _showEnrollBiometricPrompt(resolvedName, _email.text.trim(), pwd);
@@ -147,23 +153,52 @@ class _LoginPageState extends State<LoginPage> {
 
   /// Tombol Login Wajah di halaman login:
   /// Masuk cepat menggunakan pemindai kamera Apple Face ID.
-  /// Hanya dapat digunakan jika user sudah login email & mendaftarkan wajah sebelumnya.
+  /// Hanya dapat digunakan jika akun pengguna sudah mendaftarkan wajah sebelumnya.
   Future<void> _loginWithFaceId() async {
-    final isEnrolled = await FaceBiometricService.instance.isFaceEnrolled();
-    final prefs = await SharedPreferences.getInstance();
-    final String? savedName = prefs.getString('foodie_last_user_name');
-    final String? savedEmail = prefs.getString('foodie_last_user_email');
-    final String? savedPassword = prefs.getString('foodie_saved_password');
+    final inputEmail = _email.text.trim();
+    String targetEmail;
+    String targetName;
+    String? targetPassword;
 
-    // Jika belum login email dan belum mendaftarkan wajah:
-    if (!isEnrolled || savedName == null || savedName.trim().isEmpty || savedEmail == null) {
-      if (!mounted) return;
-      _showBiometricNotEnrolledSheet();
-      return;
+    if (inputEmail.isNotEmpty) {
+      // 1. Jika user mengetikkan email, pastikan Face ID terdaftar KHUSUS untuk email tersebut
+      final isUserEnrolled = await FaceBiometricService.instance.isFaceEnrolled(
+        email: inputEmail,
+      );
+      if (!isUserEnrolled) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Face ID belum didaftarkan untuk akun $inputEmail. Silakan masuk menggunakan kata sandi.',
+            ),
+            backgroundColor: AppColors.charcoal,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final key = inputEmail.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+      targetEmail = inputEmail;
+      targetName = prefs.getString('foodie_face_name_$key') ??
+          prefs.getString('foodie_last_user_name') ??
+          inputEmail.split('@').first;
+      targetPassword = prefs.getString('foodie_face_pwd_$key') ??
+          prefs.getString('foodie_saved_password');
+    } else {
+      // 2. Jika email belum diisi, periksa akun biometrik aktif yang terdaftar di perangkat ini
+      final account = await FaceBiometricService.instance.getActiveBiometricAccount();
+      if (account == null) {
+        if (!mounted) return;
+        _showBiometricNotEnrolledSheet();
+        return;
+      }
+      targetEmail = account['email']!;
+      targetName = account['name']!;
+      targetPassword = account['password'];
     }
-
-    final userName = savedName.trim();
-    final userEmail = savedEmail.trim();
 
     if (!mounted) return;
 
@@ -173,30 +208,31 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (ctx) => FaceIdScannerSheet(
-        userName: userName,
-        userEmail: userEmail,
-        savedPassword: savedPassword,
+        userName: targetName,
+        userEmail: targetEmail,
+        savedPassword: targetPassword,
         isEnrollment: false,
         onSuccess: () async {
           Navigator.of(ctx).pop();
 
           // AUTENTIKASI SUPABASE SECARA REAL-TIME DENGAN FACE ID:
-          if (savedPassword != null &&
-              savedPassword.isNotEmpty &&
-              savedEmail.isNotEmpty) {
+          if (targetPassword != null &&
+              targetPassword.isNotEmpty &&
+              targetEmail.isNotEmpty) {
             try {
               await Supabase.instance.client.auth.signInWithPassword(
-                email: savedEmail,
-                password: savedPassword,
+                email: targetEmail,
+                password: targetPassword,
               );
             } catch (_) {
               // Jika offline atau jaringan lambat, sesi lokal tetap aktif
             }
           }
           if (SupabaseService.instance.userId == null &&
-              savedEmail.isNotEmpty) {
-            SupabaseService.instance.setDemoUser(savedEmail);
+              targetEmail.isNotEmpty) {
+            SupabaseService.instance.setDemoUser(targetEmail);
           }
+          await _saveUserSession(targetName, targetEmail, targetPassword);
           await SupabaseService.instance.initStorage(force: true);
 
           if (!mounted) return;
@@ -212,7 +248,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Face ID terverifikasi. Selamat datang kembali, $userName',
+                      'Face ID terverifikasi. Selamat datang kembali, $targetName',
                     ),
                   ),
                 ],
@@ -222,7 +258,7 @@ class _LoginPageState extends State<LoginPage> {
               duration: const Duration(seconds: 2),
             ),
           );
-          _goHome(userName, biometricOn: true);
+          _goHome(targetName, biometricOn: true);
         },
       ),
     );

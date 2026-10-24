@@ -21,12 +21,26 @@ class SupabaseService {
   }
   static final instance = SupabaseService._();
 
+  SupabaseClient? get _safeClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
   SupabaseClient get _client => Supabase.instance.client;
-  User? get currentUser => _client.auth.currentUser;
+  User? get currentUser {
+    try {
+      return _safeClient?.auth.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
   String? _demoUserId;
   void setDemoUser(String? id) => _demoUserId = id;
   String? get userId => currentUser?.id ?? _demoUserId;
-  String curatorName = 'Dimas Dananjaya';
+  String curatorName = 'Kurator Rasa';
   String get guestName => curatorName;
   set guestName(String val) => curatorName = val;
 
@@ -66,8 +80,10 @@ class SupabaseService {
 
   void _initAuthListener() {
     try {
+      final client = _safeClient;
+      if (client == null) return;
       _authSub?.cancel();
-      _authSub = _client.auth.onAuthStateChange.listen((data) async {
+      _authSub = client.auth.onAuthStateChange.listen((data) async {
         final event = data.event;
         if (event == AuthChangeEvent.signedIn ||
             event == AuthChangeEvent.tokenRefreshed ||
@@ -205,32 +221,20 @@ class SupabaseService {
         }
       }
 
-      // Selalu cek backup ulasan perangkat & ulasan tamu agar tidak hilang saat logout/login
-      final globalRaw = prefs.getStringList('foodie_all_device_reviews');
-      if (globalRaw != null) {
-        for (final item in globalRaw) {
-          try {
-            final r = Review.fromJson(jsonDecode(item) as Map<String, dynamic>);
-            if (!_localReviews.any((x) =>
-                x.id == r.id ||
-                (x.restaurantId == r.restaurantId && x.comment == r.comment))) {
-              _localReviews.add(r);
-            }
-          } catch (_) {}
-        }
-      }
-
-      final guestRaw = prefs.getStringList('foodie_rev_guest');
-      if (guestRaw != null) {
-        for (final item in guestRaw) {
-          try {
-            final r = Review.fromJson(jsonDecode(item) as Map<String, dynamic>);
-            if (!_localReviews.any((x) =>
-                x.id == r.id ||
-                (x.restaurantId == r.restaurantId && x.comment == r.comment))) {
-              _localReviews.add(r);
-            }
-          } catch (_) {}
+      // Hanya muat ulasan tamu jika user saat ini memang berstatus guest
+      if (uid == 'guest') {
+        final guestRaw = prefs.getStringList('foodie_rev_guest');
+        if (guestRaw != null) {
+          for (final item in guestRaw) {
+            try {
+              final r = Review.fromJson(jsonDecode(item) as Map<String, dynamic>);
+              if (!_localReviews.any((x) =>
+                  x.id == r.id ||
+                  (x.restaurantId == r.restaurantId && x.comment == r.comment))) {
+                _localReviews.add(r);
+              }
+            } catch (_) {}
+          }
         }
       }
 
@@ -278,26 +282,39 @@ class SupabaseService {
       final uid = userId ?? 'guest';
       final list = _localReviews.map((r) => jsonEncode(r.toJson())).toList();
       await prefs.setStringList('foodie_rev_$uid', list);
-      // Simpan juga ke global key perangkat agar tetap ada setelah logout
-      await prefs.setStringList('foodie_all_device_reviews', list);
+      if (uid == 'guest') {
+        await prefs.setStringList('foodie_rev_guest', list);
+      }
     } catch (_) {}
   }
 
   Future<void> signOut() async {
     _reviewsChannel?.unsubscribe();
     _favoritesChannel?.unsubscribe();
+    _courseFeedbackChannel?.unsubscribe();
     _reviewsChannel = null;
     _favoritesChannel = null;
+    _courseFeedbackChannel = null;
     _localFavorites.clear();
     _localCheckins.clear();
     _localReviews.clear();
     _localSearchHistory.clear();
     _localBonusPoints = 0;
     _demoUserId = null;
-    curatorName = 'Dimas Dananjaya';
+    curatorName = 'Kurator Rasa';
     _initialized = false;
+    _favoritesController.add({});
+    _profileChangedController.add(null);
+
+    // Bersihkan residual cache SharedPreferences agar tidak bocor ke akun berikutnya
     try {
-      await _client.auth.signOut();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('foodie_current_display_name');
+      await prefs.remove('foodie_current_avatar');
+    } catch (_) {}
+
+    try {
+      await _safeClient?.auth.signOut();
     } catch (_) {}
   }
 
@@ -312,9 +329,8 @@ class SupabaseService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      localName = prefs.getString('foodie_name_$keyUid') ??
-          prefs.getString('foodie_current_display_name') ??
-          prefs.getString('foodie_last_user_name');
+      // Hanya ambil preferensi nama & avatar yang terikat pada keyUid pengguna saat ini
+      localName = prefs.getString('foodie_name_$keyUid');
       localAvatar = prefs.getString('foodie_avatar_$keyUid');
       isAvatarDeleted = prefs.getBool('foodie_avatar_deleted_$keyUid') ?? false;
     } catch (_) {}
@@ -323,9 +339,17 @@ class SupabaseService {
         ? null
         : (currentUser?.userMetadata?['avatar_url'] as String?);
 
-    if (uid != null) {
+    final defaultFallbackName = (currentUser?.userMetadata?['name'] as String?)?.trim().isNotEmpty == true
+        ? (currentUser!.userMetadata!['name'] as String).trim()
+        : (currentUser?.email != null && currentUser!.email!.isNotEmpty)
+            ? currentUser!.email!.split('@').first
+            : (uid != null && uid.contains('@'))
+                ? uid.split('@').first
+                : curatorName;
+
+    if (uid != null && _safeClient != null) {
       try {
-        final res = await _client
+        final res = await _safeClient!
             .from('profiles')
             .select()
             .eq('id', uid)
@@ -340,12 +364,11 @@ class SupabaseService {
                       ? p.avatarUrl
                       : metaAvatar;
 
-          // PRIORITASKAN localName jika pengguna telah mengedit namanya di perangkat
           final effectiveName = (localName != null && localName.trim().isNotEmpty)
               ? localName.trim()
               : p.displayName.trim().isNotEmpty
                   ? p.displayName.trim()
-                  : (currentUser?.userMetadata?['name'] as String? ?? curatorName);
+                  : defaultFallbackName;
 
           return Profile(
             id: p.id,
@@ -362,7 +385,7 @@ class SupabaseService {
 
     final effectiveName = (localName != null && localName.trim().isNotEmpty)
         ? localName.trim()
-        : (currentUser?.userMetadata?['name'] as String? ?? curatorName);
+        : defaultFallbackName;
 
     final effectiveAvatar = isAvatarDeleted
         ? null

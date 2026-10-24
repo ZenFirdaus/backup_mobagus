@@ -75,7 +75,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   Future<void> _checkFaceIdStatus() async {
     try {
-      final enrolled = await FaceBiometricService.instance.isFaceEnrolled();
+      final inputEmail = _emailController.text.trim();
+      final enrolled = inputEmail.isNotEmpty
+          ? await FaceBiometricService.instance.isFaceEnrolled(email: inputEmail)
+          : await FaceBiometricService.instance.isFaceEnrolled();
       if (mounted) {
         setState(() => _hasFaceIdEnrolled = enrolled);
       }
@@ -154,14 +157,55 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return msg;
   }
 
-  /// Opsi Tambahan: Pulihkan Langsung via Face ID (jika terdaftar)
+  /// Opsi Tambahan: Pulihkan Langsung via Face ID (jika terdaftar untuk akun)
   Future<void> _verifyWithFaceId() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final prefs = await SharedPreferences.getInstance();
-    final savedName = prefs.getString('foodie_last_user_name') ?? 'Pengguna';
-    final savedEmail = _emailController.text.trim().isNotEmpty
-        ? _emailController.text.trim()
-        : (prefs.getString('foodie_last_user_email') ?? 'Akun Anda');
+    final inputEmail = _emailController.text.trim();
+    String targetEmail;
+    String targetName;
+
+    if (inputEmail.isNotEmpty) {
+      final isUserEnrolled =
+          await FaceBiometricService.instance.isFaceEnrolled(email: inputEmail);
+      if (!isUserEnrolled) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Face ID belum didaftarkan untuk akun $inputEmail.',
+            ),
+            backgroundColor: AppColors.charcoal,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      targetEmail = inputEmail;
+      final prefs = await SharedPreferences.getInstance();
+      final key = inputEmail.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+      targetName = prefs.getString('foodie_face_name_$key') ??
+          prefs.getString('foodie_last_user_name') ??
+          inputEmail.split('@').first;
+    } else {
+      final account =
+          await FaceBiometricService.instance.getActiveBiometricAccount();
+      if (account == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Belum ada akun terdaftar untuk Face ID di perangkat ini.',
+            ),
+            backgroundColor: AppColors.charcoal,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      targetEmail = account['email']!;
+      targetName = account['name']!;
+      _emailController.text = targetEmail;
+    }
 
     if (!mounted) return;
     showModalBottomSheet(
@@ -170,8 +214,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (ctx) => FaceIdScannerSheet(
-        userName: savedName,
-        userEmail: savedEmail,
+        userName: targetName,
+        userEmail: targetEmail,
         isEnrollment: false,
         onSuccess: () {
           Navigator.of(ctx).pop();
@@ -182,9 +226,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             _errorMessage = null;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Identitas Terverifikasi via Face ID! Silakan buat kata sandi baru.',
+                'Identitas Terverifikasi via Face ID untuk $targetName! Silakan buat kata sandi baru.',
               ),
               backgroundColor: AppColors.greenDark,
               behavior: SnackBarBehavior.floating,
@@ -420,6 +464,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       // 2. Simpan dan perbarui kredensial lokal agar Face ID & login langsung sinkron
       try {
         final prefs = await SharedPreferences.getInstance();
+        final key = email.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+        await prefs.setString('foodie_face_pwd_$key', newPassword);
         await prefs.setString('foodie_last_user_email', email);
         await prefs.setString('foodie_saved_password', newPassword);
       } catch (_) {}

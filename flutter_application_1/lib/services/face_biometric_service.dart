@@ -47,20 +47,23 @@ class EnrolledFaceMetrics {
   double computeDifference(EnrolledFaceMetrics other) {
     double totalDiff = 0.0;
     int count = 0;
+    double maxDeviation = 0.0;
 
     // 1. Rasio aspek wajah (tinggi / lebar bounding box)
     if (faceAspectRatio > 0.1 && other.faceAspectRatio > 0.1) {
       final d = (faceAspectRatio - other.faceAspectRatio).abs() /
           other.faceAspectRatio;
-      totalDiff += d * 0.8;
+      if (d > maxDeviation) maxDeviation = d;
+      totalDiff += d * 0.9;
       count++;
     }
 
-    // 2. Rasio jarak kedua mata terhadap lebar wajah
+    // 2. Rasio jarak kedua mata terhadap lebar wajah (fitur biometrik sangat khas)
     if (eyeDistanceRatio > 0.05 && other.eyeDistanceRatio > 0.05) {
       final d = (eyeDistanceRatio - other.eyeDistanceRatio).abs() /
           other.eyeDistanceRatio;
-      totalDiff += d * 1.2;
+      if (d > maxDeviation) maxDeviation = d;
+      totalDiff += d * 1.3;
       count++;
     }
 
@@ -68,6 +71,7 @@ class EnrolledFaceMetrics {
     if (noseToEyeRatio > 0.05 && other.noseToEyeRatio > 0.05) {
       final d = (noseToEyeRatio - other.noseToEyeRatio).abs() /
           other.noseToEyeRatio;
+      if (d > maxDeviation) maxDeviation = d;
       totalDiff += d * 1.0;
       count++;
     }
@@ -76,11 +80,17 @@ class EnrolledFaceMetrics {
     if (mouthToNoseRatio > 0.05 && other.mouthToNoseRatio > 0.05) {
       final d = (mouthToNoseRatio - other.mouthToNoseRatio).abs() /
           other.mouthToNoseRatio;
+      if (d > maxDeviation) maxDeviation = d;
       totalDiff += d * 1.0;
       count++;
     }
 
-    return count > 0 ? (totalDiff / count) : 1.0;
+    final avgDiff = count > 0 ? (totalDiff / count) : 1.0;
+    // Jika ada satu fitur wajah utama yang menyimpang drastis (> 0.28), beri penalti
+    if (maxDeviation > 0.28) {
+      return (avgDiff + maxDeviation) / 2;
+    }
+    return avgDiff;
   }
 }
 
@@ -133,19 +143,74 @@ class FaceBiometricService {
     return _faceDetector!;
   }
 
-  /// Cek apakah pengguna sudah mendaftarkan Face ID dengan metrik wajah
-  Future<bool> isFaceEnrolled() async {
+  String _emailKey(String email) =>
+      email.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+
+  /// Cek apakah pengguna sudah mendaftarkan Face ID dengan metrik wajah.
+  /// Jika [email] diberikan, hanya periksa akun tersebut.
+  Future<bool> isFaceEnrolled({String? email}) async {
     final prefs = await SharedPreferences.getInstance();
-    final bool isEnabled = prefs.getBool('foodie_biometric_enabled') ?? false;
-    final String? metricsJson = prefs.getString('foodie_enrolled_face_metrics');
-    final String? email = prefs.getString('foodie_last_user_email');
-    return isEnabled && metricsJson != null && email != null;
+    if (email != null && email.trim().isNotEmpty) {
+      final key = _emailKey(email);
+      final bool isEnabled = prefs.getBool('foodie_biometric_enabled_$key') ?? false;
+      final String? metricsJson = prefs.getString('foodie_enrolled_face_metrics_$key');
+      return isEnabled && metricsJson != null && metricsJson.isNotEmpty;
+    }
+
+    // Cek user biometrik aktif yang terikat di perangkat
+    final String? activeEmail = prefs.getString('foodie_active_biometric_email') ??
+        prefs.getString('foodie_last_user_email');
+    if (activeEmail == null || activeEmail.isEmpty) return false;
+
+    final key = _emailKey(activeEmail);
+    final bool isUserEnabled = prefs.getBool('foodie_biometric_enabled_$key') ??
+        (prefs.getBool('foodie_biometric_enabled') ?? false);
+    final String? metricsJson = prefs.getString('foodie_enrolled_face_metrics_$key') ??
+        prefs.getString('foodie_enrolled_face_metrics');
+    return isUserEnabled && metricsJson != null && metricsJson.isNotEmpty;
   }
 
-  /// Ambil metrik wajah yang telah didaftarkan
-  Future<EnrolledFaceMetrics?> getEnrolledMetrics() async {
+  /// Ambil informasi akun yang terdaftar untuk biometrik aktif
+  Future<Map<String, String>?> getActiveBiometricAccount() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? jsonStr = prefs.getString('foodie_enrolled_face_metrics');
+    final String? activeEmail = prefs.getString('foodie_active_biometric_email') ??
+        prefs.getString('foodie_last_user_email');
+    if (activeEmail == null || activeEmail.isEmpty) return null;
+
+    final key = _emailKey(activeEmail);
+    final isEnrolled = await isFaceEnrolled(email: activeEmail);
+    if (!isEnrolled) return null;
+
+    final name = prefs.getString('foodie_face_name_$key') ??
+        prefs.getString('foodie_last_user_name') ??
+        activeEmail.split('@').first;
+    final pwd = prefs.getString('foodie_face_pwd_$key') ??
+        prefs.getString('foodie_saved_password') ??
+        '';
+
+    return {
+      'email': activeEmail,
+      'name': name,
+      'password': pwd,
+    };
+  }
+
+  /// Ambil metrik wajah yang telah didaftarkan (bisa spesifik per akun)
+  Future<EnrolledFaceMetrics?> getEnrolledMetrics({String? email}) async {
+    final prefs = await SharedPreferences.getInstance();
+    String? jsonStr;
+    if (email != null && email.trim().isNotEmpty) {
+      final key = _emailKey(email);
+      jsonStr = prefs.getString('foodie_enrolled_face_metrics_$key');
+      if (jsonStr == null || jsonStr.isEmpty) return null;
+    } else {
+      final activeEmail = prefs.getString('foodie_active_biometric_email');
+      if (activeEmail != null && activeEmail.isNotEmpty) {
+        final key = _emailKey(activeEmail);
+        jsonStr = prefs.getString('foodie_enrolled_face_metrics_$key');
+      }
+      jsonStr ??= prefs.getString('foodie_enrolled_face_metrics');
+    }
     if (jsonStr == null || jsonStr.isEmpty) return null;
     try {
       final map = jsonDecode(jsonStr) as Map<String, dynamic>;
@@ -155,7 +220,7 @@ class FaceBiometricService {
     }
   }
 
-  /// Simpan pendaftaran wajah
+  /// Simpan pendaftaran wajah yang TERIKAT KETAT pada profil/email pengguna tertentu
   Future<void> saveEnrolledFace({
     required EnrolledFaceMetrics metrics,
     required String userName,
@@ -163,23 +228,51 @@ class FaceBiometricService {
     String? password,
   }) async {
     final prefs = await SharedPreferences.getInstance();
+    final cleanEmail = userEmail.trim().toLowerCase();
+    final key = _emailKey(cleanEmail);
+    final metricsJson = jsonEncode(metrics.toJson());
+
+    // 1. Simpan terikat spesifik ke email akun ini
+    await prefs.setBool('foodie_biometric_enabled_$key', true);
+    await prefs.setString('foodie_enrolled_face_metrics_$key', metricsJson);
+    await prefs.setString('foodie_face_name_$key', userName.trim());
+    if (password != null && password.isNotEmpty) {
+      await prefs.setString('foodie_face_pwd_$key', password);
+    }
+
+    // 2. Set sebagai akun biometrik aktif di perangkat
+    await prefs.setString('foodie_active_biometric_email', cleanEmail);
+
+    // 3. Simpan juga key legacy agar kompatibel
     await prefs.setBool('foodie_biometric_enabled', true);
-    await prefs.setString(
-      'foodie_enrolled_face_metrics',
-      jsonEncode(metrics.toJson()),
-    );
-    await prefs.setString('foodie_last_user_name', userName);
-    await prefs.setString('foodie_last_user_email', userEmail);
+    await prefs.setString('foodie_enrolled_face_metrics', metricsJson);
+    await prefs.setString('foodie_last_user_name', userName.trim());
+    await prefs.setString('foodie_last_user_email', cleanEmail);
     if (password != null && password.isNotEmpty) {
       await prefs.setString('foodie_saved_password', password);
     }
   }
 
-  /// Hapus pendaftaran wajah
-  Future<void> removeEnrolledFace() async {
+  /// Hapus pendaftaran wajah untuk akun tertentu (atau akun aktif)
+  Future<void> removeEnrolledFace({String? email}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('foodie_biometric_enabled', false);
-    await prefs.remove('foodie_enrolled_face_metrics');
+    final targetEmail = email ?? prefs.getString('foodie_active_biometric_email') ??
+        prefs.getString('foodie_last_user_email');
+
+    if (targetEmail != null && targetEmail.isNotEmpty) {
+      final key = _emailKey(targetEmail);
+      await prefs.remove('foodie_biometric_enabled_$key');
+      await prefs.remove('foodie_enrolled_face_metrics_$key');
+      await prefs.remove('foodie_face_name_$key');
+      await prefs.remove('foodie_face_pwd_$key');
+    }
+
+    final activeEmail = prefs.getString('foodie_active_biometric_email');
+    if (email == null || activeEmail == email.trim().toLowerCase()) {
+      await prefs.remove('foodie_active_biometric_email');
+      await prefs.setBool('foodie_biometric_enabled', false);
+      await prefs.remove('foodie_enrolled_face_metrics');
+    }
   }
 
   /// Hitung tingkat kecerahan (luminance) foto secara native
@@ -222,6 +315,7 @@ class FaceBiometricService {
     required bool isEnrollment,
     double luminance = 100.0,
     EnrolledFaceMetrics? referenceMetrics,
+    String? targetEmail,
   }) async {
     // 1. Validasi Pencahayaan
     if (luminance < 12.0) {
@@ -348,8 +442,8 @@ class FaceBiometricService {
       );
     }
 
-    // 5. Jika Login/Verifikasi, cocokkan dengan metrik yang didaftarkan
-    final ref = referenceMetrics ?? await getEnrolledMetrics();
+    // 5. Jika Login/Verifikasi, cocokkan dengan metrik yang didaftarkan akun terkait
+    final ref = referenceMetrics ?? await getEnrolledMetrics(email: targetEmail);
     if (ref == null) {
       return FaceAnalysisResult(
         isSuccess: false,
@@ -362,14 +456,15 @@ class FaceBiometricService {
         differenceScore: 1.0,
         errorCategory: 'NOT_ENROLLED',
         errorMessage:
-            'Data biometrik belum tersimpan. Silakan login menggunakan email & kata sandi terlebih dahulu.',
+            'Data biometrik belum tersimpan untuk akun ini. Silakan login menggunakan email & kata sandi terlebih dahulu.',
       );
     }
 
     final diff = detectedMetrics.computeDifference(ref);
 
-    // Batas toleransi relatif biometrik: 0.48 (48% deviasi)
-    if (diff > 0.48) {
+    // Batas toleransi relatif biometrik aman: 0.22 (22% deviasi geometris)
+    // Nilai > 0.22 menunjukkan wajah milik orang lain yang berbeda
+    if (diff > 0.22) {
       return FaceAnalysisResult(
         isSuccess: false,
         isLightingAdequate: true,
@@ -382,7 +477,7 @@ class FaceBiometricService {
         detectedMetrics: detectedMetrics,
         errorCategory: 'MISMATCH',
         errorMessage:
-            'Wajah tidak cocok dengan yang didaftarkan pada akun ini.',
+            'Wajah tidak cocok dengan profil biometrik yang didaftarkan pada akun ini.',
       );
     }
 
@@ -405,6 +500,7 @@ class FaceBiometricService {
     required String imagePath,
     required bool isEnrollment,
     EnrolledFaceMetrics? referenceMetrics,
+    String? targetEmail,
   }) async {
     final luminance = await calculateLuminance(imagePath);
     final inputImage = InputImage.fromFilePath(imagePath);
@@ -413,6 +509,7 @@ class FaceBiometricService {
       isEnrollment: isEnrollment,
       luminance: luminance,
       referenceMetrics: referenceMetrics,
+      targetEmail: targetEmail,
     );
   }
 
