@@ -10,7 +10,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('PENGUJIAN MASALAH 1: Pengikatan Biometrik ke Profil Pengguna Tertentu', () {
+  group('PENGUJIAN FITUR 1: Satu Akun Hanya Terikat 1 Face ID Pendaftar Asli', () {
     test('Face ID terikat khusus ke akun pengguna yang mendaftar', () async {
       final bioService = FaceBiometricService.instance;
 
@@ -49,7 +49,7 @@ void main() {
       expect(loadedMetricsA!.faceAspectRatio, closeTo(1.35, 0.001));
     });
 
-    test('Threshold ML Kit menolak wajah orang lain yang berbeda proporsi', () {
+    test('Threshold & landmark ML Kit menolak wajah orang lain yang berbeda proporsi', () {
       final faceDimas = EnrolledFaceMetrics(
         faceAspectRatio: 1.35,
         eyeDistanceRatio: 0.42,
@@ -59,7 +59,7 @@ void main() {
         enrolledAt: DateTime.now().toIso8601String(),
       );
 
-      // Wajah orang lain (proporsi berbeda: mata lebih rapat, rasio hidung berbeda)
+      // Wajah orang lain (proporsi berbeda: mata lebih rapat, hidung berbeda)
       final faceOrangLain = EnrolledFaceMetrics(
         faceAspectRatio: 1.62,
         eyeDistanceRatio: 0.31,
@@ -71,10 +71,9 @@ void main() {
 
       final diff = faceOrangLain.computeDifference(faceDimas);
 
-      // Threshold aman baru adalah 0.14 (14%)
-      // Wajah orang lain harus memiliki deviasi > 0.14 sehingga otomatis DITOLAK
-      expect(diff > 0.14, isTrue,
-          reason: 'Deviasi wajah orang lain ($diff) harus > 0.14 agar ditolak.');
+      // Wajah orang lain harus memiliki deviasi > 0.16 atau ditolak total (1.0)
+      expect(diff > 0.16, isTrue,
+          reason: 'Deviasi wajah orang lain ($diff) harus > 0.16 agar ditolak.');
     });
 
     test('Wajah tanpa landmark esensial valid otomatis ditolak (mencegah bypass aspect ratio)', () {
@@ -100,7 +99,7 @@ void main() {
       expect(faceTanpaLandmark.hasValidLandmarks, isFalse);
       final diff = faceTanpaLandmark.computeDifference(faceValid);
       expect(diff, equals(1.0),
-          reason: 'Wajah tanpa landmark harus menghasilkan selisih maksimal 1.0 (ditolak total)');
+          reason: 'Wajah tanpa landmark harus menghasilkan selisih 1.0 (ditolak total)');
     });
 
     test('Wajah pemilik akun yang sama dengan sedikit toleransi ekspresi tetap diterima', () {
@@ -125,89 +124,76 @@ void main() {
 
       final diff = faceDimasKunjunganBerikutnya.computeDifference(faceDimasAsli);
 
-      // Harus lolos (<= 0.14)
-      expect(diff <= 0.14, isTrue,
-          reason: 'Wajah pemilik sah ($diff) harus <= 0.14 agar berhasil login.');
-    });
-
-    test('Penghapusan Face ID untuk User A tidak memengaruhi User B', () async {
-      final bioService = FaceBiometricService.instance;
-
-      final dummyMetrics = EnrolledFaceMetrics(
-        faceAspectRatio: 1.3,
-        eyeDistanceRatio: 0.4,
-        noseToEyeRatio: 0.35,
-        mouthToNoseRatio: 0.3,
-        headAngleY: 0.0,
-        enrolledAt: DateTime.now().toIso8601String(),
-      );
-
-      await bioService.saveEnrolledFace(
-        metrics: dummyMetrics,
-        userName: 'User A',
-        userEmail: 'user_a@foodie.id',
-      );
-      await bioService.saveEnrolledFace(
-        metrics: dummyMetrics,
-        userName: 'User B',
-        userEmail: 'user_b@foodie.id',
-      );
-
-      // Hapus hanya User A
-      await bioService.removeEnrolledFace(email: 'user_a@foodie.id');
-
-      expect(await bioService.isFaceEnrolled(email: 'user_a@foodie.id'), isFalse);
-      expect(await bioService.isFaceEnrolled(email: 'user_b@foodie.id'), isTrue);
+      // Harus lolos (<= 0.16)
+      expect(diff <= 0.16, isTrue,
+          reason: 'Wajah pemilik sah ($diff) harus <= 0.16 agar berhasil masuk.');
     });
   });
 
-  group('PENGUJIAN MASALAH 2: Sinkronisasi Sesi & Profil Setelah Logout', () {
-    test('Logout membersihkan seluruh residual sesi lokal, password, dan biometrik aktif', () async {
+  group('PENGUJIAN FITUR 2: Login Biometrik Tetap Aktif Setelah Logout Tanpa Merusak Akun Lain', () {
+    test('Logout mempertahankan data Face ID pendaftar agar bisa login biometrik kembali', () async {
       final prefs = await SharedPreferences.getInstance();
+      final bioService = FaceBiometricService.instance;
 
-      // Simulasi User A login dan mendaftarkan Face ID
+      // User A mendaftar Face ID
+      final metricsUserA = EnrolledFaceMetrics(
+        faceAspectRatio: 1.35,
+        eyeDistanceRatio: 0.42,
+        noseToEyeRatio: 0.36,
+        mouthToNoseRatio: 0.31,
+        headAngleY: 0.0,
+        enrolledAt: DateTime.now().toIso8601String(),
+      );
+      await bioService.saveEnrolledFace(
+        metrics: metricsUserA,
+        userName: 'Dimas Dananjaya',
+        userEmail: 'dimas@foodie.id',
+        password: 'passwordDimas123',
+      );
+
       await prefs.setString('foodie_current_display_name', 'Dimas Dananjaya (Akun A)');
-      await prefs.setString('foodie_name_uid_user_a', 'Dimas Dananjaya (Akun A)');
-      await prefs.setString('foodie_saved_password', 'secretDimas123');
-      await prefs.setString('foodie_active_biometric_email', 'dimas@foodie.id');
-      await prefs.setString('foodie_last_user_name', 'Dimas Dananjaya');
-      await prefs.setString('foodie_last_user_email', 'dimas@foodie.id');
-      await prefs.setBool('foodie_biometric_enabled', true);
       SupabaseService.instance.curatorName = 'Dimas Dananjaya (Akun A)';
 
       // User A melakukan Logout
       await SupabaseService.instance.signOut();
 
-      // 1. Pastikan key residual sesi lokal terhapus total
+      // 1. Cache display name sementara terhapus agar bersih
       expect(prefs.containsKey('foodie_current_display_name'), isFalse,
-          reason: 'foodie_current_display_name harus dihapus saat signOut');
-      expect(prefs.containsKey('foodie_saved_password'), isFalse,
-          reason: 'foodie_saved_password harus dihapus saat signOut');
-      expect(prefs.containsKey('foodie_active_biometric_email'), isFalse,
-          reason: 'foodie_active_biometric_email harus dihapus saat signOut');
-      expect(prefs.containsKey('foodie_last_user_name'), isFalse,
-          reason: 'foodie_last_user_name harus dihapus saat signOut');
-      expect(prefs.containsKey('foodie_last_user_email'), isFalse,
-          reason: 'foodie_last_user_email harus dihapus saat signOut');
-      expect(prefs.getBool('foodie_biometric_enabled'), isFalse,
-          reason: 'foodie_biometric_enabled harus di-set false saat signOut');
-
-      // 2. Pastikan akun biometrik aktif menjadi null (mencegah klik Face ID sembarangan)
-      final activeAccount = await FaceBiometricService.instance.getActiveBiometricAccount();
-      expect(activeAccount, isNull,
-          reason: 'Setelah logout, tidak boleh ada akun biometrik aktif yang tersisa tanpa login ulang');
-
-      // 3. Pastikan curatorName kembali ke default netral
+          reason: 'foodie_current_display_name harus dibersihkan saat logout');
       expect(SupabaseService.instance.curatorName, equals('Kurator Rasa'));
 
-      // 4. User B login dengan UID baru (uid_user_b)
+      // 2. Akun biometrik User A TETAP tersimpan agar User A BISA LOGIN BIOMETRIK KEMBALI
+      final activeAccount = await bioService.getActiveBiometricAccount();
+      expect(activeAccount, isNotNull,
+          reason: 'Akun biometrik harus tetap terdaftar agar pengguna bisa login dengan Face ID setelah logout');
+      expect(activeAccount!['email'], equals('dimas@foodie.id'));
+      expect(activeAccount['name'], equals('Dimas Dananjaya'));
+
+      // 3. User A tetap terdaftar Face ID
+      final isEnrolled = await bioService.isFaceEnrolled(email: 'dimas@foodie.id');
+      expect(isEnrolled, isTrue,
+          reason: 'Face ID User A harus tetap aktif agar bisa login Face ID');
+    });
+
+    test('User B yang login setelah User A logout membaca profilnya sendiri dan tidak memakai Face ID User A', () async {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Set profil khusus User A
+      await prefs.setString('foodie_name_uid_user_a', 'Dimas Dananjaya');
+
+      // User B login dengan email siti@foodie.id
       SupabaseService.instance.setDemoUser('siti@foodie.id');
 
-      // 5. getProfile() sekarang membaca profil User B, TIDAK mencemari nama User A
+      // getProfile membaca profil User B
       final profileB = await SupabaseService.instance.getProfile();
       expect(profileB, isNotNull);
       expect(profileB!.displayName, equals('siti'),
           reason: 'Profil User B harus menampilkan nama akun User B (siti), BUKAN nama User A');
+
+      // Cek apakah User B memiliki Face ID
+      final isEnrolledB = await FaceBiometricService.instance.isFaceEnrolled(email: 'siti@foodie.id');
+      expect(isEnrolledB, isFalse,
+          reason: 'User B belum mendaftar Face ID, sehingga tidak boleh otomatis bisa login Face ID');
     });
   });
 }

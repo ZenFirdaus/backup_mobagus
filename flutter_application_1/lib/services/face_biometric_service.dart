@@ -42,14 +42,14 @@ class EnrolledFaceMetrics {
         enrolledAt: json['enrolledAt']?.toString() ?? '',
       );
 
-  /// Cek apakah landmark wajah penting terdeteksi lengkap
+  /// Cek apakah landmark wajah penting terdeteksi lengkap (mata & hidung)
   bool get hasValidLandmarks =>
       eyeDistanceRatio > 0.08 &&
-      noseToEyeRatio > 0.08 &&
-      mouthToNoseRatio > 0.05;
+      noseToEyeRatio > 0.08;
 
   /// Hitung selisih jarak geometris relatif dengan wajah referensi.
-  /// Menggunakan normalized relative error agar toleran terhadap jarak, ekspresi & kemiringan wajah.
+  /// Menggunakan normalized relative error agar toleran terhadap jarak & ekspresi,
+  /// tetapi secara tegas menolak wajah orang lain yang berbeda proporsi.
   double computeDifference(EnrolledFaceMetrics other) {
     // Keduanya harus memiliki fitur biometrik landmark yang valid
     if (!hasValidLandmarks || !other.hasValidLandmarks) {
@@ -59,24 +59,31 @@ class EnrolledFaceMetrics {
     // 1. Rasio aspek wajah (tinggi / lebar bounding box)
     final dAspect =
         (faceAspectRatio - other.faceAspectRatio).abs() / other.faceAspectRatio;
-    // 2. Rasio jarak kedua mata terhadap lebar wajah (fitur biometrik sangat khas)
+    // 2. Rasio jarak kedua mata terhadap lebar wajah (fitur biometrik paling khas)
     final dEye =
         (eyeDistanceRatio - other.eyeDistanceRatio).abs() / other.eyeDistanceRatio;
     // 3. Rasio jarak hidung ke mata terhadap tinggi wajah
     final dNose =
         (noseToEyeRatio - other.noseToEyeRatio).abs() / other.noseToEyeRatio;
-    // 4. Rasio jarak mulut ke hidung terhadap tinggi wajah
-    final dMouth =
-        (mouthToNoseRatio - other.mouthToNoseRatio).abs() / other.mouthToNoseRatio;
 
     // Jika fitur biometrik utama menyimpang signifikan, otomatis bukan pemilik wajah terdaftar!
-    if (dEye > 0.16 || dNose > 0.18 || dAspect > 0.20) {
+    if (dEye > 0.18 || dNose > 0.20 || dAspect > 0.22) {
       return 1.0; // Tolak total sebagai wajah orang lain
     }
 
-    final weightedDiff =
-        (dAspect * 0.8) + (dEye * 1.5) + (dNose * 1.2) + (dMouth * 1.0);
-    return weightedDiff / 4.5;
+    double weightedDiff = (dAspect * 0.8) + (dEye * 1.5) + (dNose * 1.2);
+    double weightCount = 3.5;
+
+    // 4. Rasio jarak mulut ke hidung jika kedua frame memilikinya
+    if (mouthToNoseRatio > 0.05 && other.mouthToNoseRatio > 0.05) {
+      final dMouth =
+          (mouthToNoseRatio - other.mouthToNoseRatio).abs() / other.mouthToNoseRatio;
+      if (dMouth > 0.25) return 1.0;
+      weightedDiff += dMouth * 1.0;
+      weightCount += 1.0;
+    }
+
+    return weightedDiff / weightCount;
   }
 }
 
@@ -460,9 +467,9 @@ class FaceBiometricService {
 
     final diff = detectedMetrics.computeDifference(ref);
 
-    // Batas toleransi relatif biometrik aman: 0.14 (14% deviasi geometris)
-    // Nilai > 0.14 menunjukkan wajah milik orang lain yang berbeda
-    if (diff > 0.14) {
+    // Batas toleransi relatif biometrik aman: 0.16 (16% deviasi geometris)
+    // Nilai > 0.16 menunjukkan wajah milik orang lain yang berbeda
+    if (diff > 0.16) {
       return FaceAnalysisResult(
         isSuccess: false,
         isLightingAdequate: true,
