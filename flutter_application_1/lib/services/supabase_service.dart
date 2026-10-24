@@ -695,7 +695,7 @@ class SupabaseService {
 
   // ─── FOODS ───
 
-  Future<List<Food>> getFoods(String restaurantId) async {
+  Future<List<Food>> getFoods(String restaurantId, [Restaurant? restaurant]) async {
     try {
       final res = await _client
           .from('foods')
@@ -705,12 +705,893 @@ class SupabaseService {
       final list = (res as List).map((e) => Food.fromJson(e)).toList();
       if (list.isNotEmpty) return list;
     } catch (_) {}
-    return kDefaultFoods[restaurantId] ??
+
+    Restaurant? targetResto = restaurant;
+    targetResto ??= await getRestaurant(restaurantId);
+    if (targetResto != null) {
+      return generateDynamicFoods(targetResto);
+    }
+
+    final seedList = kDefaultFoods[restaurantId] ??
         kDefaultFoods['resto_$restaurantId'] ??
         (restaurantId.startsWith('resto_')
             ? kDefaultFoods[restaurantId.replaceFirst('resto_', '')]
-            : null) ??
-        [];
+            : null);
+    if (seedList != null && seedList.isNotEmpty) {
+      return seedList;
+    }
+
+    return [];
+  }
+
+  /// Membuat daftar hidangan otentik berdasarkan detail cuisine, nama, kategori,
+  /// dan rentang harga restoran (price_min - price_max)
+  /// Membuat daftar hidangan otentik berdasarkan detail cuisine, nama, kategori,
+  /// dan rentang harga restoran (price_min - price_max)
+  List<Food> generateDynamicFoods(Restaurant r) {
+    final List<Food> items = [];
+    final pMin = r.priceMin > 0 ? r.priceMin : 12000;
+    final pMax = r.priceMax > pMin ? r.priceMax : pMin + 25000;
+
+    int priceAt(double fraction) {
+      final raw = pMin + (pMax - pMin) * fraction;
+      final rounded = (raw / 1000).round() * 1000;
+      return math.max(3000, rounded);
+    }
+
+    final query =
+        '${r.name.toLowerCase()} ${r.cuisine?.toLowerCase() ?? ''} ${r.category.toLowerCase()}';
+
+    // ─── 1. KATA KUNCI SPESIFIK INDONESIA PRIORITAS UTAMA ───
+
+    // A. Bakpia / Pia / Oleh-oleh Khas Jogja
+    if (query.contains('bakpia') ||
+        query.contains('pia ') ||
+        query.contains('pathok') ||
+        query.contains('djava') ||
+        query.contains('kurnia sari') ||
+        query.contains('oleh-oleh')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Bakpia Basah Kacang Hijau Asli',
+          price: priceAt(0.50),
+          category: 'Bakpia & Oleh-Oleh',
+          description: 'Kulit lembut isi pasta kacang hijau manis legit',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Bakpia Keju Spesial Lumer',
+          price: priceAt(0.65),
+          category: 'Bakpia & Oleh-Oleh',
+          description: 'Isian keju cheddar gurih berpadu manis harum',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Bakpia Cokelat Premium',
+          price: priceAt(0.60),
+          category: 'Bakpia & Oleh-Oleh',
+          description: 'Cokelat lumer khas dengan aroma mentega wangi',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Bakpia Kering Aneka Rasa (Isi 20)',
+          price: priceAt(0.75),
+          category: 'Bakpia & Oleh-Oleh',
+          description: 'Tahan lebih lama cocok untuk buah tangan keluarga',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Bakpia Kukus Lembut Khas Jogja',
+          price: priceAt(0.70),
+          category: 'Bakpia & Oleh-Oleh',
+          description: 'Tekstur sponge cake lembut isi cokelat / keju',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // B. Nasi Padang / Minang / Rendang / Ampera
+    if (query.contains('padang') ||
+        query.contains('minang') ||
+        query.contains('rendang') ||
+        query.contains('ampera') ||
+        query.contains('salero') ||
+        query.contains('sederhana')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Nasi Rendang Daging Sapi Balado',
+          price: priceAt(0.75),
+          category: 'Menu Utama',
+          description: 'Daging sapi empuk bumbu rempah hitam pekat khas Padang',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Ayam Pop Khas Minang & Sambal Merah',
+          price: priceAt(0.65),
+          category: 'Menu Utama',
+          description: 'Ayam lembut gurih disajikan dengan sambal tomat khas',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Gulai Tunjang / Cincang Sapi Gurih',
+          price: priceAt(0.80),
+          category: 'Menu Utama',
+          description: 'Kuah santan kental berempah dengan kikil tunjang empuk',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Telur Dadar Padang Tebal Gurih',
+          price: math.max(6000, priceAt(0.35)),
+          category: 'Pendamping',
+          description: 'Dadar telur bebek tebal bertabur daun bawang dan cabai',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Sambal Ijo & Daun Singkong Rebus',
+          price: math.max(4000, priceAt(0.20)),
+          category: 'Pendamping',
+          description: 'Pelengkap wajib nasi padang dengan cabai hijau gurih',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_6',
+          restaurantId: r.id,
+          name: 'Es Tebak / Es Teh Manis Segar',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Minuman',
+          description: 'Minuman dingin penyegar santapan bersantan',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // C. Pempek / Palembang
+    if (query.contains('pempek') ||
+        query.contains('empek') ||
+        query.contains('palembang')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Pempek Kapal Selam Telur Utuh',
+          price: priceAt(0.70),
+          category: 'Menu Utama',
+          description: 'Pempek ikan tenggiri asli dengan isian telur bebek utuh',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Pempek Lenjer Asli Tenggiri',
+          price: priceAt(0.50),
+          category: 'Menu Utama',
+          description: 'Tekstur kenyal gurih dengan aroma ikan segar',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Pempek Kulit Crispy Gurih',
+          price: priceAt(0.45),
+          category: 'Menu Utama',
+          description: 'Garing renyah di luar, empuk gurih di dalam',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Cuko Hitam Kental Asli Palembang',
+          price: math.max(3000, priceAt(0.15)),
+          category: 'Pendamping',
+          description: 'Gula aren batok asli berpadu asam manis pedas pas',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Es Kacang Merah Segar',
+          price: math.max(5000, priceAt(0.25)),
+          category: 'Minuman',
+          description: 'Kacang merah empuk manis berpadu es serut dan susu',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // D. Gudeg Khas Yogyakarta
+    if (query.contains('gudeg') ||
+        query.contains('yu djum') ||
+        query.contains('bu tjitro')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Nasi Gudeg Komplit Telur & Ayam Suwir',
+          price: priceAt(0.65),
+          category: 'Menu Utama',
+          description: 'Gudeg nangka manis legit disajikan dengan krecek pedas',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Sambal Goreng Krecek Pedas Gurih',
+          price: priceAt(0.50),
+          category: 'Menu Utama',
+          description: 'Kulit sapi kenyal gurih dengan cabai rawit utuh',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Nasi Gudeg Paha Ayam Utuh',
+          price: priceAt(0.85),
+          category: 'Menu Utama',
+          description: 'Paha ayam opor empuk bumbu meresap hingga tulang',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Tahu & Tempe Bacem Legit',
+          price: math.max(4000, priceAt(0.25)),
+          category: 'Pendamping',
+          description: 'Bumbu gula kelapa manis rempah meresap sempurna',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Teh Poci Gula Batu Hangat',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Minuman',
+          description: 'Seduhan teh melati wangi dengan manisnya gula batu',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // E. Bakso / Pentol / Baso
+    if (query.contains('bakso') ||
+        query.contains('pentol') ||
+        query.contains('baso')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Bakso Urat Granat Jumbo Kuah Sapi',
+          price: priceAt(0.70),
+          category: 'Menu Utama',
+          description: 'Pentol urat kenyal mantap dengan kaldu sumsum gurih',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Bakso Halus Komplit Tahu & Mie',
+          price: priceAt(0.55),
+          category: 'Menu Utama',
+          description: 'Bakso daging sapi halus disajikan dengan bihun dan sawi',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Tetelan Daging Sapi Gurih Melimpah',
+          price: priceAt(0.40),
+          category: 'Pendamping',
+          description: 'Potongan tetelan sapi empuk berlemak lezat',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Pangsit Goreng Renyah & Bakso Goreng',
+          price: math.max(4000, priceAt(0.25)),
+          category: 'Camilan',
+          description: 'Gorengan renyah pelengkap makan bakso berkuah hangat',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Es Teh Manis Segar Jumbo',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Minuman',
+          description: 'Penyegar tenggorokan setelah menyantap bakso pedas',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // F. Soto / Sop / Sroto / Saoto
+    if (query.contains('soto') ||
+        query.contains('sop') ||
+        query.contains('soup') ||
+        query.contains('sroto') ||
+        query.contains('saoto')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Soto Daging Sapi Kuah Bening Gurih',
+          price: priceAt(0.60),
+          category: 'Menu Utama',
+          description: 'Kuah kaldu sapi bening kaya rempah dengan irisan daging',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Soto Ayam Kampung Spesial Koya',
+          price: priceAt(0.50),
+          category: 'Menu Utama',
+          description: 'Suwiran ayam kampung gurih dengan taburan koya gurih',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Soto Pisah Nasi + Babat / Paru Goreng',
+          price: priceAt(0.75),
+          category: 'Menu Utama',
+          description: 'Porsi lengkap kenyang dengan jeroan sapi goreng gurih',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Perkedel Kentang & Tempe Bacem',
+          price: math.max(4000, priceAt(0.25)),
+          category: 'Pendamping',
+          description: 'Lauk pelengkap soto yang gurih dan renyah',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Es Jeruk Peras Segar Asli',
+          price: math.max(4000, priceAt(0.20)),
+          category: 'Minuman',
+          description: 'Perasan jeruk asli manis asam menyegarkan',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // G. Sate / Kambing / Tongseng / Gule
+    if (query.contains('sate') ||
+        query.contains('satay') ||
+        query.contains('tongseng') ||
+        query.contains('gule') ||
+        query.contains('kambing')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Sate Daging Bumbu Kecap / Kacang (10 Tusuk)',
+          price: priceAt(0.75),
+          category: 'Menu Utama',
+          description: 'Daging empuk dibakar arang dengan lumuran bumbu gurih',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Tongseng Kuah Rempah Gurih',
+          price: priceAt(0.80),
+          category: 'Menu Utama',
+          description: 'Kuah santan gurih manis berpadu kol, tomat, dan cabai',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Gulai Hangat Bumbu Sedap',
+          price: priceAt(0.65),
+          category: 'Menu Utama',
+          description: 'Kuah kuning kaya kapulaga dan rempah nusantara',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Lontong / Nasi Putih Hangat',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Pendamping',
+          description: 'Pelengkap nikmat bersantap sate dan kuah tongseng',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Es Jeruk Nipis / Teh Manis',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Minuman',
+          description: 'Penyegar penyeimbang hidangan daging',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // H. Bebek Goreng / Bakar
+    if (query.contains('bebek') || query.contains('duck')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Bebek Goreng Kremes Sambal Korek',
+          price: priceAt(0.75),
+          category: 'Menu Utama',
+          description: 'Bebek empuk tidak amis bertabur kremesan garing gurih',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Bebek Bakar Bumbu Madu Manis Pedas',
+          price: priceAt(0.80),
+          category: 'Menu Utama',
+          description: 'Bumbu bakar manis meresap hingga serat daging terdalam',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Nasi Bebek Bumbu Hitam Madura',
+          price: priceAt(0.70),
+          category: 'Menu Utama',
+          description: 'Minyak bumbu hitam rempah khas dengan nasi hangat',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Lalapan Segar & Tahu Tempe',
+          price: math.max(4000, priceAt(0.20)),
+          category: 'Pendamping',
+          description: 'Timun, kemangi, kubis goreng dan tahu tempe hangat',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Es Teh Manis Dingin Segar',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Minuman',
+          description: 'Minuman pelepas dahaga sempurna',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // I. Ayam Goreng / Bakar / Geprek / Kremes
+    if (query.contains('ayam') ||
+        query.contains('chicken') ||
+        query.contains('kremes') ||
+        query.contains('geprek') ||
+        query.contains('penyet')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Paket Ayam Goreng Kremes + Nasi Hangat',
+          price: priceAt(0.65),
+          category: 'Menu Utama',
+          description: 'Ayam bumbu kuning empuk bertabur kremes renyah melimpah',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Ayam Bakar Madu Spesial Sambal Terasi',
+          price: priceAt(0.70),
+          category: 'Menu Utama',
+          description: 'Bakar kecap madu beraroma asap harum menggugah selera',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Ayam Geprek Crispy Sambal Bawang',
+          price: priceAt(0.55),
+          category: 'Menu Utama',
+          description: 'Ayam goreng tepung renyah digeprek dengan cabai pedas',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Tahu & Tempe Goreng Sambal Bawang',
+          price: math.max(4000, priceAt(0.25)),
+          category: 'Pendamping',
+          description: 'Lauk gurih pendamping nasi dan ayam',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Es Jeruk Manis Segar',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Minuman',
+          description: 'Minuman jeruk manis segar pelepas dahaga',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // J. Bakmi / Mie / Kwetiau / Bihun
+    if (query.contains('bakmi') ||
+        query.contains('mie') ||
+        query.contains('noodle') ||
+        query.contains('ramen') ||
+        query.contains('bihun') ||
+        query.contains('kwetiau')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Bakmi Godhog Gurih Spesial',
+          price: priceAt(0.55),
+          category: 'Menu Utama',
+          description: 'Mie kuning berkuah kaldu ayam gurih bertabur telur bebek',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Bakmi Goreng Telur Bebek Manis Gurih',
+          price: priceAt(0.65),
+          category: 'Menu Utama',
+          description: 'Aroma wajan smokey dengan suwiran ayam dan acar segar',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Magelangan / Nasi Goreng Ruwet',
+          price: priceAt(0.60),
+          category: 'Menu Utama',
+          description: 'Campuran nasi dan mie goreng nikmat khas kuliner Jawa',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Pangsit Goreng Renyah Gurih',
+          price: math.max(4000, priceAt(0.25)),
+          category: 'Camilan',
+          description: 'Camilan garing pendamping santap mie',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Teh Nasgitel / Wedang Jahe Panas',
+          price: math.max(4000, priceAt(0.18)),
+          category: 'Minuman',
+          description: 'Teh manis pekat kental khas angkringan / bakmi',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // K. Seafood / Ikan / Lele / Mangut / Udang / Cumi
+    if (query.contains('ikan') ||
+        query.contains('seafood') ||
+        query.contains('lele') ||
+        query.contains('mangut') ||
+        query.contains('gurame') ||
+        query.contains('nila') ||
+        query.contains('udang') ||
+        query.contains('cumi')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Mangut Lele Asap Kuah Santan Pedas',
+          price: priceAt(0.60),
+          category: 'Menu Utama',
+          description: 'Ikan lele asap wangi kuah santan gurih beraroma kemangi',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Gurame / Nila Bakar Bumbu Madu Gurih',
+          price: priceAt(0.85),
+          category: 'Menu Utama',
+          description: 'Ikan bakar segar dioles bumbu rempah bakar harum',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Udang / Cumi Saus Padang Pedas Manis',
+          price: priceAt(0.80),
+          category: 'Menu Utama',
+          description: 'Seafood segar disiram saus padang kaya bumbu',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Cah Kangkung Terasi Hangat',
+          price: math.max(4000, priceAt(0.30)),
+          category: 'Pendamping',
+          description: 'Kangkung renyah ditumis dengan terasi harum',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Es Kelapa Muda Segar',
+          price: math.max(5000, priceAt(0.25)),
+          category: 'Minuman',
+          description: 'Air kelapa murni dengan serutan daging kelapa muda',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // L. Kopi / Kafe / Coffee / Cafe
+    if (query.contains('kopi') ||
+        query.contains('coffee') ||
+        query.contains('cafe') ||
+        query.contains('kafe') ||
+        query.contains('espresso')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Kopi Susu Gula Aren Signature',
+          price: priceAt(0.40),
+          category: 'Kopi & Minuman',
+          description: 'Espresso blend berpadu susu segar dan manis legit aren asli',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Manual Brew V60 Single Origin',
+          price: priceAt(0.55),
+          category: 'Kopi & Minuman',
+          description: 'Biji kopi nusantara pilihan dengan citarasa fruity floral',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Americano / Long Black Dingin',
+          price: priceAt(0.35),
+          category: 'Kopi & Minuman',
+          description: 'Kopi hitam murni yang mantap dan menyegarkan',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Croissant / Roti Bakar Cokelat Keju',
+          price: priceAt(0.45),
+          category: 'Camilan',
+          description: 'Camilan manis pendamping waktu ngopi santai',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Matcha Green Tea Latte Dingin',
+          price: priceAt(0.50),
+          category: 'Kopi & Minuman',
+          description: 'Minuman teh hijau jepang berpadu susu lembut',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // M. Angkringan / Nasi Kucing / Wedangan
+    if (query.contains('angkringan') ||
+        query.contains('kucing') ||
+        query.contains('wedang')) {
+      return [
+        Food(
+          id: 'dyn_${r.id}_1',
+          restaurantId: r.id,
+          name: 'Nasi Kucing Sambal Teri Gurih',
+          price: math.max(3000, priceAt(0.25)),
+          category: 'Menu Utama',
+          description: 'Nasi bungkus daun pisang dengan sambal teri pedas gurih',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_2',
+          restaurantId: r.id,
+          name: 'Nasi Kucing Orek Tempe Manis',
+          price: math.max(3000, priceAt(0.25)),
+          category: 'Menu Utama',
+          description: 'Nasi hangat dengan tumis tempe kecap legit',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_3',
+          restaurantId: r.id,
+          name: 'Aneka Sate Usus & Telur Puyuh Bacem',
+          price: math.max(3000, priceAt(0.20)),
+          category: 'Camilan',
+          description: 'Sate khas angkringan yang dibakar saat dipesan',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_4',
+          restaurantId: r.id,
+          name: 'Tempe Mendoan Hangat & Sambal Kecap',
+          price: math.max(3000, priceAt(0.18)),
+          category: 'Camilan',
+          description: 'Mendoan basah gurih bertabur daun bawang',
+          createdAt: DateTime.now(),
+        ),
+        Food(
+          id: 'dyn_${r.id}_5',
+          restaurantId: r.id,
+          name: 'Wedang Jahe Susu / Kopi Joss',
+          price: math.max(4000, priceAt(0.25)),
+          category: 'Minuman',
+          description: 'Minuman penghangat badan dengan jahe geprek murni',
+          createdAt: DateTime.now(),
+        ),
+      ];
+    }
+
+    // ─── 2. PARSING DARI CUISINE CSV JIKA ADA HIDANGAN TERTULIS ───
+    final rawCuisine = r.cuisine?.trim() ?? '';
+    if (rawCuisine.isNotEmpty) {
+      final parts = rawCuisine
+          .split(RegExp(r'[;,]|\s*dan\s*|_dan_|\+'))
+          .map((e) => e.replaceAll('_', ' ').replaceAll('-', ' ').trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+
+      final parsed = <String>[];
+      for (final p in parts) {
+        final lower = p.toLowerCase();
+        if (lower == 'indonesian' ||
+            lower == 'javanese' ||
+            lower == 'regional' ||
+            lower == 'asian' ||
+            lower == 'traditional' ||
+            lower == 'food' ||
+            lower == 'kuliner') {
+          continue;
+        }
+        final title = p.split(' ').map((w) {
+          if (w.isEmpty) return '';
+          return w[0].toUpperCase() + w.substring(1).toLowerCase();
+        }).join(' ');
+        if (!parsed.contains(title)) parsed.add(title);
+      }
+
+      if (parsed.isNotEmpty) {
+        for (int i = 0; i < parsed.length; i++) {
+          final dish = parsed[i];
+          final lower = dish.toLowerCase();
+          final String cat;
+          final int price;
+
+          if (lower.contains('teh') ||
+              lower.contains('kopi') ||
+              lower.contains('wedang') ||
+              lower.contains('es ') ||
+              lower.contains('jus') ||
+              lower.contains('drink')) {
+            cat = 'Minuman';
+            price = math.max(4000, priceAt(0.15));
+          } else if (lower.contains('mendoan') ||
+              lower.contains('tempe') ||
+              lower.contains('tahu') ||
+              lower.contains('kerupuk') ||
+              lower.contains('camilan') ||
+              lower.contains('gorengan')) {
+            cat = 'Camilan / Pendamping';
+            price = math.max(5000, priceAt(0.30));
+          } else {
+            cat = 'Menu Utama';
+            final frac = parsed.length == 1
+                ? 0.70
+                : 0.45 + (0.45 * (i / math.max(1, parsed.length - 1)));
+            price = priceAt(frac);
+          }
+
+          items.add(Food(
+            id: 'dyn_${r.id}_$i',
+            restaurantId: r.id,
+            name: dish,
+            price: price,
+            category: cat,
+            createdAt: DateTime.now(),
+          ));
+        }
+
+        if (items.length < 3) {
+          items.add(Food(
+            id: 'dyn_${r.id}_sup1',
+            restaurantId: r.id,
+            name: 'Menu Spesial Rumah',
+            price: priceAt(0.70),
+            category: 'Menu Utama',
+            createdAt: DateTime.now(),
+          ));
+          items.add(Food(
+            id: 'dyn_${r.id}_sup2',
+            restaurantId: r.id,
+            name: 'Es Teh Manis / Jeruk Segar',
+            price: math.max(4000, priceAt(0.18)),
+            category: 'Minuman',
+            createdAt: DateTime.now(),
+          ));
+        }
+        return items;
+      }
+    }
+
+    // ─── 3. DEFAULT RESTORAN / RUMAH MAKAN NUSANTARA ───
+    return [
+      Food(
+        id: 'dyn_${r.id}_1',
+        restaurantId: r.id,
+        name: 'Nasi Goreng Spesial Telur & Ayam',
+        price: priceAt(0.55),
+        category: 'Menu Utama',
+        description: 'Nasi goreng bumbu tradisional dengan acar dan kerupuk',
+        createdAt: DateTime.now(),
+      ),
+      Food(
+        id: 'dyn_${r.id}_2',
+        restaurantId: r.id,
+        name: 'Ayam Bumbu Bakar / Goreng Kremes',
+        price: priceAt(0.70),
+        category: 'Menu Utama',
+        description: 'Potongan ayam bumbu rempah gurih khas rumah makan',
+        createdAt: DateTime.now(),
+      ),
+      Food(
+        id: 'dyn_${r.id}_3',
+        restaurantId: r.id,
+        name: 'Sayur Asem Segar / Capcay Kuah Hangat',
+        price: priceAt(0.35),
+        category: 'Pendamping',
+        description: 'Sayuran segar pelengkap makan siang yang nikmat',
+        createdAt: DateTime.now(),
+      ),
+      Food(
+        id: 'dyn_${r.id}_4',
+        restaurantId: r.id,
+        name: 'Es Teh Manis / Es Jeruk Peras',
+        price: math.max(4000, priceAt(0.18)),
+        category: 'Minuman',
+        description: 'Minuman dingin penyegar dahaga',
+        createdAt: DateTime.now(),
+      ),
+    ];
   }
 
   // ─── FAVORITES ───

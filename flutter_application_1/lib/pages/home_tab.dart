@@ -1319,7 +1319,7 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _aiCard(AiRecommendationResult result) {
     final r = result.restaurant;
-    final img = (r.imageUrl?.isEmpty ?? true) ? null : r.imageUrl;
+    final img = r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -1612,7 +1612,7 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   Widget _nearbyCard(Restaurant r) {
-    final img = (r.imageUrl?.isEmpty ?? true) ? null : r.imageUrl;
+    final img = r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null;
 
     // Hitung jarak jika koordinat tersedia
     String? distLabel;

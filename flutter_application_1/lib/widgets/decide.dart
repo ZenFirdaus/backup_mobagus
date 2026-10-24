@@ -878,7 +878,7 @@ class _DecideSheetState extends State<_DecideSheet>
                 Row(
                   children: [
                     FoodImage(
-                      imageUrl: _result!.imageUrl,
+                      imageUrl: _result!.effectiveImageUrl,
                       width: 60,
                       height: 60,
                       borderRadius: BorderRadius.circular(12),

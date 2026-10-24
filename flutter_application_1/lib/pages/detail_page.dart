@@ -229,7 +229,7 @@ class _DetailPageState extends State<DetailPage> {
       _foodsError = null;
     });
     try {
-      final list = await SupabaseService.instance.getFoods(_r.id);
+      final list = await SupabaseService.instance.getFoods(_r.id, _r);
       if (mounted) setState(() => _foods = list);
     } catch (e) {
       if (mounted) setState(() => _foodsError = e.toString());
@@ -859,9 +859,9 @@ class _DetailPageState extends State<DetailPage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (_r.imageUrl != null && _r.imageUrl!.isNotEmpty)
+          if (_r.effectiveImageUrl.isNotEmpty)
             Image.network(
-              _r.imageUrl!,
+              _r.effectiveImageUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => _fallbackImage(),
               loadingBuilder: (_, child, progress) => progress == null
@@ -1710,34 +1710,107 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Widget _foodTile(Food f) {
+    final lower = '${f.name} ${f.category ?? ''}'.toLowerCase();
+    final IconData menuIcon;
+    final Color iconColor;
+    final Color iconBg;
+
+    if (lower.contains('teh') ||
+        lower.contains('kopi') ||
+        lower.contains('coffee') ||
+        lower.contains('es ') ||
+        lower.contains('wedang') ||
+        lower.contains('jus') ||
+        lower.contains('minuman')) {
+      menuIcon = Icons.local_cafe_rounded;
+      iconColor = AppColors.orange;
+      iconBg = AppColors.tint(AppColors.orange, 0.12);
+    } else if (lower.contains('bakpia') ||
+        lower.contains('pia ') ||
+        lower.contains('roti') ||
+        lower.contains('cake') ||
+        lower.contains('pastry')) {
+      menuIcon = Icons.bakery_dining_rounded;
+      iconColor = AppColors.orange;
+      iconBg = AppColors.tint(AppColors.orange, 0.15);
+    } else if (lower.contains('padang') ||
+        lower.contains('rendang') ||
+        lower.contains('pop') ||
+        lower.contains('gulai')) {
+      menuIcon = Icons.rice_bowl_rounded;
+      iconColor = AppColors.paprika;
+      iconBg = AppColors.tint(AppColors.paprika, 0.12);
+    } else if (lower.contains('pempek') ||
+        lower.contains('ikan') ||
+        lower.contains('seafood') ||
+        lower.contains('lele') ||
+        lower.contains('udang') ||
+        lower.contains('cumi')) {
+      menuIcon = Icons.set_meal_rounded;
+      iconColor = AppColors.paprika;
+      iconBg = AppColors.tint(AppColors.paprika, 0.12);
+    } else if (lower.contains('soto') ||
+        lower.contains('sop') ||
+        lower.contains('soup')) {
+      menuIcon = Icons.soup_kitchen_rounded;
+      iconColor = AppColors.greenDark;
+      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
+    } else if (lower.contains('bakso')) {
+      menuIcon = Icons.ramen_dining_rounded;
+      iconColor = AppColors.greenDark;
+      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
+    } else if (lower.contains('sate') ||
+        lower.contains('kambing') ||
+        lower.contains('tongseng') ||
+        lower.contains('ayam') ||
+        lower.contains('bebek')) {
+      menuIcon = Icons.kebab_dining_rounded;
+      iconColor = AppColors.paprika;
+      iconBg = AppColors.tint(AppColors.paprika, 0.12);
+    } else if (lower.contains('bakmi') ||
+        lower.contains('mie') ||
+        lower.contains('bihun') ||
+        lower.contains('kwetiau')) {
+      menuIcon = Icons.ramen_dining_rounded;
+      iconColor = AppColors.greenDark;
+      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
+    } else if (lower.contains('mendoan') ||
+        lower.contains('gorengan') ||
+        lower.contains('camilan') ||
+        lower.contains('snack')) {
+      menuIcon = Icons.cookie_rounded;
+      iconColor = AppColors.yellow;
+      iconBg = AppColors.tint(AppColors.yellow, 0.2);
+    } else {
+      menuIcon = Icons.restaurant_rounded;
+      iconColor = AppColors.greenDark;
+      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x05000000),
+            color: Color(0x06000000),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: f.imageUrl != null && f.imageUrl!.isNotEmpty
-                ? Image.network(
-                    f.imageUrl!,
-                    width: 64,
-                    height: 64,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _foodFallback(),
-                  )
-                : _foodFallback(),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(menuIcon, size: 22, color: iconColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1747,74 +1820,68 @@ class _DetailPageState extends State<DetailPage> {
                 Text(
                   f.name,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textDark,
                   ),
                 ),
-                if (f.description != null && f.description!.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    f.description!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                      height: 1.35,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                const SizedBox(height: 6),
+                const SizedBox(height: 3),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.tint(AppColors.greenDark, 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        f.priceLabel,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.greenDark,
-                        ),
-                      ),
-                    ),
                     if (f.category != null && f.category!.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        f.category!,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w500,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          f.category!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 6),
                     ],
+                    if (f.description != null && f.description!.isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          f.description!,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: AppColors.textMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.tint(AppColors.greenDark, 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              f.priceLabel,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.greenDark,
+              ),
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _foodFallback() {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Icon(Icons.lunch_dining_rounded,
-          size: 28, color: AppColors.textMuted),
     );
   }
 

@@ -2,6 +2,7 @@ class Restaurant {
   final String id;
   final String name;
   final String category;
+  final String? cuisine;
   final String address;
   final String province;
   final double lat;
@@ -21,6 +22,7 @@ class Restaurant {
     required this.id,
     required this.name,
     required this.category,
+    this.cuisine,
     required this.address,
     required this.province,
     required this.lat,
@@ -42,6 +44,7 @@ class Restaurant {
       id: json['id'].toString(),
       name: json['name'] as String? ?? '',
       category: json['category'] as String? ?? '',
+      cuisine: json['cuisine'] as String?,
       address: json['address'] as String? ?? '',
       province: json['province'] as String? ?? '',
       lat: (json['lat'] as num?)?.toDouble() ?? 0,
@@ -49,7 +52,7 @@ class Restaurant {
       priceMin: json['price_min'] as int? ?? 0,
       priceMax: json['price_max'] as int? ?? 0,
       openingHours: json['opening_hours'] as String?,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: null, // Dinonaktifkan sesuai permintaan user
       phone: json['phone'] as String?,
       website: json['website'] as String?,
       createdAt:
@@ -64,6 +67,7 @@ class Restaurant {
   Map<String, dynamic> toJson() => {
     'name': name,
     'category': category,
+    'cuisine': cuisine,
     'address': address,
     'province': province,
     'lat': lat,
@@ -78,6 +82,15 @@ class Restaurant {
     'review_count': reviewCount,
     'description': description,
   };
+
+  /// Gambar dinonaktifkan/dihapus sesuai permintaan user agar tidak ada gambar kuliner yang keliru.
+  String get effectiveImageUrl => '';
+
+  static String defaultImageFor({
+    required String name,
+    required String category,
+    String? cuisine,
+  }) => '';
 
   String get priceRange => '${_rp(priceMin)} - ${_rp(priceMax)}';
 

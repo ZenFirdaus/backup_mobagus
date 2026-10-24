@@ -139,9 +139,9 @@ class _AiReasoningSheet extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: r.imageUrl != null
+                  child: r.effectiveImageUrl.isNotEmpty
                       ? Image.network(
-                          r.imageUrl!,
+                          r.effectiveImageUrl,
                           width: 56,
                           height: 56,
                           fit: BoxFit.cover,

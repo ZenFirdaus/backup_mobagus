@@ -304,7 +304,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
           child: Row(
             children: [
             FoodImage(
-              imageUrl: r.imageUrl,
+              imageUrl:
+                  r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null,
               width: 54,
               height: 54,
               borderRadius: BorderRadius.circular(14),

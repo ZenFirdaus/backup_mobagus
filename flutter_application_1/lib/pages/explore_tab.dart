@@ -1284,7 +1284,7 @@ class _PlaceCard extends StatelessWidget {
   }
 
   Widget _image() {
-    final url = (r.imageUrl?.isEmpty ?? true) ? null : r.imageUrl;
+    final url = r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null;
     return SizedBox(
       height: 150,
       width: double.infinity,
