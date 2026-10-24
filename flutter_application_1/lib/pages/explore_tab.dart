@@ -209,12 +209,6 @@ class _ExploreTabState extends State<ExploreTab> {
     _load();
   }
 
-  int get _activeFilters =>
-      (_budgetOn ? 1 : 0) +
-      (_category != null ? 1 : 0) +
-      (_selectedCity != null ? 1 : 0) +
-      (_sort != _Sort.terdekat ? 1 : 0);
-
   @override
   Widget build(BuildContext context) {
     return PageBackground(
@@ -390,120 +384,67 @@ class _ExploreTabState extends State<ExploreTab> {
 
   // ---------- Search ----------
   Widget _searchRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.search, size: 20, color: AppColors.greenDark),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _search,
+              onChanged: (v) {
+                setState(() {});
+                _onSearchChanged(v);
+              },
+              onSubmitted: (v) {
+                _onSearchSubmitted(v);
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+              textInputAction: TextInputAction.search,
+              style: const TextStyle(fontSize: 13),
+              decoration: const InputDecoration(
+                hintText: 'Cari kuliner, warung, nama menu...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, size: 20, color: AppColors.greenDark),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _search,
-                    onChanged: (v) {
-                      setState(() {});
-                      _onSearchChanged(v);
-                    },
-                    onSubmitted: (v) {
-                      _onSearchSubmitted(v);
-                      FocusManager.instance.primaryFocus?.unfocus();
-                    },
-                    textInputAction: TextInputAction.search,
-                    style: const TextStyle(fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: 'Cari kuliner, warung, ...',
-                      hintStyle: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                if (_search.text.isNotEmpty)
-                  GestureDetector(
-                    onTap: () {
-                      _search.clear();
-                      _onSearchChanged('');
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      setState(() {});
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        Icons.cancel_rounded,
-                        size: 18,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-              ],
+                border: InputBorder.none,
+                isDense: true,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _showCityFilterSheet,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.greenDark,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.tune_rounded,
-                  size: 21,
-                  color: AppColors.yellow,
+          if (_search.text.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _search.clear();
+                _onSearchChanged('');
+                FocusManager.instance.primaryFocus?.unfocus();
+                setState(() {});
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(
+                  Icons.cancel_rounded,
+                  size: 18,
+                  color: AppColors.textMuted,
                 ),
               ),
-              if (_activeFilters > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.orange,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$_activeFilters',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
+            ),
+        ],
+      ),
     );
   }
 
@@ -924,12 +865,6 @@ class _ExploreTabState extends State<ExploreTab> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          _chip(
-            _selectedCity != null ? 'Wilayah: $_selectedCity' : 'Pilih Wilayah',
-            _selectedCity != null,
-            _showCityFilterSheet,
           ),
           const SizedBox(width: 8),
           _chip('Budget < Rp25rb', _budgetOn, () {
