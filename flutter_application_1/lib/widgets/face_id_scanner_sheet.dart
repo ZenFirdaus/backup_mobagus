@@ -17,6 +17,7 @@ class FaceIdScannerSheet extends StatefulWidget {
   final String? savedPassword;
   final bool isEnrollment;
   final VoidCallback onSuccess;
+  final void Function(Map<String, dynamic> matchedAccount)? onAccountMatched;
 
   const FaceIdScannerSheet({
     super.key,
@@ -25,6 +26,7 @@ class FaceIdScannerSheet extends StatefulWidget {
     this.savedPassword,
     this.isEnrollment = false,
     required this.onSuccess,
+    this.onAccountMatched,
   });
 
   @override
@@ -49,6 +51,7 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
   int _mismatchCount = 0;
   DateTime? _scanStartTime;
   Timer? _timeoutTimer;
+  Map<String, dynamic>? _matchedAccount;
 
   late final AnimationController _pulseController = AnimationController(
     vsync: this,
@@ -255,16 +258,36 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
           return;
         }
 
-        // PENDAFTARAN SUKSES SETELAH JEDA PEMINDAIAN ALAMI
-        await _stopCameraStream();
-
+        // PENDAFTARAN: LAKUKAN CEK ATURAN 1 WAJAH 1 AKUN SEBELUM MENYIMPAN!
         if (result.detectedMetrics != null) {
+          final duplicateEmail =
+              await FaceBiometricService.instance.findExistingAccountWithSameFace(
+            newMetrics: result.detectedMetrics!,
+            currentEmail: widget.userEmail,
+          );
+
+          if (duplicateEmail != null && duplicateEmail.isNotEmpty) {
+            await _stopCameraStream();
+            HapticFeedback.heavyImpact();
+            setState(() {
+              _status = _ScanStatus.error;
+              _statusMessage = 'Wajah Sudah Terdaftar';
+              _errorMessage =
+                  'Wajah ini sudah terdaftar pada akun "$duplicateEmail".\n\nSatu wajah hanya dapat didaftarkan untuk 1 akun pengguna.';
+            });
+            return;
+          }
+
+          // Wajah aman (belum dipakai akun lain) -> Simpan ke database lokal Hive & cloud Supabase
+          await _stopCameraStream();
           await FaceBiometricService.instance.saveEnrolledFace(
             metrics: result.detectedMetrics!,
             userName: widget.userName,
             userEmail: widget.userEmail,
             password: widget.savedPassword,
           );
+        } else {
+          await _stopCameraStream();
         }
 
         // Suara klik & haptic HANYA saat wajah berhasil dideteksi!
@@ -283,12 +306,18 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
         // AUTENTIKASI / LOGIN
         if (result.isFaceMatched) {
           _mismatchCount = 0;
+          if (result.matchedAccount != null) {
+            _matchedAccount = result.matchedAccount;
+          }
 
-          // Berikan jeda pemindaian alami (~1.2 detik) agar terasa seperti memindai beneran
+          // Berikan jeda pemindaian alami (~0.8 detik)
           if (_scanStartTime == null) {
             _scanStartTime = DateTime.now();
-            if (_statusMessage != 'Memverifikasi identitas...') {
-              setState(() => _statusMessage = 'Memverifikasi identitas...');
+            final nameText = _matchedAccount != null
+                ? 'Mengenali ${_matchedAccount!['name']}...'
+                : 'Memverifikasi identitas...';
+            if (_statusMessage != nameText) {
+              setState(() => _statusMessage = nameText);
             }
             _isProcessing = false;
             return;
@@ -296,41 +325,46 @@ class _FaceIdScannerSheetState extends State<FaceIdScannerSheet>
 
           final elapsed =
               DateTime.now().difference(_scanStartTime!).inMilliseconds;
-          if (elapsed < 1200) {
-            if (_statusMessage != 'Memverifikasi identitas...') {
-              setState(() => _statusMessage = 'Memverifikasi identitas...');
-            }
+          if (elapsed < 800) {
             _isProcessing = false;
             return;
           }
 
-          // SUKSES TERVERIFIKASI SETELAH JEDA PEMINDAIAN ALAMI
+          // SUKSES TERVERIFIKASI
           await _stopCameraStream();
 
           // Suara klik & haptic HANYA saat wajah berhasil dideteksi!
           SystemSound.play(SystemSoundType.click);
           HapticFeedback.mediumImpact();
 
+          final verifiedName =
+              _matchedAccount?['name']?.toString() ?? widget.userName;
           setState(() {
             _status = _ScanStatus.success;
-            _statusMessage = 'Wajah Terverifikasi';
+            _statusMessage = 'Wajah Terverifikasi: $verifiedName';
           });
 
           await Future.delayed(const Duration(milliseconds: 650));
-          if (mounted) widget.onSuccess();
+          if (mounted) {
+            if (_matchedAccount != null && widget.onAccountMatched != null) {
+              widget.onAccountMatched!(_matchedAccount!);
+            } else {
+              widget.onSuccess();
+            }
+          }
           return;
         } else {
           _scanStartTime = null;
           _mismatchCount++;
-          // Toleransi hingga 12 frame (~1.2 detik) sebelum memvonis tidak cocok
-          if (_mismatchCount >= 12) {
+          // Toleransi hingga 10 frame (~1 detik) sebelum memvonis tidak cocok
+          if (_mismatchCount >= 10) {
             await _stopCameraStream();
             HapticFeedback.heavyImpact();
             setState(() {
               _status = _ScanStatus.error;
               _statusMessage = 'Wajah Tidak Cocok';
-              _errorMessage =
-                  'Wajah yang terdeteksi tidak cocok dengan profil biometrik yang didaftarkan pada akun ini.';
+              _errorMessage = result.errorMessage ??
+                  'Wajah yang terdeteksi tidak cocok dengan profil biometrik yang didaftarkan pada akun ini. Akses login ditolak.';
             });
             return;
           } else {

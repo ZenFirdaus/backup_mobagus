@@ -195,6 +195,11 @@ class _ProfileTabState extends State<ProfileTab>
     final currentName = _profile?.displayName ?? widget.name;
 
     if (val) {
+      final prefs = await SharedPreferences.getInstance();
+      final savedPwd = prefs.getString('foodie_saved_password');
+
+      if (!mounted) return;
+
       // Buka FaceIdScannerSheet dengan preview kamera depan
       showModalBottomSheet(
         context: context,
@@ -204,6 +209,7 @@ class _ProfileTabState extends State<ProfileTab>
         builder: (ctx) => FaceIdScannerSheet(
           userName: currentName,
           userEmail: currentEmail,
+          savedPassword: savedPwd,
           isEnrollment: true,
           onSuccess: () async {
             Navigator.of(ctx).pop();

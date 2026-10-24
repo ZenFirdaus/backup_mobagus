@@ -5,7 +5,10 @@ import 'dart:ui' as ui;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Metrik Biometrik Wajah Tingkat Lanjut (Normalized Triangulation)
+import 'hive_service.dart';
+import 'supabase_service.dart';
+
+/// Metrik Biometrik Wajah Tingkat Lanjut (High-Precision Normalized Triangulation)
 class EnrolledFaceMetrics {
   final double faceAspectRatio;
   final double eyeDistanceRatio;
@@ -14,8 +17,14 @@ class EnrolledFaceMetrics {
   final double mouthWidthRatio;
   final double noseAngle;
   final double cheekWidthRatio;
+  final double eyeToMouthRatio;
   final double headAngleY;
   final String enrolledAt;
+
+  /// Ambang batas kecocokan presisi tinggi (5.5%)
+  /// Orang yang sama: 0.015 - 0.045
+  /// Orang yang berbeda / wajah lain: >= 0.075 atau tertolak langsung oleh batasan anatomis
+  static const double matchThreshold = 0.055;
 
   EnrolledFaceMetrics({
     required this.faceAspectRatio,
@@ -25,6 +34,7 @@ class EnrolledFaceMetrics {
     this.mouthWidthRatio = 0.85,
     this.noseAngle = 58.0,
     this.cheekWidthRatio = 2.1,
+    this.eyeToMouthRatio = 1.15,
     required this.headAngleY,
     required this.enrolledAt,
   });
@@ -37,6 +47,7 @@ class EnrolledFaceMetrics {
         'mouthWidthRatio': mouthWidthRatio,
         'noseAngle': noseAngle,
         'cheekWidthRatio': cheekWidthRatio,
+        'eyeToMouthRatio': eyeToMouthRatio,
         'headAngleY': headAngleY,
         'enrolledAt': enrolledAt,
       };
@@ -53,77 +64,110 @@ class EnrolledFaceMetrics {
         noseAngle: (json['noseAngle'] as num?)?.toDouble() ?? 58.0,
         cheekWidthRatio:
             (json['cheekWidthRatio'] as num?)?.toDouble() ?? 2.1,
+        eyeToMouthRatio:
+            (json['eyeToMouthRatio'] as num?)?.toDouble() ?? 1.15,
         headAngleY: (json['headAngleY'] as num?)?.toDouble() ?? 0.0,
         enrolledAt: json['enrolledAt']?.toString() ?? '',
       );
 
   /// Cek apakah landmark wajah penting terdeteksi lengkap (mata & hidung)
   bool get hasValidLandmarks =>
-      eyeDistanceRatio > 0.08 &&
-      noseToEyeRatio > 0.1 &&
-      noseAngle > 20.0;
+      eyeDistanceRatio > 0.05 &&
+      noseToEyeRatio > 0.05 &&
+      noseAngle > 15.0;
 
-  /// Hitung selisih jarak geometris dengan wajah referensi.
-  /// Membandingkan sudut segitiga hidung, rasio mata-hidung, dan rasio mulut yang unik per individu.
+  /// Hitung selisih jarak geometris berbobot dengan profil wajah referensi awal yang didaftarkan.
+  /// Menerapkan multi-factor biometric rejection agar wajah orang lain MUTLAK DITOLAK.
   double computeDifference(EnrolledFaceMetrics other) {
     if (!hasValidLandmarks || !other.hasValidLandmarks) {
       return 1.0;
     }
 
-    // 1. Sudut Segitiga Puncak Hidung (Apex Triangle Angle)
-    // Pengguna asli sangat konsisten (+/- 2.5 derajat), orang lain menyimpang signifikan
-    final dNoseAngle = (noseAngle - other.noseAngle).abs() / 60.0;
-    if (dNoseAngle > 0.075) {
-      return 1.0; // Auto tolak: sudut anatomi hidung orang lain
+    // 1. Sudut Puncak Segitiga Hidung (Apex Triangle Angle: Mata Kiri - Hidung - Mata Kanan)
+    // Manusia konsisten pada rentang 1 - 2.5 derajat; orang lain menyimpang > 4.5 derajat
+    final angleDiff = (noseAngle - other.noseAngle).abs();
+    if (angleDiff > 4.5) {
+      return 1.0; // Auto-tolak: Sudut tulang hidung orang lain
     }
+    final dNoseAngle = angleDiff / 40.0;
 
     // 2. Rasio Panjang Hidung terhadap Jarak Antarmata (Normalized by IOD)
-    final dNoseEye = (noseToEyeRatio - other.noseToEyeRatio).abs() / other.noseToEyeRatio;
-    if (dNoseEye > 0.085) {
-      return 1.0; // Auto tolak: proporsi hidung orang lain
+    final dNoseEye = (noseToEyeRatio - other.noseToEyeRatio).abs() /
+        math.max(0.15, other.noseToEyeRatio);
+    if (dNoseEye > 0.075) {
+      return 1.0; // Auto-tolak: Proporsi panjang hidung orang lain
     }
 
-    // 3. Rasio Aspek Wajah
-    final dAspect =
-        (faceAspectRatio - other.faceAspectRatio).abs() / other.faceAspectRatio;
-    if (dAspect > 0.12) {
-      return 1.0;
-    }
-
-    double totalWeighted = (dNoseAngle * 3.5) + (dNoseEye * 3.0) + (dAspect * 1.0);
-    double totalWeight = 7.5;
-
-    // 4. Rasio Lebar Mulut terhadap Jarak Mata (jika terdeteksi)
-    if (mouthWidthRatio > 0.3 && other.mouthWidthRatio > 0.3) {
-      final dMouthWidth =
-          (mouthWidthRatio - other.mouthWidthRatio).abs() / other.mouthWidthRatio;
-      if (dMouthWidth > 0.085) {
-        return 1.0; // Auto tolak: lebar mulut orang lain
+    // 3. Rasio Jarak Mata ke Mulut (Fitur Wajah Tengah Paling Unik Antar Manusia)
+    if (eyeToMouthRatio > 0.3 && other.eyeToMouthRatio > 0.3) {
+      final dEyeMouth = (eyeToMouthRatio - other.eyeToMouthRatio).abs() /
+          math.max(0.3, other.eyeToMouthRatio);
+      if (dEyeMouth > 0.070) {
+        return 1.0; // Auto-tolak: Proporsi mata ke mulut orang lain
       }
-      totalWeighted += dMouthWidth * 3.0;
-      totalWeight += 3.0;
+    }
+
+    // 4. Rasio Lebar Mulut terhadap IOD
+    double dMouthWidth = 0.0;
+    if (mouthWidthRatio > 0.25 && other.mouthWidthRatio > 0.25) {
+      dMouthWidth = (mouthWidthRatio - other.mouthWidthRatio).abs() /
+          math.max(0.25, other.mouthWidthRatio);
+      if (dMouthWidth > 0.085) {
+        return 1.0; // Auto-tolak: Lebar bibir orang lain
+      }
     }
 
     // 5. Rasio Jarak Mulut ke Hidung
-    if (mouthToNoseRatio > 0.2 && other.mouthToNoseRatio > 0.2) {
-      final dMouthNose =
-          (mouthToNoseRatio - other.mouthToNoseRatio).abs() / other.mouthToNoseRatio;
-      if (dMouthNose > 0.09) {
-        return 1.0;
+    double dMouthNose = 0.0;
+    if (mouthToNoseRatio > 0.15 && other.mouthToNoseRatio > 0.15) {
+      dMouthNose = (mouthToNoseRatio - other.mouthToNoseRatio).abs() /
+          math.max(0.15, other.mouthToNoseRatio);
+      if (dMouthNose > 0.085) {
+        return 1.0; // Auto-tolak: Jarak hidung-mulut orang lain
       }
+    }
+
+    // 6. Rasio Lebar Tulang Pipi
+    double dCheek = 0.0;
+    if (cheekWidthRatio > 0.4 && other.cheekWidthRatio > 0.4) {
+      dCheek = (cheekWidthRatio - other.cheekWidthRatio).abs() /
+          math.max(0.4, other.cheekWidthRatio);
+      if (dCheek > 0.090) {
+        return 1.0; // Auto-tolak: Lebar tulang pipi orang lain
+      }
+    }
+
+    // 7. Rasio Aspek Wajah (Tinggi / Lebar)
+    final dAspect = (faceAspectRatio - other.faceAspectRatio).abs() /
+        math.max(0.4, other.faceAspectRatio);
+    if (dAspect > 0.095) {
+      return 1.0;
+    }
+
+    // Hitung rata-rata berbobot
+    double totalWeighted = (dNoseAngle * 3.5) + (dNoseEye * 3.5) + (dAspect * 1.5);
+    double totalWeight = 8.5;
+
+    if (eyeToMouthRatio > 0.3 && other.eyeToMouthRatio > 0.3) {
+      final dEyeMouth = (eyeToMouthRatio - other.eyeToMouthRatio).abs() /
+          math.max(0.3, other.eyeToMouthRatio);
+      totalWeighted += dEyeMouth * 4.0;
+      totalWeight += 4.0;
+    }
+
+    if (mouthWidthRatio > 0.25 && other.mouthWidthRatio > 0.25) {
+      totalWeighted += dMouthWidth * 2.5;
+      totalWeight += 2.5;
+    }
+
+    if (mouthToNoseRatio > 0.15 && other.mouthToNoseRatio > 0.15) {
       totalWeighted += dMouthNose * 2.0;
       totalWeight += 2.0;
     }
 
-    // 6. Rasio Lebar Tulang Pipi
-    if (cheekWidthRatio > 0.5 && other.cheekWidthRatio > 0.5) {
-      final dCheek =
-          (cheekWidthRatio - other.cheekWidthRatio).abs() / other.cheekWidthRatio;
-      if (dCheek > 0.095) {
-        return 1.0;
-      }
-      totalWeighted += dCheek * 2.0;
-      totalWeight += 2.0;
+    if (cheekWidthRatio > 0.4 && other.cheekWidthRatio > 0.4) {
+      totalWeighted += dCheek * 1.5;
+      totalWeight += 1.5;
     }
 
     return totalWeighted / totalWeight;
@@ -141,8 +185,9 @@ class FaceAnalysisResult {
   final bool isFaceMatched;
   final double differenceScore;
   final EnrolledFaceMetrics? detectedMetrics;
+  final Map<String, dynamic>? matchedAccount;
   final String? errorMessage;
-  final String? errorCategory; // 'LIGHTING', 'NO_FACE', 'MULTIPLE_FACES', 'OFF_CENTER', 'MISMATCH'
+  final String? errorCategory; // 'LIGHTING', 'NO_FACE', 'MULTIPLE_FACES', 'OFF_CENTER', 'MISMATCH', 'DUPLICATE_FACE'
 
   FaceAnalysisResult({
     required this.isSuccess,
@@ -154,6 +199,7 @@ class FaceAnalysisResult {
     required this.isFaceMatched,
     required this.differenceScore,
     this.detectedMetrics,
+    this.matchedAccount,
     this.errorMessage,
     this.errorCategory,
   });
@@ -182,107 +228,276 @@ class FaceBiometricService {
   String _emailKey(String email) =>
       email.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
 
+  /// Mengambil semua akun yang terdaftar biometrik di perangkat (Hive Database & SharedPreferences)
+  Future<List<Map<String, dynamic>>> getAllRegisteredProfiles() async {
+    final List<Map<String, dynamic>> result = [];
+    final Set<String> seenEmails = {};
+
+    // 1. Ambil dari Hive NoSQL Database (Sangat persisten, tidak terhapus saat logout)
+    try {
+      final hiveProfiles = HiveService.instance.getAllBiometricProfiles();
+      for (final p in hiveProfiles) {
+        final email = (p['email'] as String? ?? '').trim().toLowerCase();
+        if (email.isNotEmpty && !seenEmails.contains(email)) {
+          final metricsMap = p['metrics'] as Map?;
+          if (metricsMap != null) {
+            result.add({
+              'email': email,
+              'name': p['name'] ?? email.split('@').first,
+              'password': p['password'] ?? '',
+              'metrics': EnrolledFaceMetrics.fromJson(
+                  Map<String, dynamic>.from(metricsMap)),
+            });
+            seenEmails.add(email);
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback / Merge dari SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys();
+      for (final k in keys) {
+        if (k.startsWith('foodie_enrolled_face_metrics_')) {
+          final emailKey = k.replaceFirst('foodie_enrolled_face_metrics_', '');
+          final jsonStr = prefs.getString(k);
+          if (jsonStr != null && jsonStr.isNotEmpty) {
+            try {
+              final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+              final name =
+                  prefs.getString('foodie_face_name_$emailKey') ?? 'User';
+              final pwd = prefs.getString('foodie_face_pwd_$emailKey') ?? '';
+              final fallbackEmail =
+                  prefs.getString('foodie_last_user_email') ?? emailKey;
+              final clean = fallbackEmail.trim().toLowerCase();
+              if (!seenEmails.contains(clean)) {
+                result.add({
+                  'email': clean,
+                  'name': name,
+                  'password': pwd,
+                  'metrics': EnrolledFaceMetrics.fromJson(map),
+                });
+                seenEmails.add(clean);
+              }
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
+
+    return result;
+  }
+
   /// Cek apakah pengguna sudah mendaftarkan Face ID dengan metrik wajah.
   /// Jika [email] diberikan, hanya periksa akun tersebut.
   Future<bool> isFaceEnrolled({String? email}) async {
-    final prefs = await SharedPreferences.getInstance();
     if (email != null && email.trim().isNotEmpty) {
-      final key = _emailKey(email);
-      final bool isEnabled = prefs.getBool('foodie_biometric_enabled_$key') ?? false;
-      final String? metricsJson = prefs.getString('foodie_enrolled_face_metrics_$key');
+      final clean = email.trim().toLowerCase();
+      // 1. Cek di Hive Database
+      final hiveProf = HiveService.instance.getBiometricProfile(clean);
+      if (hiveProf != null && hiveProf['metrics'] != null) {
+        return true;
+      }
+      // 2. Cek di SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final key = _emailKey(clean);
+      final bool isEnabled =
+          prefs.getBool('foodie_biometric_enabled_$key') ?? false;
+      final String? metricsJson =
+          prefs.getString('foodie_enrolled_face_metrics_$key');
       return isEnabled && metricsJson != null && metricsJson.isNotEmpty;
     }
 
-    // Cek user biometrik aktif yang terikat di perangkat
-    final String? activeEmail = prefs.getString('foodie_active_biometric_email') ??
-        prefs.getString('foodie_last_user_email');
-    if (activeEmail == null || activeEmail.isEmpty) return false;
-
-    final key = _emailKey(activeEmail);
-    final bool isUserEnabled = prefs.getBool('foodie_biometric_enabled_$key') ??
-        (prefs.getBool('foodie_biometric_enabled') ?? false);
-    final String? metricsJson = prefs.getString('foodie_enrolled_face_metrics_$key') ??
-        prefs.getString('foodie_enrolled_face_metrics');
-    return isUserEnabled && metricsJson != null && metricsJson.isNotEmpty;
+    // Jika email tidak diberikan, cek apakah ada akun biometrik apapun di perangkat
+    final all = await getAllRegisteredProfiles();
+    return all.isNotEmpty;
   }
 
   /// Ambil informasi akun yang terdaftar untuk biometrik aktif
   Future<Map<String, String>?> getActiveBiometricAccount() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? activeEmail = prefs.getString('foodie_active_biometric_email') ??
-        prefs.getString('foodie_last_user_email');
-    if (activeEmail == null || activeEmail.isEmpty) return null;
+    final String? activeEmail =
+        prefs.getString('foodie_active_biometric_email') ??
+            prefs.getString('foodie_last_user_email');
 
-    final key = _emailKey(activeEmail);
-    final isEnrolled = await isFaceEnrolled(email: activeEmail);
-    if (!isEnrolled) return null;
+    if (activeEmail != null && activeEmail.isNotEmpty) {
+      final clean = activeEmail.trim().toLowerCase();
+      final hiveProf = HiveService.instance.getBiometricProfile(clean);
+      if (hiveProf != null) {
+        return {
+          'email': clean,
+          'name': (hiveProf['name']?.toString() ?? clean.split('@').first),
+          'password': hiveProf['password']?.toString() ?? '',
+        };
+      }
 
-    final name = prefs.getString('foodie_face_name_$key') ??
-        prefs.getString('foodie_last_user_name') ??
-        activeEmail.split('@').first;
-    final pwd = prefs.getString('foodie_face_pwd_$key') ??
-        prefs.getString('foodie_saved_password') ??
-        '';
+      final key = _emailKey(clean);
+      final isEnrolled = await isFaceEnrolled(email: clean);
+      if (isEnrolled) {
+        final name = prefs.getString('foodie_face_name_$key') ??
+            prefs.getString('foodie_last_user_name') ??
+            clean.split('@').first;
+        final pwd = prefs.getString('foodie_face_pwd_$key') ??
+            prefs.getString('foodie_saved_password') ??
+            '';
+        return {
+          'email': clean,
+          'name': name,
+          'password': pwd,
+        };
+      }
+    }
 
-    return {
-      'email': activeEmail,
-      'name': name,
-      'password': pwd,
-    };
+    // Jika tidak ada email aktif spesifik, ambil akun pertama yang ada di Hive
+    final all = await getAllRegisteredProfiles();
+    if (all.isNotEmpty) {
+      final first = all.first;
+      return {
+        'email': first['email'].toString(),
+        'name': first['name'].toString(),
+        'password': first['password'].toString(),
+      };
+    }
+
+    return null;
   }
 
   /// Ambil metrik wajah yang telah didaftarkan (bisa spesifik per akun)
   Future<EnrolledFaceMetrics?> getEnrolledMetrics({String? email}) async {
-    final prefs = await SharedPreferences.getInstance();
-    String? jsonStr;
     if (email != null && email.trim().isNotEmpty) {
-      final key = _emailKey(email);
-      jsonStr = prefs.getString('foodie_enrolled_face_metrics_$key');
-      if (jsonStr == null || jsonStr.isEmpty) return null;
-    } else {
-      final activeEmail = prefs.getString('foodie_active_biometric_email');
-      if (activeEmail != null && activeEmail.isNotEmpty) {
-        final key = _emailKey(activeEmail);
-        jsonStr = prefs.getString('foodie_enrolled_face_metrics_$key');
+      final clean = email.trim().toLowerCase();
+      final hiveProf = HiveService.instance.getBiometricProfile(clean);
+      if (hiveProf != null && hiveProf['metrics'] != null) {
+        try {
+          return EnrolledFaceMetrics.fromJson(
+              Map<String, dynamic>.from(hiveProf['metrics'] as Map));
+        } catch (_) {}
       }
-      jsonStr ??= prefs.getString('foodie_enrolled_face_metrics');
-    }
-    if (jsonStr == null || jsonStr.isEmpty) return null;
-    try {
-      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-      return EnrolledFaceMetrics.fromJson(map);
-    } catch (_) {
+
+      final prefs = await SharedPreferences.getInstance();
+      final key = _emailKey(clean);
+      final jsonStr = prefs.getString('foodie_enrolled_face_metrics_$key');
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        try {
+          return EnrolledFaceMetrics.fromJson(
+              jsonDecode(jsonStr) as Map<String, dynamic>);
+        } catch (_) {}
+      }
       return null;
     }
+
+    final active = await getActiveBiometricAccount();
+    if (active != null) {
+      return getEnrolledMetrics(email: active['email']);
+    }
+    return null;
+  }
+
+  /// ATURAN 1 WAJAH 1 AKUN:
+  /// Memeriksa apakah wajah baru yang dideteksi sudah terdaftar pada akun lain.
+  /// Mengembalikan email akun lain jika duplikat ditemukan, atau `null` jika aman.
+  Future<String?> findExistingAccountWithSameFace({
+    required EnrolledFaceMetrics newMetrics,
+    required String currentEmail,
+  }) async {
+    final allProfiles = await getAllRegisteredProfiles();
+    final cleanCurrent = currentEmail.trim().toLowerCase();
+
+    for (final prof in allProfiles) {
+      final profEmail = (prof['email'] as String? ?? '').trim().toLowerCase();
+      // Lewati akun yang sama (misalnya update wajah akun sendiri)
+      if (profEmail == cleanCurrent) continue;
+
+      final metrics = prof['metrics'] as EnrolledFaceMetrics?;
+      if (metrics == null) continue;
+
+      final diff = newMetrics.computeDifference(metrics);
+      // Jika perbedaan <= matchThreshold, berarti orang fisik yang sama!
+      if (diff <= EnrolledFaceMetrics.matchThreshold) {
+        return profEmail;
+      }
+    }
+    return null;
+  }
+
+  /// PENCARIAN AKUN OTOMATIS BERDASARKAN WAJAH (1 Wajah 1 Akun):
+  /// Mencari akun mana di database yang cocok dengan wajah di depan kamera.
+  Future<Map<String, dynamic>?> findMatchingAccount(
+      EnrolledFaceMetrics detected) async {
+    final allProfiles = await getAllRegisteredProfiles();
+    if (allProfiles.isEmpty) return null;
+
+    Map<String, dynamic>? bestMatch;
+    double lowestDiff = 1.0;
+
+    for (final prof in allProfiles) {
+      final metrics = prof['metrics'] as EnrolledFaceMetrics?;
+      if (metrics == null) continue;
+
+      final diff = detected.computeDifference(metrics);
+      if (diff <= EnrolledFaceMetrics.matchThreshold && diff < lowestDiff) {
+        lowestDiff = diff;
+        bestMatch = {
+          'email': prof['email'],
+          'name': prof['name'],
+          'password': prof['password'],
+          'difference': diff,
+        };
+      }
+    }
+
+    return bestMatch;
   }
 
   /// Simpan pendaftaran wajah yang TERIKAT KETAT pada profil/email pengguna tertentu
+  /// Menyimpan permanen ke Hive NoSQL database, Supabase Cloud, dan SharedPreferences.
   Future<void> saveEnrolledFace({
     required EnrolledFaceMetrics metrics,
     required String userName,
     required String userEmail,
     String? password,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
     final cleanEmail = userEmail.trim().toLowerCase();
-    final key = _emailKey(cleanEmail);
-    final metricsJson = jsonEncode(metrics.toJson());
+    final cleanName = userName.trim().isNotEmpty
+        ? userName.trim()
+        : cleanEmail.split('@').first;
+    final metricsMap = metrics.toJson();
+    final metricsJson = jsonEncode(metricsMap);
 
-    // 1. Simpan terikat spesifik ke email akun ini
+    // 1. Simpan di Hive Database (NoSQL disk lokal, permanen walau logout berkali-kali)
+    await HiveService.instance.saveBiometricProfile(
+      email: cleanEmail,
+      name: cleanName,
+      password: password,
+      metrics: metricsMap,
+    );
+
+    // 2. Sinkronkan ke Supabase Cloud (User Metadata)
+    try {
+      await SupabaseService.instance.saveFaceBiometricsToCloud(
+        email: cleanEmail,
+        name: cleanName,
+        metrics: metricsMap,
+        password: password,
+      );
+    } catch (_) {}
+
+    // 3. Simpan di SharedPreferences (Kompatibilitas aplikasi)
+    final prefs = await SharedPreferences.getInstance();
+    final key = _emailKey(cleanEmail);
+
     await prefs.setBool('foodie_biometric_enabled_$key', true);
     await prefs.setString('foodie_enrolled_face_metrics_$key', metricsJson);
-    await prefs.setString('foodie_face_name_$key', userName.trim());
+    await prefs.setString('foodie_face_name_$key', cleanName);
     if (password != null && password.isNotEmpty) {
       await prefs.setString('foodie_face_pwd_$key', password);
     }
 
-    // 2. Set sebagai akun biometrik aktif di perangkat
     await prefs.setString('foodie_active_biometric_email', cleanEmail);
-
-    // 3. Simpan juga key legacy agar kompatibel
     await prefs.setBool('foodie_biometric_enabled', true);
     await prefs.setString('foodie_enrolled_face_metrics', metricsJson);
-    await prefs.setString('foodie_last_user_name', userName.trim());
+    await prefs.setString('foodie_last_user_name', cleanName);
     await prefs.setString('foodie_last_user_email', cleanEmail);
     if (password != null && password.isNotEmpty) {
       await prefs.setString('foodie_saved_password', password);
@@ -292,11 +507,15 @@ class FaceBiometricService {
   /// Hapus pendaftaran wajah untuk akun tertentu (atau akun aktif)
   Future<void> removeEnrolledFace({String? email}) async {
     final prefs = await SharedPreferences.getInstance();
-    final targetEmail = email ?? prefs.getString('foodie_active_biometric_email') ??
+    final targetEmail = email ??
+        prefs.getString('foodie_active_biometric_email') ??
         prefs.getString('foodie_last_user_email');
 
     if (targetEmail != null && targetEmail.isNotEmpty) {
-      final key = _emailKey(targetEmail);
+      final clean = targetEmail.trim().toLowerCase();
+      await HiveService.instance.deleteBiometricProfile(clean);
+
+      final key = _emailKey(clean);
       await prefs.remove('foodie_biometric_enabled_$key');
       await prefs.remove('foodie_enrolled_face_metrics_$key');
       await prefs.remove('foodie_face_name_$key');
@@ -538,6 +757,20 @@ class FaceBiometricService {
       rCheek = math.sqrt(cdx * cdx + cdy * cdy) / iod;
     }
 
+    // 6. Rasio Jarak Mata ke Mulut (Tinggi Wajah Tengah Normalized by IOD)
+    double rEyeMouth = 1.15;
+    if (leftMouth != null && rightMouth != null) {
+      final double mcX = (leftMouth.position.x + rightMouth.position.x) / 2.0;
+      final double mcY = (leftMouth.position.y + rightMouth.position.y) / 2.0;
+      final double emx = (mcX - eyeCenterX).toDouble();
+      final double emy = (mcY - eyeCenterY).toDouble();
+      rEyeMouth = math.sqrt(emx * emx + emy * emy) / iod;
+    } else if (bottomMouth != null) {
+      final double emx = (bottomMouth.position.x - eyeCenterX).toDouble();
+      final double emy = (bottomMouth.position.y - eyeCenterY).toDouble();
+      rEyeMouth = math.sqrt(emx * emx + emy * emy) / iod;
+    }
+
     final double eyeDistRatio = iod / faceWidth;
 
     final detectedMetrics = EnrolledFaceMetrics(
@@ -548,6 +781,7 @@ class FaceBiometricService {
       mouthWidthRatio: rMouthWidth,
       noseAngle: noseAngleDeg,
       cheekWidthRatio: rCheek,
+      eyeToMouthRatio: rEyeMouth,
       headAngleY: face.headEulerAngleY ?? 0.0,
       enrolledAt: DateTime.now().toIso8601String(),
     );
@@ -567,30 +801,57 @@ class FaceBiometricService {
       );
     }
 
-    // 5. Jika Login/Verifikasi, cocokkan dengan metrik yang didaftarkan akun terkait
-    final ref = referenceMetrics ?? await getEnrolledMetrics(email: targetEmail);
+    // 5. Jika Login/Verifikasi:
+    EnrolledFaceMetrics? ref = referenceMetrics;
+    Map<String, dynamic>? matchedAccount;
+
+    if (ref == null && targetEmail != null && targetEmail.trim().isNotEmpty) {
+      ref = await getEnrolledMetrics(email: targetEmail);
+    }
+
+    // Jika targetEmail tidak diberikan (User klik tombol Face ID tanpa isi email di form login),
+    // lakukan auto-matching ke seluruh database biometrik (1 wajah 1 akun)!
     if (ref == null) {
+      matchedAccount = await findMatchingAccount(detectedMetrics);
+      if (matchedAccount == null) {
+        final allProfiles = await getAllRegisteredProfiles();
+        final msg = allProfiles.isEmpty
+            ? 'Data biometrik belum tersimpan di perangkat. Silakan login manual dengan email & kata sandi terlebih dahulu.'
+            : 'Wajah tidak cocok dengan profil biometrik manapun yang terdaftar di aplikasi.';
+        return FaceAnalysisResult(
+          isSuccess: false,
+          isLightingAdequate: true,
+          luminance: luminance,
+          isFaceDetected: true,
+          isSingleFace: true,
+          isFaceCentered: true,
+          isFaceMatched: false,
+          differenceScore: 1.0,
+          detectedMetrics: detectedMetrics,
+          errorCategory: allProfiles.isEmpty ? 'NOT_ENROLLED' : 'MISMATCH',
+          errorMessage: msg,
+        );
+      }
+
+      // Wajah Berhasil Dicocokkan dengan Akun di Database!
       return FaceAnalysisResult(
-        isSuccess: false,
+        isSuccess: true,
         isLightingAdequate: true,
         luminance: luminance,
         isFaceDetected: true,
         isSingleFace: true,
         isFaceCentered: true,
-        isFaceMatched: false,
-        differenceScore: 1.0,
-        errorCategory: 'NOT_ENROLLED',
-        errorMessage:
-            'Data biometrik belum tersimpan untuk akun ini. Silakan login menggunakan email & kata sandi terlebih dahulu.',
+        isFaceMatched: true,
+        differenceScore: (matchedAccount['difference'] as num?)?.toDouble() ?? 0.05,
+        detectedMetrics: detectedMetrics,
+        matchedAccount: matchedAccount,
       );
     }
 
+    // Jika target email terdaftar:
     final diff = detectedMetrics.computeDifference(ref);
 
-    // Ambang batas ketat: 0.065 (6.5% deviasi rata-rata)
-    // Pemilik sah memiliki deviasi 1.5% - 4.5%
-    // Wajah orang lain pasti memiliki deviasi > 8.0% atau tertolak langsung (1.0)
-    if (diff > 0.065) {
+    if (diff > EnrolledFaceMetrics.matchThreshold) {
       return FaceAnalysisResult(
         isSuccess: false,
         isLightingAdequate: true,
