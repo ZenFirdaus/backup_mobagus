@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/ai_recommendation_result.dart';
 import '../props/app_colors.dart';
+import 'restaurant_image.dart';
 
 /// Menampilkan penjelasan mendalam mengapa AI memilih restoran ini
 /// berdasarkan persona, selera rasa, budget, hunian, dan lokasi pengguna.
@@ -14,10 +15,8 @@ void showAiReasoningSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _AiReasoningSheet(
-      result: result,
-      onOpenDetail: onOpenDetail,
-    ),
+    builder: (ctx) =>
+        _AiReasoningSheet(result: result, onOpenDetail: onOpenDetail),
   );
 }
 
@@ -25,10 +24,7 @@ class _AiReasoningSheet extends StatelessWidget {
   final AiRecommendationResult result;
   final VoidCallback onOpenDetail;
 
-  const _AiReasoningSheet({
-    required this.result,
-    required this.onOpenDetail,
-  });
+  const _AiReasoningSheet({required this.result, required this.onOpenDetail});
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +97,10 @@ class _AiReasoningSheet extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.orange, 0.15),
                   borderRadius: BorderRadius.circular(12),
@@ -120,8 +119,11 @@ class _AiReasoningSheet extends StatelessWidget {
                 tooltip: 'Tutup',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                icon: const Icon(Icons.close_rounded,
-                    size: 22, color: AppColors.textMuted),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 22,
+                  color: AppColors.textMuted,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -139,25 +141,15 @@ class _AiReasoningSheet extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: r.effectiveImageUrl.isNotEmpty
-                      ? Image.network(
-                          r.effectiveImageUrl,
-                          width: 56,
-                          height: 56,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 56,
-                            height: 56,
-                            color: Colors.grey.shade300,
-                            child: const Icon(Icons.restaurant, color: Colors.grey),
-                          ),
-                        )
-                      : Container(
-                          width: 56,
-                          height: 56,
-                          color: Colors.grey.shade300,
-                          child: const Icon(Icons.restaurant, color: Colors.grey),
-                        ),
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: RestaurantImage(
+                      imageUrl: r.imageUrl,
+                      category: r.category,
+                      dishType: r.dishType,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

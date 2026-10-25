@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+export '../core/constants/dish_types.dart' show dishLabel;
+
 /// Membuka pencarian Google Maps untuk nama restoran dan kabupaten/kota terkait.
 Future<bool> openInGoogleMaps(String name, String? kabupatenKota) async {
   try {
@@ -16,17 +18,4 @@ Future<bool> openInGoogleMaps(String name, String? kabupatenKota) async {
     debugPrint('Error membuka Google Maps: $e');
     return false;
   }
-}
-
-/// Menghasilkan label tampilan rapi untuk jenis sajian restoran.
-String? dishLabel(String? dishType) {
-  if (dishType == null) return null;
-  final trimmed = dishType.trim();
-  if (trimmed.isEmpty) return null;
-  final cleaned = trimmed.replaceAll('_', ' ');
-  return cleaned
-      .split(' ')
-      .where((w) => w.isNotEmpty)
-      .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
-      .join(' ');
 }

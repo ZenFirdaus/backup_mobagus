@@ -23,6 +23,7 @@ import '../widgets/auth_widgets.dart';
 import '../widgets/modern_time_picker.dart';
 import '../widgets/modern_date_picker.dart';
 import '../widgets/profile_border_avatar.dart';
+import '../widgets/restaurant_image.dart';
 
 class DetailPage extends StatefulWidget {
   final Restaurant restaurant;
@@ -883,16 +884,11 @@ class _DetailPageState extends State<DetailPage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (_r.effectiveImageUrl.isNotEmpty)
-            Image.network(
-              _r.effectiveImageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => _fallbackImage(),
-              loadingBuilder: (_, child, progress) =>
-                  progress == null ? child : _fallbackImage(),
-            )
-          else
-            _fallbackImage(),
+          RestaurantImage(
+            imageUrl: _r.imageUrl,
+            category: _r.category,
+            dishType: _r.dishType,
+          ),
           // Gradient overlay
           DecoratedBox(
             decoration: BoxDecoration(
@@ -1012,25 +1008,6 @@ class _DetailPageState extends State<DetailPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _fallbackImage() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.greenDark, AppColors.tint(AppColors.orange, 0.6)],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.restaurant_rounded,
-          size: 60,
-          color: Colors.white.withValues(alpha: 0.3),
-        ),
       ),
     );
   }

@@ -11,6 +11,7 @@ import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/location_service.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/restaurant_image.dart';
 import 'detail_page.dart';
 import 'notifications_page.dart';
 
@@ -23,21 +24,31 @@ String _formatCategoryLabel(String c) {
   if (lower == 'food_court' || lower == 'food court') return 'Food Court';
   if (lower == 'cafe' || lower == 'kafe') return 'Cafe';
   if (lower == 'restoran' || lower == 'restaurant') return 'Restoran';
-  if (lower == 'warung_tradisional' || lower == 'warung tradisional' || lower == 'warung') return 'Warung Tradisional';
+  if (lower == 'warung_tradisional' ||
+      lower == 'warung tradisional' ||
+      lower == 'warung')
+    return 'Warung Tradisional';
   if (lower == 'angkringan') return 'Angkringan';
-  return c.replaceAll('_', ' ').split(' ').map((w) {
-    if (w.isEmpty) return '';
-    return w[0].toUpperCase() + w.substring(1);
-  }).join(' ');
+  return c
+      .replaceAll('_', ' ')
+      .split(' ')
+      .map((w) {
+        if (w.isEmpty) return '';
+        return w[0].toUpperCase() + w.substring(1);
+      })
+      .join(' ');
 }
 
 /// Tab "Explore": data dari Supabase (fallback seed jika kosong/offline).
 class ExploreTab extends StatefulWidget {
   final String name;
+
   /// Kategori awal yang dipilih (dari Home).
   final String? initialCategory;
+
   /// Kata kunci pencarian awal (opsional, misal dari game Kulinerdle).
   final String? initialQuery;
+
   /// Koordinat user untuk sort terdekat (dikirim dari HomePage).
   final double? userLat;
   final double? userLng;
@@ -248,11 +259,19 @@ class _ExploreTabState extends State<ExploreTab> {
                       r: r,
                       favorite: _favs.contains(r.id),
                       distanceM: () {
-                        final loc = LocationService.instance.currentLocation.value;
+                        final loc =
+                            LocationService.instance.currentLocation.value;
                         final lat = widget.userLat ?? loc?.lat;
                         final lng = widget.userLng ?? loc?.lng;
-                        if (lat != null && lng != null && (r.lat != 0 || r.lng != 0)) {
-                          return LocationService.instance.distanceM(lat, lng, r.lat, r.lng);
+                        if (lat != null &&
+                            lng != null &&
+                            (r.lat != 0 || r.lng != 0)) {
+                          return LocationService.instance.distanceM(
+                            lat,
+                            lng,
+                            r.lat,
+                            r.lng,
+                          );
                         }
                         return null;
                       }(),
@@ -271,9 +290,8 @@ class _ExploreTabState extends State<ExploreTab> {
   }
 
   void _showDetail(Restaurant r) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)));
   }
 
   // ---------- Header ----------
@@ -417,10 +435,7 @@ class _ExploreTabState extends State<ExploreTab> {
               style: const TextStyle(fontSize: 13),
               decoration: const InputDecoration(
                 hintText: 'Cari kuliner, warung, nama menu...',
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
-                ),
+                hintStyle: TextStyle(fontSize: 13, color: AppColors.textMuted),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -501,11 +516,17 @@ class _ExploreTabState extends State<ExploreTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Filter Wilayah & Lokasi', style: AppText.display(18)),
+                          Text(
+                            'Filter Wilayah & Lokasi',
+                            style: AppText.display(18),
+                          ),
                           const SizedBox(height: 2),
                           const Text(
                             'Pilih wilayah kuliner atau gunakan GPS terdekat',
-                            style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -513,7 +534,10 @@ class _ExploreTabState extends State<ExploreTab> {
                     IconButton(
                       tooltip: 'Tutup',
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -538,14 +562,18 @@ class _ExploreTabState extends State<ExploreTab> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Rekomendasi diurutkan dari GPS terdekat Anda 📍'),
+                                  content: Text(
+                                    'Rekomendasi diurutkan dari GPS terdekat Anda 📍',
+                                  ),
                                   backgroundColor: AppColors.greenDark,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
                             }
                           } else {
-                            final msg = locSvc.statusMessage.value ?? 'Gagal mengakses GPS';
+                            final msg =
+                                locSvc.statusMessage.value ??
+                                'Gagal mengakses GPS';
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -561,7 +589,8 @@ class _ExploreTabState extends State<ExploreTab> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: (currentLoc?.isGps ?? false) && _selectedCity == null
+                      color:
+                          (currentLoc?.isGps ?? false) && _selectedCity == null
                           ? AppColors.tint(AppColors.greenDark, 0.08)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(14),
@@ -584,7 +613,11 @@ class _ExploreTabState extends State<ExploreTab> {
                                   color: AppColors.greenDark,
                                 ),
                               )
-                            : const Icon(Icons.my_location_rounded, color: AppColors.greenDark, size: 20),
+                            : const Icon(
+                                Icons.my_location_rounded,
+                                color: AppColors.greenDark,
+                                size: 20,
+                              ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -604,13 +637,21 @@ class _ExploreTabState extends State<ExploreTab> {
                                     : 'Urutkan dari posisi koordinat ponsel saat ini',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        if ((currentLoc?.isGps ?? false) && _selectedCity == null)
-                          const Icon(Icons.check_circle_rounded, color: AppColors.greenDark, size: 18),
+                        if ((currentLoc?.isGps ?? false) &&
+                            _selectedCity == null)
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.greenDark,
+                            size: 18,
+                          ),
                       ],
                     ),
                   ),
@@ -629,7 +670,8 @@ class _ExploreTabState extends State<ExploreTab> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _selectedCity == null && !(currentLoc?.isGps ?? false)
+                      color:
+                          _selectedCity == null && !(currentLoc?.isGps ?? false)
                           ? AppColors.tint(AppColors.orange, 0.08)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(14),
@@ -645,7 +687,9 @@ class _ExploreTabState extends State<ExploreTab> {
                       children: [
                         Icon(
                           Icons.public_rounded,
-                          color: _selectedCity == null && !(currentLoc?.isGps ?? false)
+                          color:
+                              _selectedCity == null &&
+                                  !(currentLoc?.isGps ?? false)
                               ? AppColors.orange
                               : AppColors.textMuted,
                           size: 20,
@@ -661,99 +705,115 @@ class _ExploreTabState extends State<ExploreTab> {
                             ),
                           ),
                         ),
-                        if (_selectedCity == null && !(currentLoc?.isGps ?? false))
-                          const Icon(Icons.check_circle_rounded, color: AppColors.orange, size: 18),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 14),
-              const Text(
-                'WILAYAH KOTA KHUSUS',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Daftar Wilayah
-              ...[
-                {'name': 'Kota Yogyakarta', 'city': 'Yogyakarta'},
-                {'name': 'Kabupaten Sleman', 'city': 'Sleman'},
-                {'name': 'Kabupaten Bantul', 'city': 'Bantul'},
-                {'name': 'Surakarta (Solo)', 'city': 'Surakarta'},
-                {'name': 'Kota Semarang', 'city': 'Semarang'},
-              ].map((item) {
-                final city = item['city']!;
-                final isSelected = _selectedCity == city;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      setState(() => _selectedCity = city);
-                      Navigator.pop(ctx);
-                      _load();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Filter wilayah: ${item['name']} 🔍'),
-                          backgroundColor: AppColors.greenDark,
-                          behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.tint(AppColors.greenDark, 0.08)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected ? Icons.check_circle_rounded : Icons.location_city_rounded,
+                        if (_selectedCity == null &&
+                            !(currentLoc?.isGps ?? false))
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.orange,
                             size: 18,
-                            color: isSelected ? AppColors.greenDark : AppColors.textMuted,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              item['name']!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                color: isSelected ? AppColors.greenDark : AppColors.textDark,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
+                ),
+
+                const SizedBox(height: 14),
+                const Text(
+                  'WILAYAH KOTA KHUSUS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Daftar Wilayah
+                ...[
+                  {'name': 'Kota Yogyakarta', 'city': 'Yogyakarta'},
+                  {'name': 'Kabupaten Sleman', 'city': 'Sleman'},
+                  {'name': 'Kabupaten Bantul', 'city': 'Bantul'},
+                  {'name': 'Surakarta (Solo)', 'city': 'Surakarta'},
+                  {'name': 'Kota Semarang', 'city': 'Semarang'},
+                ].map((item) {
+                  final city = item['city']!;
+                  final isSelected = _selectedCity == city;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        setState(() => _selectedCity = city);
+                        Navigator.pop(ctx);
+                        _load();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Filter wilayah: ${item['name']} 🔍'),
+                            backgroundColor: AppColors.greenDark,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.tint(AppColors.greenDark, 0.08)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.location_city_rounded,
+                              size: 18,
+                              color: isSelected
+                                  ? AppColors.greenDark
+                                  : AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                item['name']!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: isSelected
+                                      ? AppColors.greenDark
+                                      : AppColors.textDark,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Widget _coverageInfo() {
     final loc = LocationService.instance.currentLocation.value;
@@ -792,7 +852,9 @@ class _ExploreTabState extends State<ExploreTab> {
                     TextSpan(
                       text: _selectedCity != null
                           ? 'Wilayah $_selectedCity'
-                          : (isGps ? (loc?.address ?? 'GPS Anda') : 'Semua (DIY & Jateng)'),
+                          : (isGps
+                                ? (loc?.address ?? 'GPS Anda')
+                                : 'Semua (DIY & Jateng)'),
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w800,
@@ -880,7 +942,8 @@ class _ExploreTabState extends State<ExploreTab> {
                       _category!.toLowerCase().replaceAll('_', ' ') ==
                           c.toLowerCase().replaceAll('_', ' ')),
               () {
-                final isSelected = _category != null &&
+                final isSelected =
+                    _category != null &&
                     (_category == c ||
                         _category!.toLowerCase().replaceAll('_', ' ') ==
                             c.toLowerCase().replaceAll('_', ' '));
@@ -1284,21 +1347,17 @@ class _PlaceCard extends StatelessWidget {
   }
 
   Widget _image() {
-    final url = r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null;
     return SizedBox(
       height: 150,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (url != null)
-            Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => _fallback(),
-            )
-          else
-            _fallback(),
+          RestaurantImage(
+            imageUrl: r.imageUrl,
+            category: r.category,
+            dishType: r.dishType,
+          ),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -1355,18 +1414,4 @@ class _PlaceCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _fallback() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.tint(AppColors.orange, 0.55), AppColors.greenDark],
-        ),
-      ),
-      child: const Icon(Icons.ramen_dining, size: 48, color: AppColors.yellow),
-    );
-  }
 }
-

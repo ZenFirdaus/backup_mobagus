@@ -31,6 +31,7 @@ import 'saran_kesan_page.dart';
 import 'rewards_shop_page.dart';
 import '../widgets/profile_border_avatar.dart';
 import '../widgets/modern_time_picker.dart';
+import '../widgets/restaurant_image.dart';
 import '../services/reward_border_service.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -2188,14 +2189,17 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                   child: Row(
                     children: [
-                      FoodImage(
-                        imageUrl: r.effectiveImageUrl.isNotEmpty
-                            ? r.effectiveImageUrl
-                            : null,
-                        width: 48,
-                        height: 48,
+                      ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        icon: Icons.restaurant_rounded,
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: RestaurantImage(
+                            imageUrl: r.imageUrl,
+                            category: r.category,
+                            dishType: r.dishType,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
