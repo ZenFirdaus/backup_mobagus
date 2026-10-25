@@ -761,14 +761,6 @@ class _ProfileTabState extends State<ProfileTab>
               ),
               const SizedBox(height: 6),
               _buildPointActionTile(
-                icon: Icons.location_on_rounded,
-                color: AppColors.greenDark,
-                title: 'Check-in di Restoran',
-                reward: '+50 Poin',
-                desc: 'Verifikasi kunjungan langsung saat bersantap di lokasi.',
-              ),
-              const SizedBox(height: 6),
-              _buildPointActionTile(
                 icon: Icons.sports_esports_rounded,
                 color: const Color(0xFF6C5CE7),
                 title: 'Mainkan Mini-Game',
