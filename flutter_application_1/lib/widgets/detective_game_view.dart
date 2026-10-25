@@ -40,11 +40,19 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
   final Set<String> _completedCaseIds = {};
   int _totalScore = 0;
 
-  // Lives & Cooldown System
+  // Lives & Cooldown System (2 Menit per Hati, Maks 3 Hati)
   int _lives = 3;
-  int? _recoveryDeadline;
-  int _cooldownSecondsRemaining = 0;
-  Timer? _cooldownTimer;
+  static const int kHeartRecoverySeconds = 120; // 2 menit (120 detik) per hati
+  int? _heartRecoveryAnchorMs;
+  int _secondsToNextHeart = 0;
+  Timer? _heartTimer;
+
+  int get _totalSecondsToFullRecovery {
+    if (_lives >= 3) return 0;
+    final needed = 3 - _lives;
+    if (needed <= 0) return 0;
+    return ((needed - 1) * kHeartRecoverySeconds) + _secondsToNextHeart;
+  }
 
   // Active Case Session
   DetectiveCase? _activeCase;
@@ -64,7 +72,7 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
 
   @override
   void dispose() {
-    _cooldownTimer?.cancel();
+    _heartTimer?.cancel();
     super.dispose();
   }
 
@@ -79,8 +87,10 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
       final checkpoint = prefs.getInt('foodie_detective_checkpoint') ?? 1;
       final completed = prefs.getStringList('foodie_detective_completed') ?? [];
       final score = prefs.getInt('foodie_detective_score') ?? 0;
-      final savedLives = prefs.getInt('detective_lives') ?? 3;
-      final deadline = prefs.getInt('detective_recovery_deadline');
+      final savedLives = prefs.getInt('foodie_detective_lives') ??
+          prefs.getInt('detective_lives') ??
+          3;
+      final anchor = prefs.getInt('foodie_detective_heart_anchor');
 
       if (!mounted) return;
 
@@ -90,95 +100,139 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
         _completedCaseIds.addAll(completed);
         _totalScore = score;
         _lives = savedLives.clamp(0, 3);
-        _recoveryDeadline = deadline;
+        _heartRecoveryAnchorMs = anchor;
       });
 
-      _evaluateCooldown();
+      _evaluateHeartRecovery(persist: true);
     } catch (_) {}
   }
 
-  void _evaluateCooldown() {
-    if (_lives <= 0 && _recoveryDeadline != null) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      if (now >= _recoveryDeadline!) {
-        _restoreAllLives();
-      } else {
-        _cooldownSecondsRemaining = ((_recoveryDeadline! - now) / 1000).ceil();
-        _startCooldownTimer();
-      }
-    } else if (_lives <= 0 && _recoveryDeadline == null) {
-      _startNewCooldown();
+  void _evaluateHeartRecovery({bool persist = true}) {
+    if (_lives >= 3) {
+      _lives = 3;
+      _heartRecoveryAnchorMs = null;
+      _secondsToNextHeart = 0;
+      _heartTimer?.cancel();
+      _heartTimer = null;
+      if (persist) _persistDetectiveHearts();
+      return;
     }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (_heartRecoveryAnchorMs == null) {
+      _heartRecoveryAnchorMs = now;
+      if (persist) _persistDetectiveHearts();
+    }
+
+    final elapsed = now - _heartRecoveryAnchorMs!;
+    const recoveryMs = kHeartRecoverySeconds * 1000;
+
+    if (elapsed >= recoveryMs) {
+      final recovered = elapsed ~/ recoveryMs;
+      final newLives = (_lives + recovered).clamp(0, 3);
+      _lives = newLives;
+
+      if (_lives >= 3) {
+        _lives = 3;
+        _heartRecoveryAnchorMs = null;
+        _secondsToNextHeart = 0;
+        _heartTimer?.cancel();
+        _heartTimer = null;
+        if (persist) _persistDetectiveHearts();
+        return;
+      } else {
+        _heartRecoveryAnchorMs =
+            _heartRecoveryAnchorMs! + (recovered * recoveryMs);
+        if (persist) _persistDetectiveHearts();
+      }
+    }
+
+    final remainingMs = recoveryMs - (now - _heartRecoveryAnchorMs!);
+    _secondsToNextHeart =
+        (remainingMs / 1000).ceil().clamp(0, kHeartRecoverySeconds);
+
+    _startHeartTimerIfNeeded();
   }
 
-  Future<void> _startNewCooldown() async {
-    const cooldownDuration = Duration(minutes: 5);
-    final deadline = DateTime.now().add(cooldownDuration).millisecondsSinceEpoch;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('detective_recovery_deadline', deadline);
-
-    if (!mounted) return;
-    setState(() {
-      _recoveryDeadline = deadline;
-      _cooldownSecondsRemaining = cooldownDuration.inSeconds;
-    });
-
-    _startCooldownTimer();
-  }
-
-  void _startCooldownTimer() {
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  void _startHeartTimerIfNeeded() {
+    if (_heartTimer != null && _heartTimer!.isActive) return;
+    _heartTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      if (_cooldownSecondsRemaining <= 1) {
-        timer.cancel();
-        _restoreAllLives();
+      setState(() {
+        _evaluateHeartRecovery(persist: false);
+      });
+    });
+  }
+
+  Future<void> _persistDetectiveHearts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('foodie_detective_lives', _lives);
+      await prefs.setInt('detective_lives', _lives);
+      if (_heartRecoveryAnchorMs != null && _lives < 3) {
+        await prefs.setInt(
+          'foodie_detective_heart_anchor',
+          _heartRecoveryAnchorMs!,
+        );
       } else {
-        setState(() {
-          _cooldownSecondsRemaining--;
-        });
+        await prefs.remove('foodie_detective_heart_anchor');
+        await prefs.remove('foodie_game_cooldown_end');
+        await prefs.remove('detective_recovery_deadline');
       }
-    });
+    } catch (_) {}
   }
 
-  Future<void> _restoreAllLives() async {
-    _cooldownTimer?.cancel();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('detective_lives', 3);
-    await prefs.remove('detective_recovery_deadline');
-
-    if (!mounted) return;
-    setState(() {
-      _lives = 3;
-      _recoveryDeadline = null;
-      _cooldownSecondsRemaining = 0;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('❤️ Seluruh hati pulih! Kamu siap melanjutkan penyelidikan.'),
-        duration: Duration(seconds: 3),
-        backgroundColor: AppColors.green,
-      ),
-    );
+  void _consumeLife() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _heartRecoveryAnchorMs ??= now;
+    _lives = (_lives - 1).clamp(0, 3);
+    _evaluateHeartRecovery(persist: true);
   }
 
-  Future<void> _consumeLife() async {
-    final newLives = (_lives - 1).clamp(0, 3);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('detective_lives', newLives);
-
-    if (!mounted) return;
-    setState(() {
-      _lives = newLives;
-    });
-
-    if (newLives == 0) {
-      _startNewCooldown();
+  Future<void> _instantRestoreAllLives() async {
+    const cost = 50;
+    if (_totalScore < cost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Poin Rasa tidak cukup untuk pemulihan cepat (butuh 50 Poin Rasa).',
+          ),
+          backgroundColor: AppColors.tomato,
+        ),
+      );
+      return;
     }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('foodie_detective_heart_anchor');
+      await prefs.remove('foodie_game_cooldown_end');
+      await prefs.remove('detective_recovery_deadline');
+      await prefs.setInt('foodie_detective_lives', 3);
+      await prefs.setInt('detective_lives', 3);
+
+      _heartTimer?.cancel();
+      _heartTimer = null;
+      await SupabaseService.instance.saveGameScore(-cost);
+
+      if (mounted) {
+        setState(() {
+          _totalScore = (_totalScore - cost).clamp(0, 999999);
+          _lives = 3;
+          _heartRecoveryAnchorMs = null;
+          _secondsToNextHeart = 0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚡ 3 Hati berhasil dipulihkan secara instan!'),
+            backgroundColor: AppColors.green,
+          ),
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> _saveCaseVictory(DetectiveCase c, int reward) async {
@@ -281,6 +335,9 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
   }
 
   void _showNoLivesDialog() {
+    final nextStr = _formatCooldown(_secondsToNextHeart);
+    final totalStr = _formatCooldown(_totalSecondsToFullRecovery);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -298,24 +355,45 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Tiga nyawa detektifmu telah habis akibat kesalahan deduksi. Mohon istirahat sejenak untuk memulihkan stamina.',
+              'Seluruh 3 hati detektifmu telah gugur akibat kesalahan deduksi. Mohon istirahat sejenak untuk memulihkan stamina.',
               style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.charcoal),
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.surfaceSubtle,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.line),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  const Icon(Icons.timer_outlined, color: AppColors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Waktu pulih: ${_formatCooldown(_cooldownSecondsRemaining)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.charcoal),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '1 Hati Berikutnya:',
+                        style: TextStyle(fontSize: 12, color: AppColors.slateBlue),
+                      ),
+                      Text(
+                        nextStr,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.tomato),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Pulih Penuh (3 Hati):',
+                        style: TextStyle(fontSize: 12, color: AppColors.slateBlue),
+                      ),
+                      Text(
+                        totalStr,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.charcoal),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -325,7 +403,19 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Mengerti', style: TextStyle(color: AppColors.charcoal, fontWeight: FontWeight.bold)),
+            child: const Text('Tunggu', style: TextStyle(color: AppColors.slateBlue, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _instantRestoreAllLives();
+            },
+            child: const Text('Pulihkan (50 Poin Rasa)'),
           ),
         ],
       ),
@@ -693,11 +783,11 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
                     size: 18,
                   ),
                 ),
-              if (_lives <= 0)
+              if (_lives < 3)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
                   child: Text(
-                    'Pulih ${_formatCooldown(_cooldownSecondsRemaining)}',
+                    '+❤️ ${_formatCooldown(_secondsToNextHeart)}',
                     style: const TextStyle(color: AppColors.tomato, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ),

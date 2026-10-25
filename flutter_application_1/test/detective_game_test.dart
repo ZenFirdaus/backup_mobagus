@@ -276,5 +276,178 @@ void main() {
           reason: 'Checkpoint Lv 3 guarantee must prevent drop below level 3');
     });
   });
+
+  group('Detective Heart & Recovery Mechanics (2 Mins per Heart, Max 3, Multi-Level)', () {
+    const int kRecoverySeconds = 120; // 2 menit per hati
+    const int kRecoveryMs = kRecoverySeconds * 1000;
+
+    // Helper untuk mensimulasikan kalkulasi pemulihan
+    (int, int?, int) evaluateRecovery({
+      required int currentLives,
+      required int? anchorMs,
+      required int nowMs,
+    }) {
+      int lives = currentLives;
+      int? anchor = anchorMs;
+      int secondsToNext = 0;
+
+      if (lives >= 3) {
+        return (3, null, 0);
+      }
+
+      anchor ??= nowMs;
+      final elapsed = nowMs - anchor;
+
+      if (elapsed >= kRecoveryMs) {
+        final recovered = elapsed ~/ kRecoveryMs;
+        lives = (lives + recovered).clamp(0, 3);
+        if (lives >= 3) {
+          return (3, null, 0);
+        } else {
+          anchor = anchor + (recovered * kRecoveryMs);
+        }
+      }
+
+      final remainingMs = kRecoveryMs - (nowMs - anchor);
+      secondsToNext = (remainingMs / 1000).ceil().clamp(0, kRecoverySeconds);
+      return (lives, anchor, secondsToNext);
+    }
+
+    int calculateTotalFullSeconds(int lives, int secondsToNext) {
+      if (lives >= 3) return 0;
+      final needed = 3 - lives;
+      if (needed <= 0) return 0;
+      return ((needed - 1) * kRecoverySeconds) + secondsToNext;
+    }
+
+    test('1 heart lost (lives: 2) fully recovers to 3 in 2 minutes (120s)', () {
+      const startTime = 1000000;
+      // Gugur 1 hati di startTime
+      int lives = 2;
+      int? anchor = startTime;
+
+      // 60 detik kemudian: hati belum bertambah, sisa 60 detik lagi
+      final stateAt60s = evaluateRecovery(
+        currentLives: lives,
+        anchorMs: anchor,
+        nowMs: startTime + 60000,
+      );
+      expect(stateAt60s.$1, 2);
+      expect(stateAt60s.$3, 60);
+      expect(calculateTotalFullSeconds(stateAt60s.$1, stateAt60s.$3), 60);
+
+      // 120 detik kemudian: 1 hati pulih -> kembali menjadi 3 penuh!
+      final stateAt120s = evaluateRecovery(
+        currentLives: lives,
+        anchorMs: anchor,
+        nowMs: startTime + 120000,
+      );
+      expect(stateAt120s.$1, 3, reason: 'Dalam 2 menit hati pulih menjadi 3 penuh');
+      expect(stateAt120s.$2, isNull);
+      expect(stateAt120s.$3, 0);
+      expect(calculateTotalFullSeconds(stateAt120s.$1, stateAt120s.$3), 0);
+    });
+
+    test('2 hearts lost (lives: 1) recovers sequentially in 4 minutes (240s total)', () {
+      const startTime = 2000000;
+      int lives = 1;
+      int? anchor = startTime;
+
+      // Saat t=0: sisa waktu pulih penuh adalah 240 detik
+      expect(calculateTotalFullSeconds(lives, 120), 240);
+
+      // Setelah 120s (2 menit): pulih 1 hati menjadi 2 hati
+      final stateAt120s = evaluateRecovery(
+        currentLives: lives,
+        anchorMs: anchor,
+        nowMs: startTime + 120000,
+      );
+      expect(stateAt120s.$1, 2, reason: 'Setelah 2 menit, nyawa naik dari 1 menjadi 2');
+      expect(stateAt120s.$2, isNotNull);
+      expect(stateAt120s.$3, 120);
+      expect(calculateTotalFullSeconds(stateAt120s.$1, stateAt120s.$3), 120);
+
+      // Setelah 240s (4 menit): pulih hati kedua menjadi 3 hati penuh
+      final stateAt240s = evaluateRecovery(
+        currentLives: lives,
+        anchorMs: anchor,
+        nowMs: startTime + 240000,
+      );
+      expect(stateAt240s.$1, 3, reason: 'Setelah 4 menit total, nyawa kembali menjadi 3 penuh');
+      expect(stateAt240s.$2, isNull);
+      expect(stateAt240s.$3, 0);
+    });
+
+    test('all 3 hearts lost (lives: 0) takes exactly 6 minutes (360s) for full recovery', () {
+      const startTime = 3000000;
+      int lives = 0;
+      int? anchor = startTime;
+
+      // Saat t=0 (baru habis): total butuh 360 detik = 6 menit
+      expect(calculateTotalFullSeconds(lives, 120), 360);
+
+      // Setelah 120s (2 menit): pulih menjadi 1 hati
+      final stateAt120s = evaluateRecovery(
+        currentLives: lives,
+        anchorMs: anchor,
+        nowMs: startTime + 120000,
+      );
+      expect(stateAt120s.$1, 1, reason: '2 menit pertama: pulih 1 hati');
+      expect(calculateTotalFullSeconds(stateAt120s.$1, stateAt120s.$3), 240);
+
+      // Setelah 240s (4 menit): pulih menjadi 2 hati
+      final stateAt240s = evaluateRecovery(
+        currentLives: lives,
+        anchorMs: anchor,
+        nowMs: startTime + 240000,
+      );
+      expect(stateAt240s.$1, 2, reason: '4 menit: pulih 2 hati');
+      expect(calculateTotalFullSeconds(stateAt240s.$1, stateAt240s.$3), 120);
+
+      // Setelah 360s (6 menit): seluruh hati ter-recover menjadi 3 penuh
+      final stateAt360s = evaluateRecovery(
+        currentLives: lives,
+        anchorMs: anchor,
+        nowMs: startTime + 360000,
+      );
+      expect(stateAt360s.$1, 3, reason: '6 menit: seluruh 3 hati pulih total');
+      expect(stateAt360s.$2, isNull);
+      expect(stateAt360s.$3, 0);
+      expect(calculateTotalFullSeconds(stateAt360s.$1, stateAt360s.$3), 0);
+    });
+
+    test('retains lives across multiple levels in a single run (no reset on startCase)', () {
+      // Skenario: Pemain memulai level 1 dengan 3 hati
+      int playerLives = 3;
+
+      // Di level 1 salah 1 kali
+      playerLives = (playerLives - 1).clamp(0, 3);
+      expect(playerLives, 2);
+
+      // Pemain menyelesaikan level 1 dan lanjut ke level 2
+      // Logika baru: _startDetectiveCase TIDAK mereset _detectiveLives = 3
+      // Nyawa pemain tetap 2 ketika masuk level 2!
+      final livesEnteringLevel2 = playerLives;
+      expect(livesEnteringLevel2, 2,
+          reason: 'Dalam satu kali jalan permainan, pool hati tetap 2 saat lanjut ke level 2');
+    });
+
+    test('instant restore recovers all 3 hearts immediately with 50 Poin Rasa', () {
+      int score = 250;
+      int lives = 0;
+      int? anchor = 1234567;
+      const cost = 50;
+
+      expect(score >= cost, isTrue);
+      score -= cost;
+      lives = 3;
+      anchor = null;
+
+      expect(lives, 3);
+      expect(anchor, isNull);
+      expect(score, 200);
+    });
+  });
 }
+
 

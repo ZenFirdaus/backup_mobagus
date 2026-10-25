@@ -222,9 +222,10 @@ class _GamePageState extends State<GamePage> {
   final Set<String> _gatheredClueIds = {};
   final List<CaseClue> _gatheredClues = [];
   final Set<int> _selectedChoiceIndicesInScene = {};
-  static const int _cooldownDurationSeconds = 180;
-  int _cooldownRemainingSeconds = 0;
-  Timer? _cooldownTimer;
+  static const int kHeartRecoverySeconds = 120; // 2 menit (120 detik) per hati
+  int? _heartRecoveryAnchorMs;
+  int _secondsToNextHeart = 0;
+  Timer? _heartRecoveryTimer;
   StreamSubscription<void>? _profileSubscription;
 
   @override
@@ -241,7 +242,7 @@ class _GamePageState extends State<GamePage> {
   void dispose() {
     _profileSubscription?.cancel();
     _quizTimer?.cancel();
-    _cooldownTimer?.cancel();
+    _heartRecoveryTimer?.cancel();
     super.dispose();
   }
 
@@ -371,20 +372,14 @@ class _GamePageState extends State<GamePage> {
       // Streaks
       final streak = prefs.getInt('foodie_game_daily_streak') ?? 1;
 
-      // Cooldown Check
-      final cooldownEnd = prefs.getInt('foodie_game_cooldown_end') ?? 0;
-      final now = DateTime.now().millisecondsSinceEpoch;
-      int remaining = 0;
-      int initialLives = 3;
-
-      if (cooldownEnd > now) {
-        remaining = ((cooldownEnd - now) / 1000).ceil();
-        initialLives = 0;
-        _startCooldownTimer(remaining);
-      } else if (cooldownEnd > 0) {
-        await prefs.remove('foodie_game_cooldown_end');
-        initialLives = 3;
-      }
+      // Cooldown & Detective Lives Check (2 Menit per Hati, Max 3 Hati)
+      final savedLives = prefs.getInt('foodie_detective_lives') ??
+          prefs.getInt('detective_lives') ??
+          3;
+      final anchor = prefs.getInt('foodie_detective_heart_anchor');
+      _detectiveLives = savedLives.clamp(0, 3);
+      _heartRecoveryAnchorMs = anchor;
+      _evaluateHeartRecovery(persist: true);
 
       if (mounted) {
         setState(() {
@@ -400,8 +395,6 @@ class _GamePageState extends State<GamePage> {
           );
           _detectiveStars.addAll(dStars);
           _dailyStreak = streak;
-          _detectiveLives = initialLives;
-          _cooldownRemainingSeconds = remaining;
           _selectedChapter = (((_unlockedDetectiveLevel - 1) ~/ 5) + 1).clamp(
             1,
             3,
@@ -1097,32 +1090,102 @@ class _GamePageState extends State<GamePage> {
   // ───────────────────────────────────────────────────────────────────────────
   // GAME 3: DETEKTIF KASUS LOGIC
   // ───────────────────────────────────────────────────────────────────────────
-  void _startCooldownTimer(int seconds) {
-    _cooldownTimer?.cancel();
-    _cooldownRemainingSeconds = seconds;
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (!mounted) return;
-      if (_cooldownRemainingSeconds <= 1) {
-        timer.cancel();
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('foodie_game_cooldown_end');
-        setState(() {
-          _cooldownRemainingSeconds = 0;
-          _detectiveLives = 3;
-        });
+  String _formatDuration(int totalSeconds) {
+    final m = totalSeconds ~/ 60;
+    final s = totalSeconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  int get _totalSecondsToFullRecovery {
+    if (_detectiveLives >= 3) return 0;
+    final needed = 3 - _detectiveLives;
+    if (needed <= 0) return 0;
+    return ((needed - 1) * kHeartRecoverySeconds) + _secondsToNextHeart;
+  }
+
+  void _evaluateHeartRecovery({bool persist = true}) {
+    if (_detectiveLives >= 3) {
+      _detectiveLives = 3;
+      _heartRecoveryAnchorMs = null;
+      _secondsToNextHeart = 0;
+      _heartRecoveryTimer?.cancel();
+      _heartRecoveryTimer = null;
+      if (persist) _persistDetectiveHearts();
+      return;
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (_heartRecoveryAnchorMs == null) {
+      _heartRecoveryAnchorMs = now;
+      if (persist) _persistDetectiveHearts();
+    }
+
+    final elapsed = now - _heartRecoveryAnchorMs!;
+    const recoveryPeriodMs = kHeartRecoverySeconds * 1000;
+
+    if (elapsed >= recoveryPeriodMs) {
+      final recovered = elapsed ~/ recoveryPeriodMs;
+      final newLives = (_detectiveLives + recovered).clamp(0, 3);
+      _detectiveLives = newLives;
+
+      if (_detectiveLives >= 3) {
+        _detectiveLives = 3;
+        _heartRecoveryAnchorMs = null;
+        _secondsToNextHeart = 0;
+        _heartRecoveryTimer?.cancel();
+        _heartRecoveryTimer = null;
+        if (persist) _persistDetectiveHearts();
+        return;
       } else {
-        setState(() => _cooldownRemainingSeconds--);
+        _heartRecoveryAnchorMs =
+            _heartRecoveryAnchorMs! + (recovered * recoveryPeriodMs);
+        if (persist) _persistDetectiveHearts();
       }
+    }
+
+    final remainingMs = recoveryPeriodMs - (now - _heartRecoveryAnchorMs!);
+    _secondsToNextHeart =
+        (remainingMs / 1000).ceil().clamp(0, kHeartRecoverySeconds);
+
+    _startHeartRecoveryTimerIfNeeded();
+  }
+
+  void _startHeartRecoveryTimerIfNeeded() {
+    if (_heartRecoveryTimer != null && _heartRecoveryTimer!.isActive) return;
+    _heartRecoveryTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _evaluateHeartRecovery(persist: false);
+      });
     });
   }
 
-  Future<void> _triggerCooldown() async {
-    final prefs = await SharedPreferences.getInstance();
-    final cooldownEnd =
-        DateTime.now().millisecondsSinceEpoch +
-        (_cooldownDurationSeconds * 1000);
-    await prefs.setInt('foodie_game_cooldown_end', cooldownEnd);
-    _startCooldownTimer(_cooldownDurationSeconds);
+  Future<void> _persistDetectiveHearts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('foodie_detective_lives', _detectiveLives);
+      await prefs.setInt('detective_lives', _detectiveLives);
+      if (_heartRecoveryAnchorMs != null && _detectiveLives < 3) {
+        await prefs.setInt(
+          'foodie_detective_heart_anchor',
+          _heartRecoveryAnchorMs!,
+        );
+      } else {
+        await prefs.remove('foodie_detective_heart_anchor');
+        await prefs.remove('foodie_game_cooldown_end');
+        await prefs.remove('detective_recovery_deadline');
+      }
+    } catch (_) {}
+  }
+
+  void _consumeDetectiveLife() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _heartRecoveryAnchorMs ??= now;
+    _detectiveLives = (_detectiveLives - 1).clamp(0, 3);
+    _evaluateHeartRecovery(persist: true);
   }
 
   Future<void> _instantRestoreDetectiveLives() async {
@@ -1141,15 +1204,22 @@ class _GamePageState extends State<GamePage> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('foodie_detective_heart_anchor');
       await prefs.remove('foodie_game_cooldown_end');
-      _cooldownTimer?.cancel();
+      await prefs.remove('detective_recovery_deadline');
+      await prefs.setInt('foodie_detective_lives', 3);
+      await prefs.setInt('detective_lives', 3);
+
+      _heartRecoveryTimer?.cancel();
+      _heartRecoveryTimer = null;
       await SupabaseService.instance.saveGameScore(-cost);
 
       if (mounted) {
         setState(() {
           _totalScore = (_totalScore - cost).clamp(0, 999999);
           _detectiveLives = 3;
-          _cooldownRemainingSeconds = 0;
+          _heartRecoveryAnchorMs = null;
+          _secondsToNextHeart = 0;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1162,7 +1232,9 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _startDetectiveCase(DetectiveCase c) {
-    if (_detectiveLives <= 0 && _cooldownRemainingSeconds > 0) {
+    _evaluateHeartRecovery(persist: false);
+
+    if (_detectiveLives <= 0) {
       _showCooldownDialog();
       return;
     }
@@ -1177,7 +1249,7 @@ class _GamePageState extends State<GamePage> {
     setState(() {
       _activeCase = c;
       _currentSceneIndex = 0;
-      _detectiveLives = 3;
+      // Perhatian: Jumlah hati TIDAK di-reset ke 3. Pool 3 hati berlaku sepanjang permainan!
       final firstScene = c.scenes.isNotEmpty ? c.scenes.first : null;
       _bossHp =
           (firstScene != null &&
@@ -1215,7 +1287,7 @@ class _GamePageState extends State<GamePage> {
       }
 
       if (choice.losesLife) {
-        _detectiveLives = (_detectiveLives - 1).clamp(0, 3).toInt();
+        _consumeDetectiveLife();
       }
 
       if (scene.isBossFight && choice.bossDamage > 0) {
@@ -1388,7 +1460,7 @@ class _GamePageState extends State<GamePage> {
     required bool isGameOver,
   }) {
     if (isGameOver) {
-      _triggerCooldown();
+      _persistDetectiveHearts();
       setState(() => _currentView = _GameView.detectiveBadEnding);
       return;
     }
@@ -1825,10 +1897,8 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _showCooldownDialog() {
-    final mins = _cooldownRemainingSeconds ~/ 60;
-    final secs = _cooldownRemainingSeconds % 60;
-    final timeStr =
-        '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    final nextStr = _formatDuration(_secondsToNextHeart);
+    final totalStr = _formatDuration(_totalSecondsToFullRecovery);
 
     showDialog(
       context: context,
@@ -1838,28 +1908,74 @@ class _GamePageState extends State<GamePage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text(
-            'Penyelidikan Ditangguhkan',
-            style: TextStyle(
-              color: AppColors.charcoal,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          title: const Row(
+            children: [
+              Icon(Icons.hourglass_top_rounded, color: AppColors.orange, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Penyelidikan Ditangguhkan',
+                style: TextStyle(
+                  color: AppColors.charcoal,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Hati detektif sedang dalam masa pemulihan.',
-                style: TextStyle(color: AppColors.slateBlue, fontSize: 13),
+                'Seluruh 3 hati detektifmu gugur. Kamu harus menunggu sampai hati pulih kembali untuk melanjutkan penyelidikan.',
+                style: TextStyle(color: AppColors.charcoal, fontSize: 13, height: 1.45),
               ),
               const SizedBox(height: 14),
-              Text(
-                timeStr,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.charcoal,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '1 Hati Berikutnya:',
+                          style: TextStyle(fontSize: 12, color: AppColors.slateBlue),
+                        ),
+                        Text(
+                          nextStr,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.tomato,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Pulih Penuh (3 Hati):',
+                          style: TextStyle(fontSize: 12, color: AppColors.slateBlue),
+                        ),
+                        Text(
+                          totalStr,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.charcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1876,6 +1992,9 @@ class _GamePageState extends State<GamePage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orange,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () {
                 Navigator.of(ctx).pop();
@@ -3328,20 +3447,33 @@ class _GamePageState extends State<GamePage> {
                 border: Border.all(color: AppColors.line),
               ),
               child: Row(
-                children: List.generate(3, (i) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                    child: Icon(
-                      i < _detectiveLives
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: 16,
-                      color: i < _detectiveLives
-                          ? AppColors.tomato
-                          : AppColors.line,
+                children: [
+                  ...List.generate(3, (i) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                      child: Icon(
+                        i < _detectiveLives
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        size: 16,
+                        color: i < _detectiveLives
+                            ? AppColors.tomato
+                            : AppColors.line,
+                      ),
+                    );
+                  }),
+                  if (_detectiveLives < 3) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      '+❤️ ${_formatDuration(_secondsToNextHeart)}',
+                      style: AppText.display(
+                        9.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.tomato,
+                      ),
                     ),
-                  );
-                }),
+                  ],
+                ],
               ),
             ),
           ],
@@ -3481,7 +3613,7 @@ class _GamePageState extends State<GamePage> {
           ),
         ),
 
-        if (_detectiveLives <= 0 && _cooldownRemainingSeconds > 0) ...[
+        if (_detectiveLives < 3) ...[
           _buildDetectiveCooldownBanner(),
           const SizedBox(height: 16),
         ],
@@ -3504,46 +3636,62 @@ class _GamePageState extends State<GamePage> {
   }
 
   Widget _buildDetectiveCooldownBanner() {
-    final mins = _cooldownRemainingSeconds ~/ 60;
-    final secs = _cooldownRemainingSeconds % 60;
-    final timeStr =
-        '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    final nextStr = _formatDuration(_secondsToNextHeart);
+    final totalStr = _formatDuration(_totalSecondsToFullRecovery);
+    final isZero = _detectiveLives <= 0;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.tomato.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: isZero
+              ? AppColors.tomato.withValues(alpha: 0.5)
+              : AppColors.orange.withValues(alpha: 0.4),
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.timer_outlined, color: AppColors.tomato, size: 24),
+          Icon(
+            isZero ? Icons.timer_outlined : Icons.favorite_rounded,
+            color: isZero ? AppColors.tomato : AppColors.paprika,
+            size: 24,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Cooldown Investigasi Aktif',
+                  isZero
+                      ? 'Semua Hati Gugur (0/3 Hati)'
+                      : 'Pemulihan Hati Aktif ($_detectiveLives/3 Hati)',
                   style: AppText.display(
                     12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.charcoal,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  'Hati pulih dalam: $timeStr',
+                  isZero
+                      ? '1 Hati berikutnya: $nextStr • Penuh (3 Hati): $totalStr'
+                      : '+1 Hati dalam: $nextStr • Penuh (3 Hati): $totalStr',
                   style: AppText.body(11, color: AppColors.slateBlue),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.orange,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: _instantRestoreDetectiveLives,
             child: Text(
@@ -3954,20 +4102,43 @@ class _GamePageState extends State<GamePage> {
               ),
               // Life Counter
               Row(
-                children: List.generate(3, (i) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 3),
-                    child: Icon(
-                      i < _detectiveLives
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: 15,
-                      color: i < _detectiveLives
-                          ? AppColors.tomato
-                          : AppColors.line,
+                children: [
+                  ...List.generate(3, (i) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 3),
+                      child: Icon(
+                        i < _detectiveLives
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        size: 15,
+                        color: i < _detectiveLives
+                            ? AppColors.tomato
+                            : AppColors.line,
+                      ),
+                    );
+                  }),
+                  if (_detectiveLives < 3) ...[
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.tomato.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '+❤️ ${_formatDuration(_secondsToNextHeart)}',
+                        style: AppText.display(
+                          9,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.tomato,
+                        ),
+                      ),
                     ),
-                  );
-                }),
+                  ],
+                ],
               ),
               const SizedBox(width: 8),
               // Papan Bukti Button
@@ -5296,6 +5467,67 @@ class _GamePageState extends State<GamePage> {
                   ),
                 ),
               ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceSubtle,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.tomato.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.favorite_border_rounded,
+                    color: AppColors.tomato,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pemulihan Hati Sedang Berjalan',
+                    style: AppText.display(
+                      12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.charcoal,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '1 Hati berikutnya: ${_formatDuration(_secondsToNextHeart)}\n'
+                '3 Hati pulih penuh: ${_formatDuration(_totalSecondsToFullRecovery)} (maks 6 menit)',
+                style: AppText.body(
+                  11.5,
+                  color: AppColors.slateBlue,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.bolt_rounded, size: 16),
+                  label: const Text('Pulihkan Instan (50 Poin Rasa)'),
+                  onPressed: _instantRestoreDetectiveLives,
+                ),
+              ),
             ],
           ),
         ),
