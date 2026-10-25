@@ -64,7 +64,8 @@ class _RewardsShopPageState extends State<RewardsShopPage>
       final owned = await RewardBorderService.instance.getOwnedBorderIds();
       final active = await RewardBorderService.instance.getActiveBorderId();
       final txs = await RewardBorderService.instance.getPointTransactions();
-      final bTxs = await BlockchainService.instance.getUserBlockchainTransactions();
+      final bTxs = await BlockchainService.instance
+          .getUserBlockchainTransactions();
 
       if (mounted) {
         setState(() {
@@ -97,9 +98,41 @@ class _RewardsShopPageState extends State<RewardsShopPage>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('FOODIE Rewards & Border'),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.stars_rounded,
+                  color: AppColors.orange,
+                  size: 16,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '$_userPoints Poin',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.orange))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.orange),
+            )
           : Column(
               children: [
                 // Header Ringkasan Saldo & Info Blockchain
@@ -122,7 +155,10 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     ),
                     labelColor: Colors.white,
                     unselectedLabelColor: AppColors.textMuted,
-                    labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    labelStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                     tabs: [
                       Tab(text: 'Toko (${_allBorders.length})'),
                       Tab(text: 'Koleksi (${_ownedBorders.length})'),
@@ -183,20 +219,34 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Saldo Poin Rasa',
+                  'Saldo Poin Kurator',
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFFD4E0D9),
                   ),
                 ),
-                Text(
-                  '$_userPoints',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      '$_userPoints',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Poin',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -222,11 +272,15 @@ class _RewardsShopPageState extends State<RewardsShopPage>
           ),
           child: const Row(
             children: [
-              Icon(Icons.info_outline_rounded, color: AppColors.orange, size: 16),
+              Icon(
+                Icons.info_outline_rounded,
+                color: AppColors.orange,
+                size: 16,
+              ),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Tukarkan Poin Rasa untuk mengoleksi lebih dari 1 border. Setiap border yang dibuka otomatis tersimpan di Koleksi dan gratis digunakan kapan saja!',
+                  'Tukarkan poin untuk mengoleksi lebih dari 1 border. Setiap border yang dibuka otomatis tersimpan di Koleksi dan gratis digunakan kapan saja!',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -245,9 +299,13 @@ class _RewardsShopPageState extends State<RewardsShopPage>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             children: [
-              _filterChip(label: 'Semua', isSelected: _selectedRarity == null, onSelected: () {
-                setState(() => _selectedRarity = null);
-              }),
+              _filterChip(
+                label: 'Semua',
+                isSelected: _selectedRarity == null,
+                onSelected: () {
+                  setState(() => _selectedRarity = null);
+                },
+              ),
               ...BorderRarity.values.map(
                 (r) => _filterChip(
                   label: r.label,
@@ -349,7 +407,10 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: isOwned
                           ? const Color(0xFFE8F5E9)
@@ -361,7 +422,9 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
-                        color: isOwned ? AppColors.greenDark : border.rarity.color,
+                        color: isOwned
+                            ? AppColors.greenDark
+                            : border.rarity.color,
                         letterSpacing: 0.4,
                       ),
                     ),
@@ -385,7 +448,12 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
               // Live Preview Avatar dengan Border
               ProfileBorderAvatar(
-                avatarUrl: Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'],
+                avatarUrl: Supabase
+                    .instance
+                    .client
+                    .auth
+                    .currentUser
+                    ?.userMetadata?['avatar_url'],
                 border: border,
                 size: 46,
                 fallbackText: SupabaseService.instance.guestName,
@@ -423,53 +491,66 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 height: 32,
                 child: isOwned
                     ? (isActive
-                        ? Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.greenDark,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.check_rounded, color: Colors.white, size: 13),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Dipasang',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ElevatedButton(
-                            onPressed: () => _equipBorder(border.id),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E7D32),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
+                          ? Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.greenDark,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.check_circle_outline_rounded, size: 12, color: Colors.white),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Pakai (Gratis)',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                              alignment: Alignment.center,
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 13,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Dipasang',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ElevatedButton(
+                              onPressed: () => _equipBorder(border.id),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2E7D32),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ],
-                            ),
-                          ))
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline_rounded,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Pakai (Gratis)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ))
                     : ElevatedButton(
-                        onPressed: canAfford ? () => _confirmPurchase(border) : null,
+                        onPressed: canAfford
+                            ? () => _confirmPurchase(border)
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.orange,
                           foregroundColor: Colors.white,
@@ -484,10 +565,14 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.stars_rounded, size: 12, color: Colors.white),
+                            const Icon(
+                              Icons.stars_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                             const SizedBox(width: 3),
                             Text(
-                              '${border.pricePoints} Poin Rasa',
+                              '${border.pricePoints} Poin',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
@@ -519,7 +604,11 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                   color: AppColors.orange.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.palette_outlined, size: 48, color: AppColors.orange),
+                child: const Icon(
+                  Icons.palette_outlined,
+                  size: 48,
+                  color: AppColors.orange,
+                ),
               ),
               const SizedBox(height: 14),
               const Text(
@@ -532,9 +621,13 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               ),
               const SizedBox(height: 6),
               const Text(
-                'Tukarkan Poin Rasa dari mini games untuk membuka koleksi border profil.\nSetiap border yang sudah ditukar akan tersimpan di sini dan bebas dipakai kapan saja secara gratis!',
+                'Tukarkan poin dari mini games untuk membuka koleksi border profil.\nSetiap border yang sudah ditukar akan tersimpan di sini dan bebas dipakai kapan saja secara gratis!',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.4),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 18),
               ElevatedButton.icon(
@@ -544,8 +637,13 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.orange,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
@@ -554,7 +652,9 @@ class _RewardsShopPageState extends State<RewardsShopPage>
       );
     }
 
-    final activeBorderObj = _allBorders.where((b) => b.id == _activeBorderId).firstOrNull;
+    final activeBorderObj = _allBorders
+        .where((b) => b.id == _activeBorderId)
+        .firstOrNull;
 
     return Column(
       children: [
@@ -577,7 +677,12 @@ class _RewardsShopPageState extends State<RewardsShopPage>
           child: Row(
             children: [
               ProfileBorderAvatar(
-                avatarUrl: Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'],
+                avatarUrl: Supabase
+                    .instance
+                    .client
+                    .auth
+                    .currentUser
+                    ?.userMetadata?['avatar_url'],
                 border: activeBorderObj,
                 size: 40,
                 fallbackText: SupabaseService.instance.guestName,
@@ -616,9 +721,18 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                   onPressed: _unequipBorder,
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.red,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                   ),
-                  child: const Text('Lepas', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'Lepas',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -682,7 +796,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
         // Seksi Riwayat Poin
         const Text(
-          'RIWAYAT POIN RASA',
+          'RIWAYAT POIN FOODIE',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -701,7 +815,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               border: Border.all(color: AppColors.line),
             ),
             child: const Text(
-              'Belum ada riwayat transaksi Poin Rasa.',
+              'Belum ada riwayat transaksi poin.',
               style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           )
@@ -712,8 +826,12 @@ class _RewardsShopPageState extends State<RewardsShopPage>
   }
 
   Widget _buildBlockchainTxCard(BlockchainTransaction bTx) {
-    final borderObj = _allBorders.where((b) => b.id == bTx.borderId).firstOrNull;
-    final borderName = borderObj?.name ?? bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
+    final borderObj = _allBorders
+        .where((b) => b.id == bTx.borderId)
+        .firstOrNull;
+    final borderName =
+        borderObj?.name ??
+        bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
 
     return InkWell(
       onTap: () => _showBlockchainCertificate(bTx),
@@ -724,7 +842,9 @@ class _RewardsShopPageState extends State<RewardsShopPage>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF627EEA).withValues(alpha: 0.3)),
+          border: Border.all(
+            color: const Color(0xFF627EEA).withValues(alpha: 0.3),
+          ),
           boxShadow: const [
             BoxShadow(
               color: Color(0x06627EEA),
@@ -744,7 +864,11 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     color: const Color(0xFF627EEA).withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.verified_rounded, color: Color(0xFF627EEA), size: 16),
+                  child: const Icon(
+                    Icons.verified_rounded,
+                    color: Color(0xFF627EEA),
+                    size: 16,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -753,17 +877,26 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     children: [
                       Text(
                         'Sertifikat Digital: $borderName',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       Text(
                         'Block #${bTx.blockNumber ?? 7054231} • Jaringan Blockchain',
-                        style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2.5,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.greenDark.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -793,7 +926,10 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF627EEA).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -810,7 +946,11 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                         ),
                       ),
                       SizedBox(width: 4),
-                      Icon(Icons.chevron_right_rounded, size: 13, color: Color(0xFF627EEA)),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 13,
+                        color: Color(0xFF627EEA),
+                      ),
                     ],
                   ),
                 ),
@@ -824,8 +964,12 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
   /// Dialog Sertifikat Digital Kepemilikan On-Chain (Proof of Ownership)
   void _showBlockchainCertificate(BlockchainTransaction bTx) {
-    final borderObj = _allBorders.where((b) => b.id == bTx.borderId).firstOrNull;
-    final borderName = borderObj?.name ?? bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
+    final borderObj = _allBorders
+        .where((b) => b.id == bTx.borderId)
+        .firstOrNull;
+    final borderName =
+        borderObj?.name ??
+        bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
     final blockNum = bTx.blockNumber ?? 7054231;
     final blockUrl = 'https://sepolia.etherscan.io/block/$blockNum';
 
@@ -857,13 +1001,21 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     ),
                   ],
                 ),
-                child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.verified_user_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
               const SizedBox(height: 12),
               const Text(
                 'Sertifikat Kepemilikan Digital',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                style: TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 3),
               const Text(
@@ -887,9 +1039,17 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     const Divider(height: 14, thickness: 0.7),
                     _buildCertRow('Jaringan', 'Ethereum Sepolia Testnet'),
                     const Divider(height: 14, thickness: 0.7),
-                    _buildCertRow('Nomor Blok', '#$blockNum (On-Chain)', isBold: true),
+                    _buildCertRow(
+                      'Nomor Blok',
+                      '#$blockNum (On-Chain)',
+                      isBold: true,
+                    ),
                     const Divider(height: 14, thickness: 0.7),
-                    _buildCertRow('Status Verifikasi', 'TERVERIFIKASI SAH', valueColor: AppColors.greenDark),
+                    _buildCertRow(
+                      'Status Verifikasi',
+                      'TERVERIFIKASI SAH',
+                      valueColor: AppColors.greenDark,
+                    ),
                     const Divider(height: 14, thickness: 0.7),
                     _buildCertRow(
                       'Smart Contract',
@@ -904,14 +1064,22 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                           children: [
                             const Text(
                               'Hash Kriptografis (SHA-256)',
-                              style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             InkWell(
                               onTap: () {
-                                Clipboard.setData(ClipboardData(text: bTx.txHash));
+                                Clipboard.setData(
+                                  ClipboardData(text: bTx.txHash),
+                                );
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Hash bukti berhasil disalin!'),
+                                    content: Text(
+                                      'Hash bukti berhasil disalin!',
+                                    ),
                                     duration: Duration(seconds: 2),
                                     backgroundColor: AppColors.greenDark,
                                   ),
@@ -919,11 +1087,19 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                               },
                               child: const Row(
                                 children: [
-                                  Icon(Icons.copy_rounded, size: 11, color: AppColors.orange),
+                                  Icon(
+                                    Icons.copy_rounded,
+                                    size: 11,
+                                    color: AppColors.orange,
+                                  ),
                                   SizedBox(width: 3),
                                   Text(
                                     'Salin',
-                                    style: TextStyle(fontSize: 10, color: AppColors.orange, fontWeight: FontWeight.w700),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.orange,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -933,7 +1109,11 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                         const SizedBox(height: 4),
                         SelectableText(
                           bTx.txHash,
-                          style: const TextStyle(fontSize: 9.5, fontFamily: 'Courier', color: AppColors.textDark),
+                          style: const TextStyle(
+                            fontSize: 9.5,
+                            fontFamily: 'Courier',
+                            color: AppColors.textDark,
+                          ),
                         ),
                       ],
                     ),
@@ -956,7 +1136,9 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                     backgroundColor: const Color(0xFF627EEA),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 11),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
@@ -965,7 +1147,13 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Tutup', style: TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.5,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -975,7 +1163,12 @@ class _RewardsShopPageState extends State<RewardsShopPage>
     );
   }
 
-  Widget _buildCertRow(String label, String value, {bool isBold = false, Color? valueColor}) {
+  Widget _buildCertRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    Color? valueColor,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -1007,7 +1200,9 @@ class _RewardsShopPageState extends State<RewardsShopPage>
       child: Row(
         children: [
           Icon(
-            tx.isCredit ? Icons.add_circle_outline_rounded : Icons.remove_circle_outline_rounded,
+            tx.isCredit
+                ? Icons.add_circle_outline_rounded
+                : Icons.remove_circle_outline_rounded,
             color: tx.isCredit ? AppColors.greenDark : AppColors.red,
             size: 20,
           ),
@@ -1018,17 +1213,23 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               children: [
                 Text(
                   tx.readableTitle,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Text(
                   '${tx.createdAt.day}/${tx.createdAt.month}/${tx.createdAt.year} ${tx.createdAt.hour.toString().padLeft(2, '0')}:${tx.createdAt.minute.toString().padLeft(2, '0')}',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ],
             ),
           ),
           Text(
-            '${tx.isCredit ? '+' : ''}${tx.amount} Poin Rasa',
+            '${tx.isCredit ? '+' : ''}${tx.amount} Poin',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -1073,7 +1274,12 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
               // Live Avatar Preview Besar
               ProfileBorderAvatar(
-                avatarUrl: Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'],
+                avatarUrl: Supabase
+                    .instance
+                    .client
+                    .auth
+                    .currentUser
+                    ?.userMetadata?['avatar_url'],
                 border: border,
                 size: 80,
                 fallbackText: SupabaseService.instance.guestName,
@@ -1091,7 +1297,10 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               ),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: border.rarity.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -1126,11 +1335,17 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                   decoration: BoxDecoration(
                     color: AppColors.greenDark.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.greenDark.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.greenDark.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded, color: AppColors.greenDark, size: 22),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.greenDark,
+                        size: 22,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -1138,13 +1353,20 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                           children: [
                             const Text(
                               'Sudah Ada di Koleksi Anda',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.greenDark),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.greenDark,
+                              ),
                             ),
                             Text(
                               isActive
                                   ? 'Sedang terpasang sebagai border profil Anda.'
                                   : 'Tersimpan permanen. Anda dapat menggunakan border ini kapan saja secara GRATIS!',
-                              style: const TextStyle(fontSize: 11, color: AppColors.charcoal),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.charcoal,
+                              ),
                             ),
                           ],
                         ),
@@ -1165,7 +1387,11 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.verified_outlined, color: AppColors.greenDark, size: 20),
+                    Icon(
+                      Icons.verified_outlined,
+                      color: AppColors.greenDark,
+                      size: 20,
+                    ),
                     SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -1173,11 +1399,17 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                         children: [
                           Text(
                             'Sertifikat Kepemilikan Digital Resmi',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           Text(
                             'Border eksklusif ini diverifikasi permanen dengan bukti kepemilikan digital berbasis Blockchain.',
-                            style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -1193,39 +1425,45 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 height: 48,
                 child: isOwned
                     ? (isActive
-                        ? OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _unequipBorder();
-                            },
-                            icon: const Icon(Icons.remove_circle_outline, size: 18),
-                            label: const Text('Lepas Border Aktif'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.red,
-                              side: const BorderSide(color: AppColors.red),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          ? OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _unequipBorder();
+                              },
+                              icon: const Icon(
+                                Icons.remove_circle_outline,
+                                size: 18,
                               ),
-                            ),
-                          )
-                        : ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _equipBorder(border.id);
-                            },
-                            icon: const Icon(Icons.check_circle_rounded, size: 18),
-                            label: const Text(
-                              'Gunakan Border Ini (Gratis)',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.greenDark,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              label: const Text('Lepas Border Aktif'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.red,
+                                side: const BorderSide(color: AppColors.red),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                            ),
-                          ))
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _equipBorder(border.id);
+                              },
+                              icon: const Icon(
+                                Icons.check_circle_rounded,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'Gunakan Border Ini (Gratis)',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.greenDark,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ))
                     : ElevatedButton.icon(
                         onPressed: canAfford
                             ? () {
@@ -1236,8 +1474,8 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                         icon: const Icon(Icons.stars_rounded, size: 18),
                         label: Text(
                           canAfford
-                              ? 'Tukar ${border.pricePoints} Poin Rasa (Simpan ke Koleksi)'
-                              : 'Poin Rasa Tidak Cukup (${border.pricePoints} Butuh)',
+                              ? 'Tukar ${border.pricePoints} Poin (Simpan ke Koleksi)'
+                              : 'Poin Tidak Cukup (${border.pricePoints} Butuh)',
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         style: ElevatedButton.styleFrom(
@@ -1271,12 +1509,16 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                 color: AppColors.orange.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.stars_rounded, color: AppColors.orange, size: 24),
+              child: const Icon(
+                Icons.stars_rounded,
+                color: AppColors.orange,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
-                'Tukar Poin Rasa Border',
+                'Tukar Poin Border',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
             ),
@@ -1287,8 +1529,12 @@ class _RewardsShopPageState extends State<RewardsShopPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Tukarkan ${border.pricePoints} Poin Rasa untuk membuka "${border.name}"?',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.charcoal),
+              'Tukarkan ${border.pricePoints} poin untuk membuka "${border.name}"?',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.charcoal,
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -1301,12 +1547,20 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.inventory_2_outlined, color: AppColors.greenDark, size: 18),
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.greenDark,
+                    size: 18,
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Border akan tersimpan permanen di tab Koleksi. Anda dapat menukar lebih dari satu border dan menggunakannya kapan saja secara gratis.',
-                      style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.3),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textMuted,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
@@ -1317,16 +1571,21 @@ class _RewardsShopPageState extends State<RewardsShopPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: AppColors.textMuted)),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.orange,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text('Tukar (${border.pricePoints} Poin Rasa)'),
+            child: Text('Tukar (${border.pricePoints} Poin)'),
           ),
         ],
       ),
@@ -1343,7 +1602,10 @@ class _RewardsShopPageState extends State<RewardsShopPage>
             SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             ),
             SizedBox(width: 12),
             Text('Memproses transaksi dan verifikasi blockchain...'),
