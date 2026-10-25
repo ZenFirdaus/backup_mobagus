@@ -1775,13 +1775,12 @@ class _ProfileTabState extends State<ProfileTab>
                     const SizedBox(height: 16),
                     Center(
                       child: Text(
-                        'FOODIE INDONESIA\nv1.0.0\nDaerah Istimewa Yogyakarta',
+                        'FOODIE',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 9,
-                          height: 1.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
                           color: AppColors.textMuted.withValues(alpha: 0.6),
                         ),
                       ),
