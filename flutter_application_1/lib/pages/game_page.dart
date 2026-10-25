@@ -12,6 +12,8 @@ import '../models/profile.dart';
 import '../models/quiz_data.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/hive_service.dart';
 import '../services/supabase_service.dart';
 import '../services/reward_border_service.dart';
 import '../widgets/auth_widgets.dart';
@@ -223,16 +225,21 @@ class _GamePageState extends State<GamePage> {
   static const int _cooldownDurationSeconds = 180;
   int _cooldownRemainingSeconds = 0;
   Timer? _cooldownTimer;
+  StreamSubscription<void>? _profileSubscription;
 
   @override
   void initState() {
     super.initState();
     _initKulinerdleWord();
     _loadAllData();
+    _profileSubscription = SupabaseService.instance.onProfileChanged.listen((_) {
+      if (mounted) _loadAllData();
+    });
   }
 
   @override
   void dispose() {
+    _profileSubscription?.cancel();
     _quizTimer?.cancel();
     _cooldownTimer?.cancel();
     super.dispose();
@@ -254,12 +261,98 @@ class _GamePageState extends State<GamePage> {
         qStars[i] = prefs.getInt('foodie_quiz_stars_$i') ?? 0;
       }
 
-      // Detective Progress
-      final unlockedDet = prefs.getInt('foodie_game_unlocked_level') ?? 1;
-      final dStars = <int, int>{};
-      for (int i = 1; i <= kDetectiveCases.length; i++) {
-        dStars[i] = prefs.getInt('foodie_game_stars_$i') ?? 0;
+      // ───────────────────────────────────────────────────────────────────────
+      // DETECTIVE PROGRESS: Multi-Layer Resilient Checkpoint Persistence
+      // (Layer 1: SharedPreferences, Layer 2: Hive NoSQL, Layer 3: Cloud Metadata,
+      //  Layer 4: Star-derived reconstruction, Layer 5: Checkpoint Bab 1 Level 3 Guarantee)
+      // ───────────────────────────────────────────────────────────────────────
+      final uid = SupabaseService.instance.userId;
+      final supaUser = SupabaseService.instance.currentUser;
+
+      // Layer 1: SharedPreferences (Global & User-Scoped)
+      final globalPrefsUnlocked = prefs.getInt('foodie_game_unlocked_level') ?? 1;
+      final userPrefsUnlocked = (uid != null && uid.isNotEmpty)
+          ? (prefs.getInt('foodie_game_unlocked_level_$uid') ?? 1)
+          : 1;
+      final hasCp3Pref = prefs.getBool('foodie_game_checkpoint_lv3_unlocked') == true ||
+          (uid != null && uid.isNotEmpty && prefs.getBool('foodie_game_checkpoint_lv3_unlocked_$uid') == true);
+
+      // Layer 2: Hive NoSQL Local Database (tahan logout & pembersihan cache)
+      final hiveUnlocked = HiveService.instance.getDetectiveUnlockedLevel(uid);
+
+      // Layer 3: Supabase Cloud User Metadata
+      int cloudUnlocked = 1;
+      Map<String, dynamic>? cloudStarsMap;
+      if (supaUser != null && supaUser.userMetadata != null) {
+        final meta = supaUser.userMetadata!;
+        final rawCloudLv = meta['foodie_detective_unlocked_level'];
+        if (rawCloudLv is int) {
+          cloudUnlocked = rawCloudLv;
+        } else if (rawCloudLv != null) {
+          cloudUnlocked = int.tryParse(rawCloudLv.toString()) ?? 1;
+        }
+        if (meta['foodie_checkpoint_lv3'] == true && cloudUnlocked < 3) {
+          cloudUnlocked = 3;
+        }
+        if (meta['foodie_detective_stars'] is Map) {
+          cloudStarsMap = Map<String, dynamic>.from(meta['foodie_detective_stars'] as Map);
+        }
       }
+
+      // Layer 4: Load Stars across all sources & Star-Derived Checkpoint
+      final hiveStars = HiveService.instance.getDetectiveStars(uid);
+      final dStars = <int, int>{};
+      int highestCompletedLevel = 0;
+
+      for (int i = 1; i <= kDetectiveCases.length; i++) {
+        final gPref = prefs.getInt('foodie_game_stars_$i') ?? 0;
+        final uPref = (uid != null && uid.isNotEmpty)
+            ? (prefs.getInt('foodie_game_stars_${i}_$uid') ?? 0)
+            : 0;
+        final hStar = hiveStars[i] ?? 0;
+        int cStar = 0;
+        if (cloudStarsMap != null && cloudStarsMap.containsKey(i.toString())) {
+          cStar = int.tryParse(cloudStarsMap[i.toString()].toString()) ?? 0;
+        }
+        final bestStar = [gPref, uPref, hStar, cStar].reduce(max);
+        dStars[i] = bestStar;
+        if (bestStar > 0) {
+          highestCompletedLevel = max(highestCompletedLevel, i);
+        }
+      }
+
+      // Jika level k berhasil diselesaikan (bintang > 0), level k + 1 dipastikan terbuka
+      final derivedFromStars = highestCompletedLevel > 0
+          ? min(highestCompletedLevel + 1, kDetectiveCases.length)
+          : 1;
+
+      // Evaluasi Checkpoint Tertinggi
+      int unlockedDet = [
+        globalPrefsUnlocked,
+        userPrefsUnlocked,
+        hiveUnlocked,
+        cloudUnlocked,
+        derivedFromStars,
+      ].reduce(max);
+
+      // Layer 5: Garansi Checkpoint Bab 1 Level 3 (Klimaks Sambisari & Boss Ki Joyo)
+      if ((hasCp3Pref || highestCompletedLevel >= 2) && unlockedDet < 3) {
+        unlockedDet = 3;
+      }
+      unlockedDet = unlockedDet.clamp(1, kDetectiveCases.length);
+
+      // Sinkronisasikan balik ke seluruh layer penyimpanan lokal agar tahan logout
+      await prefs.setInt('foodie_game_unlocked_level', unlockedDet);
+      if (uid != null && uid.isNotEmpty) {
+        await prefs.setInt('foodie_game_unlocked_level_$uid', unlockedDet);
+      }
+      if (unlockedDet >= 3) {
+        await prefs.setBool('foodie_game_checkpoint_lv3_unlocked', true);
+        if (uid != null && uid.isNotEmpty) {
+          await prefs.setBool('foodie_game_checkpoint_lv3_unlocked_$uid', true);
+        }
+      }
+      await HiveService.instance.saveDetectiveUnlockedLevel(unlockedDet, uid);
 
       // Kulinerdle Stats
       _kdPlayed = prefs.getInt('kulinerdle_played') ?? 0;
@@ -1074,12 +1167,23 @@ class _GamePageState extends State<GamePage> {
       return;
     }
 
+    // Checkpoint Pengaman: Begitu kasus dibuka atau dimainkan, pastikan level ini
+    // tercatat sebagai checkpoint permanen (tahan logout & pembersihan cache).
+    if (c.level > _unlockedDetectiveLevel) {
+      _unlockedDetectiveLevel = c.level;
+    }
+    _persistDetectiveCheckpoint(_unlockedDetectiveLevel);
+
     setState(() {
       _activeCase = c;
       _currentSceneIndex = 0;
       _detectiveLives = 3;
-      _bossHp = c.scenes.isNotEmpty && c.scenes.last.isBossFight
-          ? (c.scenes.last.boss?.maxHp ?? 100)
+      final firstScene = c.scenes.isNotEmpty ? c.scenes.first : null;
+      _bossHp =
+          (firstScene != null &&
+              firstScene.isBossFight &&
+              firstScene.boss != null)
+          ? firstScene.boss!.maxHp
           : 100;
       _gatheredClueIds.clear();
       _gatheredClues.clear();
@@ -1123,7 +1227,11 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _showDetectiveChoiceFeedback(SceneChoice choice, CaseScene scene) {
-    final isBossDefeated = scene.isBossFight && _bossHp <= 0;
+    final hasNextScene = choice.nextSceneId != null;
+    final isBossDefeated =
+        scene.isBossFight &&
+        (_bossHp <= 0 || choice.isCorrect) &&
+        !hasNextScene;
     final isGameOver = _detectiveLives <= 0;
 
     showModalBottomSheet(
@@ -1251,9 +1359,11 @@ class _GamePageState extends State<GamePage> {
                     ? 'Investigasi Terhenti (Nyawa Habis)'
                     : (isBossDefeated
                           ? 'Kasus Selesai: Lihat Hasil 🏆'
-                          : (scene.isBossFight
-                                ? 'Lanjutkan Konfrontasi ⚔️'
-                                : 'Langkah Selanjutnya ➔')),
+                          : (hasNextScene
+                                ? 'Lanjut ke Tahap Berikutnya ➔'
+                                : (scene.isBossFight
+                                      ? 'Lanjutkan Konfrontasi ⚔️'
+                                      : 'Langkah Selanjutnya ➔'))),
                 onPressed: () {
                   Navigator.of(ctx).pop();
                   _afterDetectiveFeedbackNavigation(
@@ -1305,7 +1415,10 @@ class _GamePageState extends State<GamePage> {
           _selectedChoiceIndicesInScene.clear();
           final nextScene = _activeCase!.scenes[nextIdx];
           if (nextScene.isBossFight && nextScene.boss != null) {
-            _bossHp = nextScene.boss!.maxHp;
+            // Reinitialize boss HP when entering a new boss fight scene or stage
+            if (!scene.isBossFight || nextScene.id != scene.id) {
+              _bossHp = nextScene.boss!.maxHp;
+            }
           }
         });
         return;
@@ -1320,7 +1433,9 @@ class _GamePageState extends State<GamePage> {
         _selectedChoiceIndicesInScene.clear();
         final nextScene = _activeCase!.scenes[_currentSceneIndex];
         if (nextScene.isBossFight && nextScene.boss != null) {
-          _bossHp = nextScene.boss!.maxHp;
+          if (!scene.isBossFight) {
+            _bossHp = nextScene.boss!.maxHp;
+          }
         }
       });
     } else {
@@ -1342,21 +1457,91 @@ class _GamePageState extends State<GamePage> {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final uid = SupabaseService.instance.userId;
+
+      // 1. Simpan Bintang Kasus (SharedPreferences + Hive)
       final currentStars = _detectiveStars[level] ?? 0;
-      if (stars > currentStars) {
-        _detectiveStars[level] = stars;
-        await prefs.setInt('foodie_game_stars_$level', stars);
+      final newStars = max(currentStars, stars);
+      _detectiveStars[level] = newStars;
+
+      await prefs.setInt('foodie_game_stars_$level', newStars);
+      if (uid != null && uid.isNotEmpty) {
+        await prefs.setInt('foodie_game_stars_${level}_$uid', newStars);
+      }
+      await HiveService.instance.saveDetectiveStars(level, newStars, uid);
+
+      // 2. Majukan Checkpoint ke level berikutnya (Level + 1)
+      final nextLevel = level + 1;
+      final targetUnlocked = max(_unlockedDetectiveLevel, nextLevel).clamp(1, kDetectiveCases.length);
+      _unlockedDetectiveLevel = targetUnlocked;
+
+      await prefs.setInt('foodie_game_unlocked_level', targetUnlocked);
+      if (uid != null && uid.isNotEmpty) {
+        await prefs.setInt('foodie_game_unlocked_level_$uid', targetUnlocked);
       }
 
-      if (level >= _unlockedDetectiveLevel && level < kDetectiveCases.length) {
-        _unlockedDetectiveLevel = level + 1;
-        await prefs.setInt(
-          'foodie_game_unlocked_level',
-          _unlockedDetectiveLevel,
-        );
+      // Checkpoint permanen jika mencapai level 3 atau lebih (Bab 1 Level 3 Guarantee)
+      if (targetUnlocked >= 3) {
+        await prefs.setBool('foodie_game_checkpoint_lv3_unlocked', true);
+        if (uid != null && uid.isNotEmpty) {
+          await prefs.setBool('foodie_game_checkpoint_lv3_unlocked_$uid', true);
+        }
       }
+
+      // Simpan ke database NoSQL lokal Hive
+      await HiveService.instance.saveDetectiveUnlockedLevel(targetUnlocked, uid);
+
+      // Sinkronisasi ke Supabase Cloud User Metadata
+      _syncDetectiveProgressToCloud(targetUnlocked, _detectiveStars);
 
       await _addScore(pointsEarned);
+    } catch (_) {}
+  }
+
+  /// Memperkuat checkpoint level agar tersimpan permanen di semua lapisan
+  Future<void> _persistDetectiveCheckpoint(int level) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = SupabaseService.instance.userId;
+      final target = max(_unlockedDetectiveLevel, level).clamp(1, kDetectiveCases.length);
+      _unlockedDetectiveLevel = target;
+
+      await prefs.setInt('foodie_game_unlocked_level', target);
+      if (uid != null && uid.isNotEmpty) {
+        await prefs.setInt('foodie_game_unlocked_level_$uid', target);
+      }
+      if (target >= 3) {
+        await prefs.setBool('foodie_game_checkpoint_lv3_unlocked', true);
+        if (uid != null && uid.isNotEmpty) {
+          await prefs.setBool('foodie_game_checkpoint_lv3_unlocked_$uid', true);
+        }
+      }
+      await HiveService.instance.saveDetectiveUnlockedLevel(target, uid);
+      _syncDetectiveProgressToCloud(target, _detectiveStars);
+    } catch (_) {}
+  }
+
+  /// Menyinkronkan progres level & bintang ke Supabase Auth User Metadata (Cloud)
+  Future<void> _syncDetectiveProgressToCloud(int unlockedLevel, Map<int, int> stars) async {
+    try {
+      final client = Supabase.instance.client;
+      final user = client.auth.currentUser;
+      if (user != null) {
+        final existingData = user.userMetadata ?? {};
+        final curCloudLv = existingData['foodie_detective_unlocked_level'] as int? ?? 1;
+        if (unlockedLevel >= curCloudLv) {
+          await client.auth.updateUser(
+            UserAttributes(
+              data: {
+                ...existingData,
+                'foodie_detective_unlocked_level': unlockedLevel,
+                'foodie_checkpoint_lv3': unlockedLevel >= 3,
+                'foodie_detective_stars': stars.map((k, v) => MapEntry(k.toString(), v)),
+              },
+            ),
+          );
+        }
+      }
     } catch (_) {}
   }
 
@@ -1367,8 +1552,7 @@ class _GamePageState extends State<GamePage> {
       isScrollControlled: true,
       builder: (ctx) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.72,
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          height: MediaQuery.of(context).size.height * 0.78,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -1376,86 +1560,252 @@ class _GamePageState extends State<GamePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top drag handle
               Center(
                 child: Container(
-                  width: 40,
+                  width: 44,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
                   decoration: BoxDecoration(
                     color: AppColors.line,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.menu_book_rounded,
-                    color: AppColors.paprika,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 10),
-                  Text('Papan Bukti Investigasi', style: AppText.display(18)),
-                  const Spacer(),
-                  Text(
-                    '${_gatheredClues.length} Bukti',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.paprika,
-                      fontWeight: FontWeight.bold,
+              // Mini Hero Header Banner
+              Container(
+                height: 90,
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.charcoal.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/images/detective_board.jpg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(color: AppColors.charcoal),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.35),
+                                Colors.black.withValues(alpha: 0.8),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.orange.withValues(alpha: 0.9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.menu_book_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'PAPAN BUKTI INVESTIGASI',
+                                    style: AppText.display(
+                                      14,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Arsip bukti otentik yang berhasil dikumpulkan',
+                                    style: AppText.body(
+                                      11,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Text(
+                                '${_gatheredClues.length} Bukti',
+                                style: AppText.display(
+                                  11,
+                                  color: AppColors.saffron,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-              const Divider(color: AppColors.line, height: 24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Divider(color: AppColors.line, height: 1),
+              ),
               Expanded(
                 child: _gatheredClues.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Belum ada bukti terkumpul.',
-                          style: TextStyle(color: AppColors.slateBlue),
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.search_off_rounded,
+                                size: 48,
+                                color: AppColors.slateBlue.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Belum Ada Bukti Terkumpul',
+                                style: AppText.display(
+                                  15,
+                                  color: AppColors.charcoal,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Pilih opsi investigasi dan interogasi saksi untuk mengamankan bukti kasus.',
+                                textAlign: TextAlign.center,
+                                style: AppText.body(
+                                  12,
+                                  color: AppColors.slateBlue,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                         itemCount: _gatheredClues.length,
                         separatorBuilder: (context, index) =>
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
                         itemBuilder: (ctx, idx) {
                           final clue = _gatheredClues[idx];
                           return Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: AppColors.background,
+                              color: AppColors.surfaceSubtle,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: AppColors.line),
                             ),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  clue.icon,
-                                  color: AppColors.paprika,
-                                  size: 22,
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.orange.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    clue.icon,
+                                    color: AppColors.paprika,
+                                    size: 20,
+                                  ),
                                 ),
-                                const SizedBox(width: 14),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        clue.title,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.charcoal,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              clue.title,
+                                              style: AppText.display(
+                                                13.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.charcoal,
+                                              ),
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.saffron
+                                                  .withValues(alpha: 0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'BUKTI #${idx + 1}',
+                                              style: AppText.display(
+                                                9,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.paprika,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 2),
+                                      const SizedBox(height: 4),
                                       Text(
                                         clue.description,
-                                        style: const TextStyle(
-                                          fontSize: 11.5,
+                                        style: AppText.body(
+                                          11.5,
                                           color: AppColors.slateBlue,
+                                          height: 1.45,
                                         ),
                                       ),
                                     ],
@@ -2891,10 +3241,12 @@ class _GamePageState extends State<GamePage> {
     final chapterCases = kDetectiveCases
         .where((c) => c.chapter == _selectedChapter)
         .toList();
+    final totalSolved = _detectiveStars.values.where((s) => s > 0).length;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 36),
       children: [
+        // Top App Bar
         Row(
           children: [
             InkWell(
@@ -2907,6 +3259,13 @@ class _GamePageState extends State<GamePage> {
                   color: Colors.white,
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.line),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.charcoal.withValues(alpha: 0.05),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Icon(
                   Icons.arrow_back,
@@ -2920,37 +3279,207 @@ class _GamePageState extends State<GamePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'PILIH JALANMU: DETEKTIF',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.orange,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.orange.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'PILIH JALANMU',
+                          style: AppText.display(
+                            9,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: AppColors.orange,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '• DETEKTIF KULINER',
+                        style: AppText.display(
+                          9,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.slateBlue,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text('Berkas Misteri Mataram', style: AppText.display(17)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Berkas Misteri Mataram',
+                    style: AppText.display(17, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
-            Row(
-              children: List.generate(3, (i) {
-                return Padding(
-                  padding: const EdgeInsets.only(left: 3),
-                  child: Icon(
-                    i < _detectiveLives
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    size: 18,
-                    color: i < _detectiveLives
-                        ? AppColors.tomato
-                        : AppColors.line,
-                  ),
-                );
-              }),
+            // Life Counter Hearts
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Row(
+                children: List.generate(3, (i) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                    child: Icon(
+                      i < _detectiveLives
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 16,
+                      color: i < _detectiveLives
+                          ? AppColors.tomato
+                          : AppColors.line,
+                    ),
+                  );
+                }),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+
+        // Hero Dossier Illustration Banner
+        Container(
+          height: 140,
+          margin: const EdgeInsets.only(top: 14, bottom: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.charcoal.withValues(alpha: 0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/detective_board.jpg',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Container(color: AppColors.charcoal),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.25),
+                          Colors.black.withValues(alpha: 0.88),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.orange,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.shield_outlined,
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      'ARSIP RAHASIA MATARAM',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppText.display(
+                                        8.5,
+                                        letterSpacing: 1.1,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Text(
+                              '$totalSolved/15 Kasus Tuntas',
+                              style: AppText.display(
+                                9.5,
+                                color: AppColors.saffron,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'PAPAN INVESTIGASI KASUS',
+                        style: AppText.display(
+                          17,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Pecahkan misteri kuliner otentik Yogyakarta & hadapi dalang sindikat rasa.',
+                        style: AppText.body(
+                          11,
+                          color: Colors.white.withValues(alpha: 0.88),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
 
         if (_detectiveLives <= 0 && _cooldownRemainingSeconds > 0) ...[
           _buildDetectiveCooldownBanner(),
@@ -2995,20 +3524,17 @@ class _GamePageState extends State<GamePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Cooldown Investigasi Aktif',
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: AppText.display(
+                    12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.charcoal,
                   ),
                 ),
                 Text(
                   'Hati pulih dalam: $timeStr',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.slateBlue,
-                  ),
+                  style: AppText.body(11, color: AppColors.slateBlue),
                 ),
               ],
             ),
@@ -3020,9 +3546,9 @@ class _GamePageState extends State<GamePage> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
             onPressed: _instantRestoreDetectiveLives,
-            child: const Text(
+            child: Text(
               'Pulihkan',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              style: AppText.display(11, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -3051,14 +3577,15 @@ class _GamePageState extends State<GamePage> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? AppColors.orange : AppColors.line,
+              width: isSelected ? 1.5 : 1.0,
             ),
           ),
           child: Column(
             children: [
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 11,
+                style: AppText.display(
+                  11,
                   fontWeight: FontWeight.bold,
                   color: isSelected
                       ? AppColors.orange
@@ -3067,8 +3594,8 @@ class _GamePageState extends State<GamePage> {
               ),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 9.5,
+                style: AppText.body(
+                  9.5,
                   color: isSelected ? AppColors.charcoal : AppColors.slateBlue,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -3084,136 +3611,289 @@ class _GamePageState extends State<GamePage> {
     final isUnlocked = c.level <= _unlockedDetectiveLevel;
     final stars = _detectiveStars[c.level] ?? 0;
 
+    final accentColor = c.isCheckpoint
+        ? AppColors.saffron
+        : (isUnlocked ? AppColors.orange : AppColors.line);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: isUnlocked ? () => _startDetectiveCase(c) : null,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: c.isCheckpoint
-                            ? AppColors.saffron.withValues(alpha: 0.2)
-                            : AppColors.surfaceSubtle,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        c.isCheckpoint
-                            ? 'CHECKPOINT LV ${c.level}'
-                            : 'KASUS ${c.level}',
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                          color: c.isCheckpoint
-                              ? AppColors.paprika
-                              : AppColors.slateBlue,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: c.difficulty.color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        c.difficulty.label,
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                          color: c.difficulty.color,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    if (!isUnlocked)
-                      const Icon(
-                        Icons.lock_rounded,
-                        size: 16,
-                        color: AppColors.slateBlue,
-                      )
-                    else if (stars > 0)
-                      Row(
-                        children: List.generate(
-                          3,
-                          (i) => Icon(
-                            Icons.star_rounded,
-                            size: 15,
-                            color: i < stars
-                                ? AppColors.saffron
-                                : AppColors.line,
-                          ),
-                        ),
-                      ),
-                  ],
+        border: Border.all(
+          color: isUnlocked
+              ? AppColors.line
+              : AppColors.line.withValues(alpha: 0.6),
+        ),
+        boxShadow: isUnlocked
+            ? [
+                BoxShadow(
+                  color: AppColors.charcoal.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSubtle,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: Text(
-                          c.iconEmoji,
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left Accent Stripe
+              Container(width: 5, color: accentColor),
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: isUnlocked ? () => _startDetectiveCase(c) : null,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            c.title,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.charcoal,
-                            ),
+                          // Header badges
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: c.isCheckpoint
+                                      ? AppColors.saffron.withValues(
+                                          alpha: 0.18,
+                                        )
+                                      : AppColors.surfaceSubtle,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: c.isCheckpoint
+                                        ? AppColors.saffron.withValues(
+                                            alpha: 0.4,
+                                          )
+                                        : AppColors.line,
+                                  ),
+                                ),
+                                child: Text(
+                                  c.isCheckpoint
+                                      ? '🎖️ CHECKPOINT LV ${c.level}'
+                                      : 'KASUS #${c.level.toString().padLeft(2, '0')}',
+                                  style: AppText.display(
+                                    9,
+                                    fontWeight: FontWeight.bold,
+                                    color: c.isCheckpoint
+                                        ? AppColors.paprika
+                                        : AppColors.slateBlue,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: c.difficulty.color.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  c.difficulty.label.toUpperCase(),
+                                  style: AppText.display(
+                                    8.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: c.difficulty.color,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              if (!isUnlocked)
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.lock_outline_rounded,
+                                      size: 15,
+                                      color: AppColors.slateBlue,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Terkunci',
+                                      style: AppText.display(
+                                        9.5,
+                                        color: AppColors.slateBlue,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else if (stars > 0)
+                                Row(
+                                  children: List.generate(
+                                    3,
+                                    (i) => Icon(
+                                      Icons.star_rounded,
+                                      size: 16,
+                                      color: i < stars
+                                          ? AppColors.saffron
+                                          : AppColors.line,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.orange.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'BARU',
+                                    style: AppText.display(
+                                      8.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.orange,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                          Text(
-                            c.subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.slateBlue,
-                            ),
+                          const SizedBox(height: 10),
+                          // Content Row
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: isUnlocked
+                                      ? AppColors.surfaceSubtle
+                                      : const Color(0xFFF0EFEA),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.line),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    c.iconEmoji,
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      color: isUnlocked ? null : Colors.black26,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      c.title,
+                                      style: AppText.display(
+                                        13.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: isUnlocked
+                                            ? AppColors.charcoal
+                                            : AppColors.slateBlue,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      c.subtitle,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppText.body(
+                                        11,
+                                        color: AppColors.slateBlue,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Bottom tags metadata
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on_outlined,
+                                      size: 12,
+                                      color: isUnlocked
+                                          ? AppColors.orange
+                                          : AppColors.slateBlue,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        c.location,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppText.body(
+                                          10.5,
+                                          color: AppColors.slateBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                flex: 2,
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.person_outline_rounded,
+                                      size: 12,
+                                      color: AppColors.slateBlue,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        c.suspectName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppText.body(
+                                          10.5,
+                                          color: AppColors.slateBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '+${c.baseReward} XP',
+                                style: AppText.display(
+                                  10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.paprika,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -3233,7 +3913,7 @@ class _GamePageState extends State<GamePage> {
       children: [
         // App Bar
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: const BoxDecoration(
             color: Colors.white,
             border: Border(bottom: BorderSide(color: AppColors.line)),
@@ -3250,21 +3930,54 @@ class _GamePageState extends State<GamePage> {
                 ),
               ),
               Expanded(
-                child: Text(
-                  'Kasus ${c.level}: ${c.title}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'KASUS ${c.level} • TAHAP ${_currentSceneIndex + 1}/${c.scenes.length}',
+                      style: AppText.display(
+                        9,
+                        letterSpacing: 0.8,
+                        fontWeight: FontWeight.bold,
+                        color: scene.isBossFight
+                            ? AppColors.tomato
+                            : AppColors.orange,
+                      ),
+                    ),
+                    Text(
+                      c.title,
+                      style: AppText.display(13, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
+              // Life Counter
+              Row(
+                children: List.generate(3, (i) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Icon(
+                      i < _detectiveLives
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 15,
+                      color: i < _detectiveLives
+                          ? AppColors.tomato
+                          : AppColors.line,
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(width: 8),
+              // Papan Bukti Button
               InkWell(
                 onTap: _openClueNotebook,
+                borderRadius: BorderRadius.circular(8),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
-                    vertical: 4,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSubtle,
@@ -3281,8 +3994,8 @@ class _GamePageState extends State<GamePage> {
                       const SizedBox(width: 4),
                       Text(
                         '${_gatheredClues.length} Bukti',
-                        style: const TextStyle(
-                          fontSize: 11,
+                        style: AppText.display(
+                          10.5,
                           fontWeight: FontWeight.bold,
                           color: AppColors.charcoal,
                         ),
@@ -3297,78 +4010,257 @@ class _GamePageState extends State<GamePage> {
 
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
             children: [
               if (scene.isBossFight && scene.boss != null) ...[
-                _buildDetectiveBossFightCard(scene.boss!),
-                const SizedBox(height: 14),
-              ],
-
-              // Dialogue Card
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.line),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppColors.surfaceSubtle,
-                      child: Text(scene.speakerAvatar),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            scene.speakerName,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                _buildDetectiveBossFightCard(c, scene, scene.boss!),
+                const SizedBox(height: 18),
+              ] else ...[
+                // Normal Investigation Scene Header Illustration
+                Container(
+                  height: 120,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.charcoal.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Image.asset(
+                            'assets/images/detective_investigation.jpg',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(color: AppColors.charcoal),
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.75),
+                                ],
+                              ),
                             ),
                           ),
+                        ),
+                        Positioned(
+                          left: 14,
+                          bottom: 12,
+                          right: 14,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.6),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.place_rounded,
+                                        size: 12,
+                                        color: AppColors.saffron,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          scene.location.toUpperCase(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppText.display(
+                                            9.5,
+                                            letterSpacing: 0.8,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.orange,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'TKP INVESTIGASI',
+                                  style: AppText.display(
+                                    8.5,
+                                    letterSpacing: 1.0,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Dialogue Card (Speaker)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.line),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.charcoal.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.surfaceSubtle,
+                          border: Border.all(
+                            color: AppColors.saffron,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            scene.speakerAvatar,
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              scene.speakerName,
+                              style: AppText.display(
+                                13.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.charcoal,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.saffron.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                scene.speakerRole.toUpperCase(),
+                                style: AppText.display(
+                                  8.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.paprika,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Narrative Card (Confidential Culinary Dossier report)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.line),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 3,
+                            height: 14,
+                            color: AppColors.orange,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            scene.speakerRole,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              color: AppColors.slateBlue,
+                            'LAPORAN INVESTIGASI LAPANGAN',
+                            style: AppText.display(
+                              9,
+                              letterSpacing: 1.1,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.paprika,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Narrative Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.line),
-                ),
-                child: Text(
-                  scene.narrative,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    height: 1.5,
-                    color: AppColors.charcoal,
+                      const Divider(color: AppColors.line, height: 16),
+                      Text(
+                        scene.narrative,
+                        style: AppText.body(
+                          13.5,
+                          height: 1.55,
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 18),
+              ],
 
               Text(
-                'PILIH LANGKAH INVESTIGASI:',
+                scene.isBossFight
+                    ? 'TAKTIK SERANGAN LOGIKA DALANG:'
+                    : 'PILIH LANGKAH INVESTIGASI:',
                 style: AppText.display(
                   11,
-                  color: AppColors.slateBlue,
+                  fontWeight: FontWeight.bold,
+                  color: scene.isBossFight
+                      ? AppColors.tomato
+                      : AppColors.slateBlue,
                   letterSpacing: 0.8,
                 ),
               ),
@@ -3378,6 +4270,14 @@ class _GamePageState extends State<GamePage> {
                 final idx = entry.key;
                 final choice = entry.value;
                 final isSelected = _selectedChoiceIndicesInScene.contains(idx);
+
+                final choiceBorderColor = scene.isBossFight
+                    ? (isSelected
+                          ? AppColors.line
+                          : AppColors.tomato.withValues(alpha: 0.5))
+                    : (isSelected
+                          ? AppColors.line
+                          : choice.type.color.withValues(alpha: 0.5));
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -3394,37 +4294,77 @@ class _GamePageState extends State<GamePage> {
                             : Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isSelected
-                              ? AppColors.line
-                              : choice.type.color.withValues(alpha: 0.5),
+                          color: choiceBorderColor,
+                          width: scene.isBossFight && !isSelected ? 1.5 : 1.0,
                         ),
+                        boxShadow: !isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.charcoal.withValues(
+                                    alpha: 0.04,
+                                  ),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            choice.type.label.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.bold,
-                              color: choice.type.color,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: choice.type.color.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      choice.type.icon,
+                                      size: 11,
+                                      color: choice.type.color,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      choice.type.label.toUpperCase(),
+                                      style: AppText.display(
+                                        8.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: choice.type.color,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
                             choice.text,
-                            style: const TextStyle(
-                              fontSize: 13,
+                            style: AppText.display(
+                              13,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.charcoal,
+                              color: isSelected
+                                  ? AppColors.slateBlue
+                                  : AppColors.charcoal,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Text(
                             choice.actionDetail,
-                            style: const TextStyle(
-                              fontSize: 11,
+                            style: AppText.body(
+                              11,
                               color: AppColors.slateBlue,
+                              height: 1.4,
                             ),
                           ),
                         ],
@@ -3440,66 +4380,550 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  Widget _buildDetectiveBossFightCard(BossConfrontation boss) {
+  String _getBossIllustrationAsset(
+    DetectiveCase c,
+    CaseScene scene,
+    BossConfrontation boss,
+  ) {
+    if (boss.imageAsset != null && boss.imageAsset!.isNotEmpty) {
+      return boss.imageAsset!;
+    }
+
+    if (c.level == 15 ||
+        scene.id.contains('boss_1') ||
+        scene.id.contains('boss_2') ||
+        scene.id.contains('boss_3')) {
+      return 'assets/images/boss_final_tamansari.jpg';
+    }
+
+    final lower = boss.name.toLowerCase();
+    if (boss.avatar == '👩‍🔬' ||
+        boss.avatar == '💃' ||
+        lower.contains('nyai') ||
+        lower.contains('madam') ||
+        lower.contains('ratu') ||
+        lower.contains('siska')) {
+      return 'assets/images/boss_femme_fatale.jpg';
+    }
+
+    switch (c.chapter) {
+      case 1:
+        return 'assets/images/boss_chapter_1.jpg';
+      case 2:
+        return 'assets/images/boss_chapter_2.jpg';
+      case 3:
+      default:
+        return 'assets/images/boss_chapter_3.jpg';
+    }
+  }
+
+  Widget _buildDetectiveBossFightCard(
+    DetectiveCase c,
+    CaseScene scene,
+    BossConfrontation boss,
+  ) {
     final hpPct = (_bossHp / boss.maxHp).clamp(0.0, 1.0);
+    final illustrationAsset = _getBossIllustrationAsset(c, scene, boss);
+
+    // Determine stage info if this is a multi-stage boss (like Case 15)
+    final isCase15 = c.id == 'case_bale_raos_finale';
+    String stageBadgeText = 'KONFRONTASI DALANG';
+    if (isCase15) {
+      if (scene.id == 'scene_boss_1') {
+        stageBadgeText = 'TAHAP 1/3: ALTAR TAMANSARI';
+      } else if (scene.id == 'scene_boss_2') {
+        stageBadgeText = 'TAHAP 2/3: TERDESAK';
+      } else if (scene.id == 'scene_boss_3') {
+        stageBadgeText = 'TAHAP 3/3: SKAKMAT AKHIR';
+      }
+    } else if (scene.id == 'scene_boss_2') {
+      stageBadgeText = 'SKAKMAT AKHIR';
+    }
+
+    final String phaseNarration;
+    if (hpPct > 0.6) {
+      phaseNarration =
+          'Dalang masih bertahan dengan alibi palsunya. Terus bongkar celah pada argumennya!';
+    } else if (hpPct > 0.25) {
+      phaseNarration =
+          'Pertahanan mental dalang mulai goyah! Kontradiksi argumennya kian terbukti nyata.';
+    } else {
+      phaseNarration =
+          'Dalang tersudut di ambang kekalahan total! Tuntaskan dengan deduksi pamungkas.';
+    }
+
+    final chapterBadge = c.chapterTitle.split('(').first.trim().toUpperCase();
+
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.tomato, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'KONFRONTASI DALANG',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.tomato,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                'HP: $_bossHp/${boss.maxHp}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.charcoal,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: hpPct,
-              backgroundColor: AppColors.line,
-              valueColor: const AlwaysStoppedAnimation(AppColors.tomato),
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text(boss.avatar, style: const TextStyle(fontSize: 24)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  boss.name,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.charcoal.withValues(alpha: 0.07),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Image with boss atmosphere & tailored illustration
+            Stack(
+              children: [
+                SizedBox(
+                  height: 155,
+                  width: double.infinity,
+                  child: Image.asset(
+                    illustrationAsset,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: AppColors.charcoal,
+                      child: const Center(
+                        child: Icon(
+                          Icons.theater_comedy_rounded,
+                          size: 44,
+                          color: AppColors.saffron,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.65),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.88),
+                        ],
+                        stops: const [0.0, 0.42, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                // Top Badges Row (Chapter & Boss Fight Stage)
+                Positioned(
+                  top: 10,
+                  left: 12,
+                  right: 12,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.shield_rounded,
+                              size: 11,
+                              color: AppColors.saffron,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              chapterBadge,
+                              style: AppText.display(
+                                8.5,
+                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.paprika,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.gavel_rounded,
+                              size: 11,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              stageBadgeText,
+                              style: AppText.display(
+                                8.5,
+                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Boss Profile (Avatar, Name, Role & Location) over banner
+                Positioned(
+                  left: 14,
+                  bottom: 10,
+                  right: 14,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          border: Border.all(color: AppColors.orange, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            boss.avatar,
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              boss.name,
+                              style: AppText.display(
+                                15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 1),
+                            Row(
+                              children: [
+                                Text(
+                                  boss.role.toUpperCase(),
+                                  style: AppText.display(
+                                    9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.saffron,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '•',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    scene.location.split('-').first.trim().toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.body(
+                                      9,
+                                      color: Colors.white.withValues(alpha: 0.85),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // Card Body: Situasi Konfrontasi, Ancaman Tersangka & Ketahanan Mental
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Situasi Konfrontasi (Narrative)
+                  Row(
+                    children: [
+                      Container(
+                        width: 3.5,
+                        height: 13,
+                        color: AppColors.tomato,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'SITUASI KONFRONTASI TERAKHIR',
+                        style: AppText.display(
+                          9,
+                          letterSpacing: 1.1,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.tomato,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    scene.narrative,
+                    style: AppText.body(
+                      13,
+                      height: 1.5,
+                      color: AppColors.charcoal,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Berkas Konfrontasi: Alibi & Titik Lemah Argumen (Padat, Informatif & Tidak Kosong)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF9EE),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.saffron.withValues(alpha: 0.6),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.charcoal.withValues(alpha: 0.03),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header bar: Speaker Quote Tag & Status Chip
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: AppColors.orange.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.record_voice_over_rounded,
+                                size: 13,
+                                color: AppColors.paprika,
+                              ),
+                            ),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Text(
+                                'DALIH & PERNYATAAN ${boss.name.toUpperCase()}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.display(
+                                  8.5,
+                                  letterSpacing: 0.8,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.paprika,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.tomato.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'TERDESAK',
+                                style: AppText.display(
+                                  8,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.tomato,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Quote Text (Selalu terisi & terbaca jelas dengan teks tegas)
+                        Text(
+                          boss.quote.trim().isNotEmpty
+                              ? '“${boss.quote}”'
+                              : '“Aku tidak akan membiarkanmu membongkar rencanaku di sini!”',
+                          style: const TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.charcoal,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Tactical Clue / Focus Target
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.line,
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.lightbulb_rounded,
+                                size: 14,
+                                color: AppColors.saffron,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  boss.weakPoints.isNotEmpty
+                                      ? 'Fokus Bukti: ${boss.weakPoints.join(' • ')}'
+                                      : 'Pilih argumen yang mematahkan alibi dalang untuk meruntuhkan pertahanannya.',
+                                  style: AppText.body(
+                                    10.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.charcoal,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Health Bar Section (Ketahanan Dalang)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.psychology_outlined,
+                        size: 14,
+                        color: AppColors.slateBlue,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Ketahanan Mental Dalang',
+                        style: AppText.display(
+                          10.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.charcoal,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$_bossHp% / ${boss.maxHp}%',
+                        style: AppText.display(
+                          11,
+                          fontWeight: FontWeight.bold,
+                          color: hpPct <= 0.3
+                              ? AppColors.tomato
+                              : AppColors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.line,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Stack(
+                        children: [
+                          FractionallySizedBox(
+                            widthFactor: hpPct,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: hpPct > 0.4
+                                      ? [AppColors.orange, AppColors.saffron]
+                                      : [AppColors.tomato, AppColors.orange],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Dynamic Battle Phase Status
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSubtle,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: Text(
+                      phaseNarration,
+                      style: AppText.body(
+                        10.5,
+                        color: AppColors.slateBlue,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3509,22 +4933,133 @@ class _GamePageState extends State<GamePage> {
     if (c == null) {
       return Center(
         child: PrimaryButton(
-          label: 'Kembali',
+          label: 'Kembali ke Menu',
           onPressed: () => setState(() => _currentView = _GameView.hub),
         ),
       );
     }
 
     final ending = c.goodEnding;
+    final stars = _detectiveStars[c.level] ?? 3;
+    final points = c.baseReward;
+
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
-        const Center(child: Text('🏆', style: TextStyle(fontSize: 48))),
-        const SizedBox(height: 10),
-        Center(child: Text('KASUS TERPECAHKAN!', style: AppText.display(20))),
+        // Trophy Badge Icon
+        Center(
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.saffron.withValues(alpha: 0.15),
+              border: Border.all(color: AppColors.saffron, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.saffron.withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Text('🏆', style: TextStyle(fontSize: 36)),
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.green.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'BERKAS RESMI DIARSIPKAN • TERPECAHKAN',
+              style: AppText.display(
+                9.5,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+                color: AppColors.green,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            'KASUS TERPECAHKAN!',
+            style: AppText.display(20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            c.title,
+            style: AppText.body(13, color: AppColors.slateBlue),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Stars & Rewards Pill
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Text(
+                    'RATING INVESTIGASI',
+                    style: AppText.display(8.5, color: AppColors.slateBlue),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: List.generate(
+                      3,
+                      (i) => Icon(
+                        Icons.star_rounded,
+                        size: 20,
+                        color: i < stars ? AppColors.saffron : AppColors.line,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Container(width: 1, height: 32, color: AppColors.line),
+              Column(
+                children: [
+                  Text(
+                    'POIN KULINER',
+                    style: AppText.display(8.5, color: AppColors.slateBlue),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '+$points XP',
+                    style: AppText.display(
+                      15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Narrative Dossier
+        Container(
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -3535,28 +5070,120 @@ class _GamePageState extends State<GamePage> {
             children: [
               Text(
                 ending.title,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: AppText.display(
+                  15,
                   fontWeight: FontWeight.bold,
+                  color: AppColors.charcoal,
                 ),
               ),
               const Divider(color: AppColors.line, height: 20),
               Text(
                 ending.narrative,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
+                style: AppText.body(
+                  13.5,
+                  height: 1.55,
                   color: AppColors.charcoal,
                 ),
               ),
+              const SizedBox(height: 14),
+              // Epilogue
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.saffron.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CATATAN KERATON MATARAM:',
+                      style: AppText.display(
+                        8.5,
+                        letterSpacing: 1.0,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.paprika,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ending.epilogue,
+                      style: AppText.body(
+                        12,
+                        height: 1.45,
+                        color: AppColors.charcoal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (ending.badgeName.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.saffron.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.military_tech_rounded,
+                        size: 15,
+                        color: AppColors.paprika,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'LENCANA DIBUKA: ${ending.badgeName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.display(
+                            9.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.paprika,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
         const SizedBox(height: 20),
+
         PrimaryButton(
           label: 'Daftar Kasus Berikutnya ➔',
           onPressed: () =>
               setState(() => _currentView = _GameView.detectiveCaseSelect),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            side: const BorderSide(color: AppColors.line),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: () => setState(() => _currentView = _GameView.hub),
+          child: Text(
+            'Kembali ke Menu Game',
+            style: AppText.display(
+              12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.charcoal,
+            ),
+          ),
         ),
       ],
     );
@@ -3575,19 +5202,64 @@ class _GamePageState extends State<GamePage> {
 
     final ending = c.badEnding;
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
-        const Center(child: Text('💔', style: TextStyle(fontSize: 48))),
-        const SizedBox(height: 10),
         Center(
-          child: Text(
-            'INVESTIGASI GAGAL!',
-            style: AppText.display(20, color: AppColors.tomato),
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.tomato.withValues(alpha: 0.12),
+              border: Border.all(color: AppColors.tomato, width: 2),
+            ),
+            child: const Center(
+              child: Text('💔', style: TextStyle(fontSize: 34)),
+            ),
           ),
         ),
         const SizedBox(height: 14),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.tomato.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'INVESTIGASI TERHENTI',
+              style: AppText.display(
+                9.5,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+                color: AppColors.tomato,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            'DEDUKSI GAGAL!',
+            style: AppText.display(
+              20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.tomato,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            c.title,
+            style: AppText.body(13, color: AppColors.slateBlue),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(height: 16),
+
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -3598,28 +5270,60 @@ class _GamePageState extends State<GamePage> {
             children: [
               Text(
                 ending.title,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: AppText.display(
+                  15,
                   fontWeight: FontWeight.bold,
+                  color: AppColors.charcoal,
                 ),
               ),
               const Divider(color: AppColors.line, height: 20),
               Text(
                 ending.narrative,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
+                style: AppText.body(
+                  13.5,
+                  height: 1.55,
                   color: AppColors.charcoal,
                 ),
               ),
+              if (ending.epilogue.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  ending.epilogue,
+                  style: AppText.body(
+                    12,
+                    color: AppColors.slateBlue,
+                    height: 1.45,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
         const SizedBox(height: 20),
+
         PrimaryButton(
           label: 'Kembali ke Menu Kasus',
           onPressed: () =>
               setState(() => _currentView = _GameView.detectiveCaseSelect),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            side: const BorderSide(color: AppColors.line),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: () => setState(() => _currentView = _GameView.hub),
+          child: Text(
+            'Kembali ke Menu Game',
+            style: AppText.display(
+              12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.charcoal,
+            ),
+          ),
         ),
       ],
     );

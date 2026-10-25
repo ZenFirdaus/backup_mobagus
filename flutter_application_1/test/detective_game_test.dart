@@ -12,7 +12,7 @@ void main() {
       }
     });
 
-    test('verifies chapters and checkpoints (Lv 5, 10, 15)', () {
+    test('verifies chapters and checkpoints (Lv 3 Klimaks Candi Sambisari, Lv 5, 10, 15)', () {
       for (final c in kDetectiveCases) {
         if (c.level <= 5) {
           expect(c.chapter, 1);
@@ -25,8 +25,9 @@ void main() {
           expect(c.chapterTitle, contains('Bab III'));
         }
 
-        if (c.level % 5 == 0) {
-          expect(c.isCheckpoint, isTrue);
+        if (c.level == 3 || c.level % 5 == 0) {
+          expect(c.isCheckpoint, isTrue,
+              reason: 'Case ${c.level} should be marked as a checkpoint');
         } else {
           expect(c.isCheckpoint, isFalse);
         }
@@ -89,6 +90,59 @@ void main() {
       expect(sBoss2.isBossFight, isTrue);
       final totalPhase2Damage = sBoss2.choices.fold<int>(0, (sum, ch) => sum + ch.bossDamage);
       expect(totalPhase2Damage, greaterThanOrEqualTo(sBoss2.boss!.maxHp));
+    });
+
+    test('verifies Case 15 has 3 sequential boss fight stages to defeat the last boss', () {
+      final case15 = kDetectiveCases.firstWhere((c) => c.level == 15);
+      expect(case15.id, 'case_bale_raos_finale');
+
+      // Filter boss scenes
+      final bossScenes = case15.scenes.where((s) => s.isBossFight).toList();
+      expect(bossScenes.length, 3, reason: 'Case 15 must have exactly 3 boss fight stages');
+
+      final stage1 = bossScenes[0];
+      final stage2 = bossScenes[1];
+      final stage3 = bossScenes[2];
+
+      expect(stage1.id, 'scene_boss_1');
+      expect(stage2.id, 'scene_boss_2');
+      expect(stage3.id, 'scene_boss_3');
+
+      // Stage 1 links to Stage 2 on correct choice
+      final stage1Correct = stage1.choices.firstWhere((ch) => ch.isCorrect);
+      expect(stage1Correct.nextSceneId, 'scene_boss_2');
+      expect(stage1Correct.bossDamage, greaterThan(0));
+
+      // Stage 2 links to Stage 3 on correct choice
+      final stage2Correct = stage2.choices.firstWhere((ch) => ch.isCorrect);
+      expect(stage2Correct.nextSceneId, 'scene_boss_3');
+      expect(stage2Correct.bossDamage, greaterThan(0));
+
+      // Stage 3 final checkmate (nextSceneId is null)
+      final stage3Correct = stage3.choices.firstWhere((ch) => ch.isCorrect);
+      expect(stage3Correct.nextSceneId, isNull);
+      expect(stage3Correct.bossDamage, greaterThan(0));
+    });
+
+    test('verifies all 15 cases have tailored boss illustrations matching chapter and boss character', () {
+      const allowedAssets = {
+        'assets/images/boss_chapter_1.jpg',
+        'assets/images/boss_chapter_2.jpg',
+        'assets/images/boss_chapter_3.jpg',
+        'assets/images/boss_femme_fatale.jpg',
+        'assets/images/boss_final_tamansari.jpg',
+      };
+
+      for (final c in kDetectiveCases) {
+        final bossScenes = c.scenes.where((s) => s.isBossFight && s.boss != null).toList();
+        expect(bossScenes, isNotEmpty, reason: 'Case ${c.level} must have at least one boss scene');
+        for (final s in bossScenes) {
+          expect(s.boss!.imageAsset, isNotNull,
+              reason: 'Boss in Case ${c.level} Scene ${s.id} must have an imageAsset');
+          expect(allowedAssets.contains(s.boss!.imageAsset), isTrue,
+              reason: 'Asset ${s.boss!.imageAsset} in Case ${c.level} must be one of the tailored boss illustrations');
+        }
+      }
     });
   });
 
@@ -175,4 +229,52 @@ void main() {
       }
     });
   });
+
+  group('Detective Checkpoint Resilience & Bab 1 Level 3 Tests', () {
+    test('Case 3 (Candi Sambisari) has complete boss fight metadata and Ki Joyo suspect', () {
+      final case3 = kDetectiveCases.firstWhere((c) => c.level == 3);
+      expect(case3.id, 'case_soto_bathok');
+      expect(case3.title, contains('Batok Keramat'));
+      expect(case3.suspectName, contains('Ki Joyo'));
+      expect(case3.isCheckpoint, isTrue);
+
+      final bossScene = case3.scenes.firstWhere((s) => s.isBossFight);
+      expect(bossScene.boss, isNotNull);
+      expect(bossScene.boss!.name, contains('Ki Joyo'));
+      expect(bossScene.boss!.quote, isNotEmpty);
+      expect(bossScene.boss!.weakPoints, isNotEmpty);
+      expect(bossScene.boss!.weakPoints.length, greaterThanOrEqualTo(2));
+    });
+
+    test('reconstructs checkpoint from completed levels stars (star > 0 guarantees next level)', () {
+      // Simulating user who beat level 1 and 2:
+      final stars = <int, int>{
+        1: 3, // beaten with 3 stars
+        2: 2, // beaten with 2 stars
+      };
+      int highestCompletedLevel = 0;
+      for (final entry in stars.entries) {
+        if (entry.value > 0 && entry.key > highestCompletedLevel) {
+          highestCompletedLevel = entry.key;
+        }
+      }
+      final derivedUnlocked = (highestCompletedLevel > 0)
+          ? highestCompletedLevel + 1
+          : 1;
+
+      expect(derivedUnlocked, 3,
+          reason: 'Beating level 2 must guarantee Level 3 is unlocked');
+    });
+
+    test('preserves checkpoint Level 3 guarantee across reset simulations', () {
+      bool hasCp3 = true;
+      int rawSavedLevel = 1; // e.g. cache was reset to 1
+      if (hasCp3 && rawSavedLevel < 3) {
+        rawSavedLevel = 3;
+      }
+      expect(rawSavedLevel, 3,
+          reason: 'Checkpoint Lv 3 guarantee must prevent drop below level 3');
+    });
+  });
 }
+

@@ -72,6 +72,7 @@ class BossConfrontation {
   final String quote;
   final int maxHp;
   final List<String> weakPoints;
+  final String? imageAsset;
 
   const BossConfrontation({
     required this.name,
@@ -80,6 +81,7 @@ class BossConfrontation {
     required this.quote,
     this.maxHp = 100,
     required this.weakPoints,
+    this.imageAsset,
   });
 }
 
@@ -174,5 +176,7 @@ class DetectiveCase {
     }
   }
 
-  bool get isCheckpoint => level % 5 == 0;
+  /// Checkpoint tetap: Level 3 (Klimaks Bab I Candi Sambisari) dan setiap akhir babak
+  bool get isCheckpoint => level == 3 || level % 5 == 0;
 }
+
