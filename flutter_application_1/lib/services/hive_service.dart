@@ -169,7 +169,14 @@ class HiveService {
   // Tersimpan permanen di database lokal meski user logout berkali-kali
   // ==========================================
 
-  Box get _faceBox => Hive.box(boxFaceBiometrics);
+  Box? get _faceBox {
+    try {
+      if (Hive.isBoxOpen(boxFaceBiometrics)) {
+        return Hive.box(boxFaceBiometrics);
+      }
+    } catch (_) {}
+    return null;
+  }
 
   /// Menyimpan data biometrik wajah terikat ke email akun
   Future<void> saveBiometricProfile({
@@ -179,43 +186,148 @@ class HiveService {
     required Map<String, dynamic> metrics,
     String? userId,
   }) async {
-    final cleanEmail = email.trim().toLowerCase();
-    await _faceBox.put(cleanEmail, {
-      'email': cleanEmail,
-      'name': name.trim(),
-      'password': password ?? '',
-      'metrics': metrics,
-      'userId': userId ?? '',
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
+    try {
+      final cleanEmail = email.trim().toLowerCase();
+      await _faceBox?.put(cleanEmail, {
+        'email': cleanEmail,
+        'name': name.trim(),
+        'password': password ?? '',
+        'metrics': metrics,
+        'userId': userId ?? '',
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {}
   }
 
   /// Mengambil profil biometrik berdasarkan email
   Map<String, dynamic>? getBiometricProfile(String email) {
-    final cleanEmail = email.trim().toLowerCase();
-    final raw = _faceBox.get(cleanEmail);
-    if (raw != null && raw is Map) {
-      return Map<String, dynamic>.from(raw);
-    }
+    try {
+      final cleanEmail = email.trim().toLowerCase();
+      final raw = _faceBox?.get(cleanEmail);
+      if (raw != null && raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+    } catch (_) {}
     return null;
   }
 
   /// Mengambil semua akun yang terdaftar Face ID di perangkat
   List<Map<String, dynamic>> getAllBiometricProfiles() {
     final List<Map<String, dynamic>> list = [];
-    for (var key in _faceBox.keys) {
-      final raw = _faceBox.get(key);
-      if (raw != null && raw is Map) {
-        list.add(Map<String, dynamic>.from(raw));
+    try {
+      final box = _faceBox;
+      if (box == null) return list;
+      for (var key in box.keys) {
+        final raw = box.get(key);
+        if (raw != null && raw is Map) {
+          list.add(Map<String, dynamic>.from(raw));
+        }
       }
-    }
+    } catch (_) {}
     return list;
   }
 
   /// Menghapus pendaftaran biometrik suatu akun
   Future<void> deleteBiometricProfile(String email) async {
-    final cleanEmail = email.trim().toLowerCase();
-    await _faceBox.delete(cleanEmail);
+    try {
+      final cleanEmail = email.trim().toLowerCase();
+      await _faceBox?.delete(cleanEmail);
+    } catch (_) {}
+  }
+
+  // ==========================================
+  // 4. GAME CHECKPOINT & PROGRESS PERSISTENCE
+  // ==========================================
+
+  /// Mengambil level detektif tertinggi yang terbuka (Checkpoint)
+  int getDetectiveUnlockedLevel([String? userId]) {
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return 1;
+      final box = Hive.box(boxSettings);
+      int maxLevel = 1;
+      final globalVal = box.get('foodie_game_unlocked_level');
+      if (globalVal is int && globalVal > maxLevel) {
+        maxLevel = globalVal;
+      }
+      if (userId != null && userId.isNotEmpty) {
+        final userVal = box.get('foodie_game_unlocked_level_$userId');
+        if (userVal is int && userVal > maxLevel) {
+          maxLevel = userVal;
+        }
+      }
+      // Checkpoint Bab 1 Level 3 permanen
+      final isCp3Global = box.get('foodie_game_checkpoint_lv3_unlocked') == true;
+      final isCp3User = userId != null && userId.isNotEmpty
+          ? box.get('foodie_game_checkpoint_lv3_unlocked_$userId') == true
+          : false;
+      if ((isCp3Global || isCp3User) && maxLevel < 3) {
+        maxLevel = 3;
+      }
+      return maxLevel;
+    } catch (_) {
+      return 1;
+    }
+  }
+
+  /// Menyimpan checkpoint level detektif ke database NoSQL lokal Hive
+  Future<void> saveDetectiveUnlockedLevel(int level, [String? userId]) async {
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return;
+      final box = Hive.box(boxSettings);
+      final curGlobal = (box.get('foodie_game_unlocked_level') as int?) ?? 1;
+      final newGlobal = level > curGlobal ? level : curGlobal;
+      await box.put('foodie_game_unlocked_level', newGlobal);
+
+      if (level >= 3) {
+        await box.put('foodie_game_checkpoint_lv3_unlocked', true);
+      }
+
+      if (userId != null && userId.isNotEmpty) {
+        final curUser = (box.get('foodie_game_unlocked_level_$userId') as int?) ?? 1;
+        final newUser = level > curUser ? level : curUser;
+        await box.put('foodie_game_unlocked_level_$userId', newUser);
+        if (level >= 3) {
+          await box.put('foodie_game_checkpoint_lv3_unlocked_$userId', true);
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// Mengambil perolehan bintang per level detektif
+  Map<int, int> getDetectiveStars([String? userId]) {
+    final stars = <int, int>{};
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return stars;
+      final box = Hive.box(boxSettings);
+      for (int i = 1; i <= 15; i++) {
+        final g = (box.get('foodie_game_stars_$i') as int?) ?? 0;
+        int u = 0;
+        if (userId != null && userId.isNotEmpty) {
+          u = (box.get('foodie_game_stars_${i}_$userId') as int?) ?? 0;
+        }
+        stars[i] = g > u ? g : u;
+      }
+    } catch (_) {}
+    return stars;
+  }
+
+  /// Menyimpan bintang perolehan kasus detektif
+  Future<void> saveDetectiveStars(int level, int starCount, [String? userId]) async {
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return;
+      final box = Hive.box(boxSettings);
+      final g = (box.get('foodie_game_stars_$level') as int?) ?? 0;
+      if (starCount > g) {
+        await box.put('foodie_game_stars_$level', starCount);
+      }
+      if (userId != null && userId.isNotEmpty) {
+        final u = (box.get('foodie_game_stars_${level}_$userId') as int?) ?? 0;
+        if (starCount > u) {
+          await box.put('foodie_game_stars_${level}_$userId', starCount);
+        }
+      }
+    } catch (_) {}
   }
 }
+
 

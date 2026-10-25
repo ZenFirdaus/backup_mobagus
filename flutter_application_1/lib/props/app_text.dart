@@ -18,8 +18,10 @@ class AppText {
   /// Gaya judul (font modern Gotham).
   static TextStyle display(
     double size, {
-    FontWeight weight = FontWeight.w700,
+    FontWeight? weight,
+    FontWeight? fontWeight,
     bool italic = false,
+    FontStyle? fontStyle,
     Color color = AppColors.textDark,
     double? height,
     double? letterSpacing,
@@ -27,8 +29,8 @@ class AppText {
     return TextStyle(
       fontFamily: AppFonts.display,
       fontSize: size,
-      fontWeight: weight,
-      fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+      fontWeight: fontWeight ?? weight ?? FontWeight.w700,
+      fontStyle: fontStyle ?? (italic ? FontStyle.italic : FontStyle.normal),
       color: color,
       height: height,
       letterSpacing: letterSpacing,
@@ -38,7 +40,10 @@ class AppText {
   /// Gaya teks sans-serif modern (Manrope).
   static TextStyle body(
     double size, {
-    FontWeight weight = FontWeight.w500,
+    FontWeight? weight,
+    FontWeight? fontWeight,
+    bool italic = false,
+    FontStyle? fontStyle,
     Color color = AppColors.textDark,
     double? height = 1.45,
     double? letterSpacing,
@@ -46,7 +51,8 @@ class AppText {
     return TextStyle(
       fontFamily: AppFonts.body,
       fontSize: size,
-      fontWeight: weight,
+      fontWeight: fontWeight ?? weight ?? FontWeight.w500,
+      fontStyle: fontStyle ?? (italic ? FontStyle.italic : FontStyle.normal),
       color: color,
       height: height,
       letterSpacing: letterSpacing,
@@ -56,14 +62,18 @@ class AppText {
   /// Label kecil / pill badge.
   static TextStyle caption({
     double size = 11,
-    FontWeight weight = FontWeight.w600,
+    FontWeight? weight,
+    FontWeight? fontWeight,
+    bool italic = false,
+    FontStyle? fontStyle,
     Color color = AppColors.textMuted,
     double letterSpacing = 0.2,
   }) {
     return TextStyle(
       fontFamily: AppFonts.body,
       fontSize: size,
-      fontWeight: weight,
+      fontWeight: fontWeight ?? weight ?? FontWeight.w600,
+      fontStyle: fontStyle ?? (italic ? FontStyle.italic : FontStyle.normal),
       color: color,
       letterSpacing: letterSpacing,
     );

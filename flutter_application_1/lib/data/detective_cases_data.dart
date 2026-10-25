@@ -123,6 +123,7 @@ final List<DetectiveCase> kDetectiveCases = [
               'Detektif ingusan! Gudeg kuno itu memang sudah usang dan pantas punah digantikan franchise-ku! Kamu punya bukti apa menuduhku?!',
           maxHp: 100,
           weakPoints: ['Faktur Toko Kimia', 'Boot Lumpur Identik'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -163,6 +164,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Semua itu fitnah! Aku ada di kamarku sepanjang malam tadi!',
           maxHp: 50,
           weakPoints: ['Sol Sepatu Lumpur'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -307,6 +309,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Siapa peduli turis sakit perut?! Selama angkringan terpaksa beli arang briket buatanku, aku yang menguasai malam Jogja!',
           maxHp: 100,
           weakPoints: ['Stempel Karung Belerang', 'Serbuk Pecahan Gelas'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -347,6 +350,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kalian tidak akan pernah membuktikan uang ini hasil kejahatan!',
           maxHp: 40,
           weakPoints: ['Buku Catatan Hitam'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -491,6 +495,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Mbah Katro sudah terlalu tua! Kaldu bening ini bernilai miliaran jika kujual ke pabrik bumbu instan!',
           maxHp: 100,
           weakPoints: ['Jeriken Kaldu Curian', 'Getah Jarak'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -531,6 +536,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Jangan sentuh aku! Kaldu ini milikku sekarang!',
           maxHp: 50,
           weakPoints: ['Botol Getah Jarak'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -675,6 +681,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kayu klampok ini harganya sepuluh kali lipat di restoran kota! Orang tua di Ngenep itu tak pantas memakai kayu semahal ini!',
           maxHp: 100,
           weakPoints: ['Segel Kapur Kayu Klampok', 'Serat Pinus Kimia'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -715,6 +722,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Minggir atau kutabrak kau detektif!',
           maxHp: 40,
           weakPoints: ['Kunci Kontak Truk'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -859,6 +867,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Jeruji besi tua ini mengandung nikel murni Belanda! Lebih berharga kujadikan pusaka daripada hanya menusuk daging kambing!',
           maxHp: 110,
           weakPoints: ['Catatan Pesanan Klithikan', 'Minyak Keris Cendana'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -899,6 +908,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Koleksiku tidak boleh gagal diselesaikan!',
           maxHp: 50,
           weakPoints: ['Tongkat Besi'],
+          imageAsset: 'assets/images/boss_chapter_1.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1043,6 +1053,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Lihat bapak ibu! Bakmi tradisional ini jorok dan bau busuk! Beralihlah ke mie kemasan kami yang steril dan cepat saji!',
           maxHp: 110,
           weakPoints: ['Spuit Jarum Medis', 'Cangkang Telur Amonia'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1083,6 +1094,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kalian tidak bisa menahanku! Perusahaanku punya pengacara hebat!',
           maxHp: 45,
           weakPoints: ['Kunci Motor'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1227,6 +1239,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Orang-orang bodoh itu rela antre berjam-jam demi mercon pedas! Biar lambung mereka robek dan mereka harus sujud membeli obat mujarabku!',
           maxHp: 110,
           weakPoints: ['Buku Formula Obat', 'Uji Kapsaisin 5 Juta SHU'],
+          imageAsset: 'assets/images/boss_femme_fatale.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1267,6 +1280,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kalau aku hancur, satu kampung Kauman harus ikut terbakar matanya!',
           maxHp: 50,
           weakPoints: ['Botol Semprotan'],
+          imageAsset: 'assets/images/boss_femme_fatale.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1411,6 +1425,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Resep bakmi nyemek ini akan menjadi tambang uang bagi kelompokku! Kau tidak akan pernah keluar hidup-hidup dari pabrik ini!',
           maxHp: 120,
           weakPoints: ['Akta Perampasan Palsu', 'Buku Resep Kaldu Bebek'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1451,6 +1466,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kalau aku tidak dapat resep ini, kalian juga tidak boleh memilikinya!',
           maxHp: 55,
           weakPoints: ['Pemantik Api'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1595,6 +1611,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kampus ini menolak penelitianku! Maka akan kutunjukkan pada mereka bahwa kuliner kebanggaan mereka bisa kuhancurkan dalam semalam!',
           maxHp: 120,
           weakPoints: ['Log Biakan Jamur', 'Pendaran UV Aflatoksin'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1635,6 +1652,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Jangan sentuh cawan risetku!',
           maxHp: 55,
           weakPoints: ['Labu Erlenmeyer'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1779,6 +1797,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Restoran itu menolak membeli balungan dariku! Sekarang lihat, reputasi mereka akan hancur dan mereka akan mengemis pasokan dari tanganku!',
           maxHp: 130,
           weakPoints: ['Manifes Truk Oplosan', 'Sampel Sumsum Bakteri'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1819,6 +1838,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Jangan berani halangi jalanku!',
           maxHp: 60,
           weakPoints: ['Kapak Jagal'],
+          imageAsset: 'assets/images/boss_chapter_2.jpg',
         ),
         choices: [
           SceneChoice(
@@ -1963,6 +1983,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Daun pandan dan suji itu merepotkan! Pewarna buatanku membuat cendol hijau berkilau abadi tanpa perlu memetik daun segar!',
           maxHp: 130,
           weakPoints: ['Kaleng Pewarna Tamansari', 'Zat Hijau Metanil Tekstil'],
+          imageAsset: 'assets/images/boss_femme_fatale.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2003,6 +2024,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Jangan sentuh gaun sutraku!',
           maxHp: 60,
           weakPoints: ['Kipas Berduri'],
+          imageAsset: 'assets/images/boss_femme_fatale.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2147,6 +2169,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kuali ini menyerap minyak keberuntungan selama 70 tahun! Dengan kuali ini, aku bisa membuka pesugihan warung makan terkaya di tanah Jawa!',
           maxHp: 135,
           weakPoints: ['Cap Ukir Kuali 1954', 'Palu Godam'],
+          imageAsset: 'assets/images/boss_chapter_3.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2187,6 +2210,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Semua akan hangus bersamaku!',
           maxHp: 65,
           weakPoints: ['Selang Gas Blower'],
+          imageAsset: 'assets/images/boss_chapter_3.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2331,6 +2355,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Formula 12 rempah ini bernilai triliunan rupiah di pasar global! Restoran ayam lokal murah seperti ini tidak pantas memilikinya!',
           maxHp: 140,
           weakPoints: ['Harddisk Enkripsi', 'Log Transmisi Data'],
+          imageAsset: 'assets/images/boss_chapter_3.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2371,6 +2396,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Kalau aku tidak membawanya, tidak ada yang boleh memilikinya!',
           maxHp: 65,
           weakPoints: ['Stun Gun'],
+          imageAsset: 'assets/images/boss_chapter_3.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2515,6 +2541,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Industri specialty coffee adalah ladang uang raksasa! Siapapun yang menghalangi kopi oplosanku harus mati dalam cangkir terakhir mereka!',
           maxHp: 145,
           weakPoints: ['Daftar Target Juri', 'Kertas Uji Sianida'],
+          imageAsset: 'assets/images/boss_chapter_3.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2555,6 +2582,7 @@ final List<DetectiveCase> kDetectiveCases = [
           quote: 'Semua harus mencium aroma kematian bersamaku!',
           maxHp: 70,
           weakPoints: ['Detonator'],
+          imageAsset: 'assets/images/boss_chapter_3.jpg',
         ),
         choices: [
           SceneChoice(
@@ -2669,7 +2697,7 @@ final List<DetectiveCase> kDetectiveCases = [
               description: 'Rekaman pengakuan Topeng Garam yang disaksikan seluruh pembesar istana.',
               icon: Icons.videocam_rounded,
             ),
-            nextSceneId: 'scene_boss',
+            nextSceneId: 'scene_boss_1',
           ),
           SceneChoice(
             text: 'Minta dia bernegosiasi secara empat mata tanpa saksi',
@@ -2678,85 +2706,139 @@ final List<DetectiveCase> kDetectiveCases = [
                 'Topeng Garam menembakkan gas air mata kristal garam ke matamu! Kamu terhuyung kehilangan 1 nyawa!',
             isCorrect: false,
             losesLife: true,
-            nextSceneId: 'scene_boss',
+            nextSceneId: null,
           ),
         ],
       ),
       CaseScene(
-        id: 'scene_boss',
-        title: 'BATTLE AKHIR FASE 1: Runtuhkan Keangkuhan Topeng Garam',
+        id: 'scene_boss_1',
+        title: 'KONFRONTASI TAHAP 1: Runtuhkan Doktrin & Gas Altar',
         location: 'Kubah Bawah Tanah Tamansari - Pukul 20.00 WIB',
         narrative:
-            'Topeng Garam melompat ke podium altar kristal garam sambil menghunus pedang rapier perak beracun!',
+            'Topeng Garam berdiri tegak di podium altar kristal garam sambil menyebarkan gas beracun ke seluruh ruangan, meremehkan warisan rasa Keraton.',
         speakerName: 'Topeng Garam',
-        speakerRole: 'Final Boss Kampanye',
+        speakerRole: 'Tahap 1: Penguasa Sindikat',
         speakerAvatar: '🎭',
         isBossFight: true,
         boss: BossConfrontation(
-          name: 'Topeng Garam (The Grand Mastermind)',
-          role: 'Penguasa Sindikat Kuliner Hitam',
+          name: 'Topeng Garam',
+          role: 'Tahap 1: Dalang Utama Sindikat',
           avatar: '🎭',
-          quote: 'Aku telah merusak gudeg Wijilan, mencemari kopi joss, memalsukan mangut lele, dan merampas jeruji klathak! Malam ini kuliner keraton akan tamat dan duniaku yang akan berkuasa!',
-          maxHp: 160,
+          quote:
+              'Aku telah merusak gudeg Wijilan, mencemari kopi joss, memalsukan mangut lele, dan merampas jeruji klathak! Malam ini kuliner keraton akan tamat dan duniaku yang akan berkuasa!',
+          maxHp: 100,
           weakPoints: ['Residu Kristal Sindikat', 'Bukti Siaran Langsung'],
+          imageAsset: 'assets/images/boss_final_tamansari.jpg',
         ),
         choices: [
           SceneChoice(
-            text: 'Hantamkan Lencana Master Detektif dan sebarkan bubuk penawar resep murni ke udara altar!',
-            actionDetail: 'Menetralisir gas beracun dan meremukkan pertahanan mental sang dalang',
+            text:
+                'Hantamkan Lencana Master Detektif dan sebarkan bubuk penawar resep murni ke udara altar!',
+            actionDetail:
+                'Menetralisir gas beracun menggunakan reagen kristal gabungan 14 kasus',
             feedback:
-                'CRITICAL GODLIKE HIT! Kristal garam beracun di altar hancur berkeping-keping dan pedang rapiernya patah terbelah dua!',
+                'Deduksi tepat! Reagen murni menetralisir kabut racun seketika! Topeng Garam terbatuk kaget dan keangkuhan pertamanya runtuh!',
             isCorrect: true,
-            bossDamage: 85,
+            bossDamage: 35,
             nextSceneId: 'scene_boss_2',
           ),
           SceneChoice(
-            text: 'Tantang adu pedang dengan tangan kosong tanpa senjata',
-            actionDetail: 'Melawan pedang perak dengan tangan terbuka',
+            text: 'Tantang adu pedang dengan tangan kosong tanpa menetralisir kabut gas',
+            actionDetail: 'Maju menyerang secara fisik tanpa strategi deduksi',
             feedback:
-                'Sabetan pedang merobek lengan jas detektifmu! Darah menetes dan kamu kehilangan 1 nyawa!',
+                'Kabut racun membuat matamu perih dan sabetan pedang rapier dalang melukaimu! Kamu kehilangan 1 hati!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
-            nextSceneId: 'scene_boss_2',
+            nextSceneId: null,
           ),
         ],
       ),
       CaseScene(
         id: 'scene_boss_2',
-        title: 'BATTLE AKHIR FASE 2: Hancurkan Topeng Porselen Kepalsuan!',
-        location: 'Altar Bawah Tanah Tamansari - Pukul 20.20 WIB',
+        title: 'KONFRONTASI TAHAP 2: Lucuti Pedang Perak & Patahkan Serangan',
+        location: 'Altar Bawah Tanah Tamansari - Pukul 20.15 WIB',
         narrative:
-            'Topeng Garam terhuyung berdarah di atas lututnya, namun tangannya masih berusaha meraih saklar peledak terakhir!',
+            'Melihat kabut racunnya gagal, Topeng Garam menggeram murka. Ia melompat dari altar dan menghunus pedang rapier perak beracun langsung ke arahmu!',
         speakerName: 'Topeng Garam',
-        speakerRole: 'Dalang Terpojok',
+        speakerRole: 'Tahap 2: Dalang Terdesak',
         speakerAvatar: '🎭',
         isBossFight: true,
         boss: BossConfrontation(
           name: 'Topeng Garam',
-          role: 'Dalang Terakhir',
+          role: 'Tahap 2: Dalang Terdesak',
           avatar: '🎭',
-          quote: 'Tidak! Rencanaku selama dua puluh tahun tidak boleh berakhir di tangan seorang detektif!',
-          maxHp: 75,
-          weakPoints: ['Topeng Porselen'],
+          quote:
+              'Lancang sekali! Jangan kira kamu menang hanya karena kabut racunku netral! Pedang perak ini yang akan menguburmu di Tamansari!',
+          maxHp: 100,
+          weakPoints: ['Jeruji Klathak', 'Siaran Langsung'],
+          imageAsset: 'assets/images/boss_final_tamansari.jpg',
         ),
         choices: [
           SceneChoice(
-            text: 'Lepaskan tendangan sapuan pamungkas, hancurkan topeng porselennya berkeping-keping, dan amankan detonator!',
-            actionDetail: 'Membuka identitas aslinya di hadapan dunia dan melucuti senjata peledak',
+            text:
+                'Tangkis ayunan pedang dengan jeruji sate klathak pusaka dan putar bukti siaran langsung ke hadapan pengawalnya!',
+            actionDetail:
+                'Mematahkan senjata fisik sekaligus meruntuhkan loyalitas para pengawal sindikat',
             feedback:
-                'LEGENDARY FINISH! Topeng keramik hancur berkeping-keping! Wajah aslinya terungkap, detonator tersita, dan pasukan pengawal Kraton menyergapnya!',
+                'Dentang keras bergema! Pedang rapier perak patah terbelah dua dan para pengawal sindikat lari kocar-kacir melihat siaran langsung!',
             isCorrect: true,
-            bossDamage: 90,
+            bossDamage: 35,
+            nextSceneId: 'scene_boss_3',
           ),
           SceneChoice(
-            text: 'Tutup mata dan berdoa tanpa merebut saklar peledak',
-            actionDetail: 'Pasrah di saat-saat paling krusial',
+            text: 'Coba bujuk dia menyerahkan diri dengan tawaran negosiasi damai',
+            actionDetail: 'Mencoba bernegosiasi dengan dalang yang sedang kalap',
             feedback:
-                'Percikan api saklar membakar sekitarmu dan kamu terpental ke dinding!',
+                'Topeng Garam menepis ajakanmu dengan tendangan keras yang membenturkanmu ke pilar! Kamu kehilangan 1 hati!',
             isCorrect: false,
             losesLife: true,
             bossDamage: 0,
+            nextSceneId: null,
+          ),
+        ],
+      ),
+      CaseScene(
+        id: 'scene_boss_3',
+        title: 'KONFRONTASI TAHAP 3: Skakmat Pamungkas & Buka Topeng Kepalsuan',
+        location: 'Altar Bawah Tanah Tamansari - Pukul 20.30 WIB',
+        narrative:
+            'Pedang patah dan pengawal kabur, Topeng Garam tersungkur di lantai altar. Dengan tangan gemetar penuh keputusasaan, ia meraih saklar detonator peledak untuk memusnahkan seluruh resep keraton!',
+        speakerName: 'Topeng Garam',
+        speakerRole: 'Tahap 3: Skakmat Terakhir',
+        speakerAvatar: '🎭',
+        isBossFight: true,
+        boss: BossConfrontation(
+          name: 'Topeng Garam',
+          role: 'Tahap 3: Skakmat Terakhir',
+          avatar: '🎭',
+          quote:
+              'Tidak... Rencanaku selama dua puluh tahun tidak boleh hancur di tanganmu! Jika aku binasa, seluruh warisan resep keraton ini harus musnah bersamaku!',
+          maxHp: 100,
+          weakPoints: ['Topeng Porselen', 'Detonator'],
+          imageAsset: 'assets/images/boss_final_tamansari.jpg',
+        ),
+        choices: [
+          SceneChoice(
+            text:
+                'Lepaskan tendangan sapuan presisi untuk merebut detonator dan remukkan topeng porselennya berkeping-keping!',
+            actionDetail:
+                'Melucuti ancaman peledak terakhir dan membuka identitas asli sang dalang di hadapan hukum',
+            feedback:
+                'SKAKMAT MUTLAK! Detonator berhasil diamankan! Topeng porselen hancur berkeping-keping, menyingkap wajah aslinya saat pasukan pengawal Keraton menyergapnya!',
+            isCorrect: true,
+            bossDamage: 60,
+            nextSceneId: null,
+          ),
+          SceneChoice(
+            text: 'Terpaku ragu mendengarkan ancaman gertakan terakhirnya',
+            actionDetail: 'Ragu melangkah di detik-detik penentuan',
+            feedback:
+                'Percikan api pemicu sempat menyambar jasmu sebelum kamu sempat mundur! Kamu kehilangan 1 hati!',
+            isCorrect: false,
+            losesLife: true,
+            bossDamage: 0,
+            nextSceneId: null,
           ),
         ],
       ),
