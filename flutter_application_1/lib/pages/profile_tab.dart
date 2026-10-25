@@ -570,31 +570,31 @@ class _ProfileTabState extends State<ProfileTab>
       {
         'lv': 1,
         'title': 'Pemula Rasa',
-        'range': '0 - 299 Poin',
+        'range': '0 - 299 Poin Rasa',
         'desc': 'Baru memulai petualangan kuliner di Jogja & Jateng.',
       },
       {
         'lv': 2,
         'title': 'Penjelajah Kuliner',
-        'range': '300 - 799 Poin',
+        'range': '300 - 799 Poin Rasa',
         'desc': 'Mulai rajin menjelajahi warung & kuliner legendaris.',
       },
       {
         'lv': 3,
         'title': 'Kurator Kuliner',
-        'range': '800 - 1499 Poin',
+        'range': '800 - 1499 Poin Rasa',
         'desc': 'Rasa dan ulasan Anda menjadi rujukan sesama pencinta rasa.',
       },
       {
         'lv': 4,
         'title': 'Penjelajah Kuliner Sejati',
-        'range': '1500 - 2499 Poin',
+        'range': '1500 - 2499 Poin Rasa',
         'desc': 'Koleksi pengalaman rasa yang luas dan berwawasan tinggi.',
       },
       {
         'lv': 5,
         'title': 'Kurator Utama',
-        'range': '≥ 2500 Poin',
+        'range': '≥ 2500 Poin Rasa',
         'desc': 'Gelar tertinggi kurator kuliner kehormatan FOODIE.',
       },
     ];
@@ -649,7 +649,7 @@ class _ProfileTabState extends State<ProfileTab>
                           style: AppText.display(17),
                         ),
                         const Text(
-                          'Sistem reputasi dan akumulasi poin kurator FOODIE',
+                          'Sistem reputasi dan akumulasi Poin Rasa kurator FOODIE',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: AppColors.textMuted,
@@ -707,7 +707,7 @@ class _ProfileTabState extends State<ProfileTab>
                         ),
                         const Spacer(),
                         Text(
-                          '$currentPts Poin',
+                          '$currentPts Poin Rasa',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
@@ -732,7 +732,7 @@ class _ProfileTabState extends State<ProfileTab>
                     Text(
                       currentLv >= 5
                           ? 'Selamat! Anda telah mencapai tingkatan kurator tertinggi.'
-                          : 'Butuh $neededPts poin lagi untuk naik ke Level ${currentLv + 1} (${levels[currentLv]['title']}).',
+                          : 'Butuh $neededPts Poin Rasa lagi untuk naik ke Level ${currentLv + 1} (${levels[currentLv]['title']}).',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: Colors.white.withValues(alpha: 0.85),
@@ -744,7 +744,7 @@ class _ProfileTabState extends State<ProfileTab>
 
               const SizedBox(height: 18),
               const Text(
-                'Cara Mendapatkan Poin',
+                'Cara Mendapatkan Poin Rasa',
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
@@ -756,7 +756,7 @@ class _ProfileTabState extends State<ProfileTab>
                 icon: Icons.rate_review_rounded,
                 color: AppColors.orange,
                 title: 'Tulis Ulasan & Rating',
-                reward: '+20 Poin',
+                reward: '+20 Poin Rasa',
                 desc: 'Bagikan ulasan jujur kuliner yang Anda nikmati.',
               ),
               const SizedBox(height: 6),
@@ -764,7 +764,7 @@ class _ProfileTabState extends State<ProfileTab>
                 icon: Icons.sports_esports_rounded,
                 color: const Color(0xFF6C5CE7),
                 title: 'Mainkan Mini-Game',
-                reward: 's/d +350 Poin',
+                reward: 's/d +350 Poin Rasa',
                 desc: 'Selesaikan tebak rasa Kulinerdle dan Kasus Detektif.',
               ),
 
@@ -902,7 +902,7 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                   icon: const Icon(Icons.shopping_bag_rounded, size: 18),
                   label: const Text(
-                    'Tukar Poin di Toko Border Hadiah',
+                    'Tukar Poin Rasa di Toko Border Hadiah',
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
@@ -2771,7 +2771,7 @@ class _ProfileTabState extends State<ProfileTab>
                         Row(
                           children: [
                             Text(
-                              '${_profile!.points} Poin',
+                              '${_profile!.points} Poin Rasa',
                               style: const TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
@@ -2782,7 +2782,7 @@ class _ProfileTabState extends State<ProfileTab>
                             Text(
                               _profile!.curatorLevel >= 5
                                   ? 'Level Maksimal'
-                                  : 'Target Lv ${_profile!.curatorLevel + 1}: ${_profile!.nextLevelPoints} Poin',
+                                  : 'Target Lv ${_profile!.curatorLevel + 1}: ${_profile!.nextLevelPoints} Poin Rasa',
                               style: TextStyle(
                                 fontSize: 9.5,
                                 color: Colors.white.withValues(alpha: 0.8),
@@ -2963,7 +2963,7 @@ class _ProfileTabState extends State<ProfileTab>
                     ),
                     const SizedBox(height: 2),
                     const Text(
-                      'Main & raih poin',
+                      'Main & raih Poin Rasa',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textMuted,
@@ -3035,7 +3035,7 @@ class _ProfileTabState extends State<ProfileTab>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '$pts Poin',
+                            '$pts Poin Rasa',
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,

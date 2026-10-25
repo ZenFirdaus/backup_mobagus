@@ -57,9 +57,9 @@ class PointTransaction {
       case 'checkin':
         return 'Bonus Check-in Kuliner';
       case 'refund':
-        return 'Pengembalian Poin';
+        return 'Pengembalian Poin Rasa';
       default:
-        return 'Aktivitas Poin';
+        return 'Aktivitas Poin Rasa';
     }
   }
 

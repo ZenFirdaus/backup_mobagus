@@ -328,6 +328,88 @@ class HiveService {
       }
     } catch (_) {}
   }
+
+  // ==========================================
+  // 5. BORDER REWARDS & INVENTORY PERSISTENCE
+  // ==========================================
+
+  /// Mengambil daftar ID border yang dimiliki pengguna dari database NoSQL Hive
+  Set<String> getOwnedBorderIds([String? userId]) {
+    final result = <String>{};
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return result;
+      final box = Hive.box(boxSettings);
+      final globalList = box.get('foodie_owned_borders_global');
+      if (globalList is List) {
+        result.addAll(globalList.map((e) => e.toString()));
+      }
+      if (userId != null && userId.isNotEmpty) {
+        final userList = box.get('foodie_owned_borders_$userId');
+        if (userList is List) {
+          result.addAll(userList.map((e) => e.toString()));
+        }
+      }
+    } catch (_) {}
+    return result;
+  }
+
+  /// Menyimpan seluruh ID border yang dimiliki pengguna ke database NoSQL Hive
+  Future<void> saveOwnedBorderIds(Set<String> borderIds, [String? userId]) async {
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return;
+      final box = Hive.box(boxSettings);
+      final list = borderIds.toList();
+      await box.put('foodie_owned_borders_global', list);
+      if (userId != null && userId.isNotEmpty) {
+        await box.put('foodie_owned_borders_$userId', list);
+      }
+    } catch (_) {}
+  }
+
+  /// Menambahkan satu ID border baru ke koleksi pengguna
+  Future<void> addOwnedBorderId(String borderId, [String? userId]) async {
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return;
+      final current = getOwnedBorderIds(userId);
+      current.add(borderId);
+      await saveOwnedBorderIds(current, userId);
+    } catch (_) {}
+  }
+
+  /// Mengambil ID border aktif yang dipasang pengguna
+  String? getActiveBorderId([String? userId]) {
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return null;
+      final box = Hive.box(boxSettings);
+      if (userId != null && userId.isNotEmpty) {
+        final uBorder = box.get('foodie_active_border_$userId')?.toString();
+        if (uBorder != null && uBorder.isNotEmpty) return uBorder;
+      }
+      return box.get('foodie_active_border_global')?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Menyimpan ID border aktif ke database NoSQL Hive
+  Future<void> saveActiveBorderId(String? borderId, [String? userId]) async {
+    try {
+      if (!Hive.isBoxOpen(boxSettings)) return;
+      final box = Hive.box(boxSettings);
+      if (borderId == null || borderId.isEmpty) {
+        await box.delete('foodie_active_border_global');
+        if (userId != null && userId.isNotEmpty) {
+          await box.delete('foodie_active_border_$userId');
+        }
+      } else {
+        await box.put('foodie_active_border_global', borderId);
+        if (userId != null && userId.isNotEmpty) {
+          await box.put('foodie_active_border_$userId', borderId);
+        }
+      }
+    } catch (_) {}
+  }
 }
+
 
 

@@ -90,6 +90,14 @@ class BlockchainService {
     }
   }
 
+  SupabaseClient? get _safeClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Membuat bukti transaksi blockchain Sepolia untuk pembelian border
   /// Idempoten, aman, dan tercatat permanen baik di lokal maupun Supabase.
   Future<BlockchainTransaction> recordBorderMintProof({
@@ -98,8 +106,8 @@ class BlockchainService {
     required String idempotencyKey,
     String? redemptionId,
   }) async {
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser?.id ?? 'local_user';
+    final client = _safeClient;
+    final userId = client?.auth.currentUser?.id ?? 'local_user';
 
     // 1. Cek apakah transaksi sudah ada di penyimpanan lokal
     final localList = await _getLocalTxs(userId);
@@ -109,7 +117,7 @@ class BlockchainService {
     }
 
     // 2. Cek apakah transaksi sudah ada di Supabase
-    if (client.auth.currentUser != null) {
+    if (client != null && client.auth.currentUser != null) {
       try {
         final existing = await client
             .from('blockchain_transactions')
@@ -168,7 +176,7 @@ class BlockchainService {
     await _saveLocalTx(userId, createdTx);
 
     // 5. Coba simpan ke Supabase jika terhubung
-    if (client.auth.currentUser != null) {
+    if (client != null && client.auth.currentUser != null) {
       try {
         final supabasePayload = Map<String, dynamic>.from(txData);
         supabasePayload.remove('id'); // Biarkan Supabase meng-generate UUID
@@ -190,8 +198,8 @@ class BlockchainService {
 
   /// Mengambil daftar transaksi blockchain milik pengguna
   Future<List<BlockchainTransaction>> getUserBlockchainTransactions() async {
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser?.id ?? 'local_user';
+    final client = _safeClient;
+    final userId = client?.auth.currentUser?.id ?? 'local_user';
     final Map<String, BlockchainTransaction> mergedMap = {};
 
     // 1. Baca transaksi dari SharedPreferences lokal
@@ -201,7 +209,7 @@ class BlockchainService {
     }
 
     // 2. Baca dari Supabase jika user terautentikasi
-    if (client.auth.currentUser != null) {
+    if (client != null && client.auth.currentUser != null) {
       try {
         final res = await client
             .from('blockchain_transactions')

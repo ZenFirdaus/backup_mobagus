@@ -97,32 +97,6 @@ class _RewardsShopPageState extends State<RewardsShopPage>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('FOODIE Rewards & Border'),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.stars_rounded, color: AppColors.orange, size: 16),
-                const SizedBox(width: 5),
-                Text(
-                  '$_userPoints Poin',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.orange))
@@ -209,34 +183,20 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Saldo Poin Kurator',
+                  'Saldo Poin Rasa',
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFFD4E0D9),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      '$_userPoints',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'FOODIE Poin',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.orange,
-                      ),
-                    ),
-                  ],
+                Text(
+                  '$_userPoints',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -247,9 +207,38 @@ class _RewardsShopPageState extends State<RewardsShopPage>
   }
 
   /// Tab 1: Katalog Toko Border (20 Item)
+  /// Tab 1: Katalog Toko Border (20 Item)
   Widget _buildShopCatalogTab() {
     return Column(
       children: [
+        // Banner Petunjuk Koleksi & Penukaran
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF9E6),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFFFE082)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: AppColors.orange, size: 16),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Tukarkan Poin Rasa untuk mengoleksi lebih dari 1 border. Setiap border yang dibuka otomatis tersimpan di Koleksi dan gratis digunakan kapan saja!',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF5D4037),
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Filter Rarity Bar
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -280,7 +269,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 0.72,
+              childAspectRatio: 0.70,
             ),
             itemCount: _filteredBorders.length,
             itemBuilder: (context, index) {
@@ -332,14 +321,18 @@ class _RewardsShopPageState extends State<RewardsShopPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isActive ? AppColors.green : AppColors.line,
-          width: isActive ? 2.0 : 1.0,
+          color: isActive
+              ? AppColors.greenDark
+              : (isOwned ? const Color(0xFFA5D6A7) : AppColors.line),
+          width: isActive ? 2.2 : (isOwned ? 1.4 : 1.0),
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x06000000),
+            color: isActive
+                ? AppColors.greenDark.withValues(alpha: 0.12)
+                : const Color(0x06000000),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -351,22 +344,24 @@ class _RewardsShopPageState extends State<RewardsShopPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Badge Rarity & Animasi
+              // Badge Rarity / Koleksi & Animasi
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: border.rarity.color.withValues(alpha: 0.12),
+                      color: isOwned
+                          ? const Color(0xFFE8F5E9)
+                          : border.rarity.color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      border.rarity.label.toUpperCase(),
+                      isOwned ? '✓ KOLEKSI' : border.rarity.label.toUpperCase(),
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
-                        color: border.rarity.color,
+                        color: isOwned ? AppColors.greenDark : border.rarity.color,
                         letterSpacing: 0.4,
                       ),
                     ),
@@ -411,18 +406,18 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               ),
               const SizedBox(height: 2),
 
-              // Kategori
+              // Kategori / Info Gratis
               Text(
-                border.category,
-                style: const TextStyle(
+                isOwned ? 'Milik Anda (Gratis)' : border.category,
+                style: TextStyle(
                   fontSize: 10.5,
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w500,
+                  color: isOwned ? AppColors.greenDark : AppColors.textMuted,
+                  fontWeight: isOwned ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-              // Action Button (Beli / Pasang / Dipasang)
+              // Action Button (Pakai Gratis / Dipasang / Tukar Poin)
               SizedBox(
                 width: double.infinity,
                 height: 32,
@@ -450,19 +445,27 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                               ],
                             ),
                           )
-                        : OutlinedButton(
+                        : ElevatedButton(
                             onPressed: () => _equipBorder(border.id),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.charcoal,
-                              side: const BorderSide(color: AppColors.charcoal, width: 1.2),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
                               padding: EdgeInsets.zero,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: const Text(
-                              'Gunakan',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle_outline_rounded, size: 12, color: Colors.white),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Pakai (Gratis)',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                                ),
+                              ],
                             ),
                           ))
                     : ElevatedButton(
@@ -484,9 +487,9 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                             const Icon(Icons.stars_rounded, size: 12, color: Colors.white),
                             const SizedBox(width: 3),
                             Text(
-                              '${border.pricePoints}',
+                              '${border.pricePoints} Poin Rasa',
                               style: const TextStyle(
-                                fontSize: 11.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -501,56 +504,144 @@ class _RewardsShopPageState extends State<RewardsShopPage>
     );
   }
 
-  /// Tab 2: Koleksi Saya
+  /// Tab 2: Koleksi Saya (Semua Border yang Sudah Ditukar & Bebas Dipakai Gratis)
   Widget _buildMyInventoryTab() {
     if (_ownedBorders.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.palette_outlined, size: 48, color: AppColors.textMuted),
-            const SizedBox(height: 12),
-            const Text(
-              'Belum Ada Border Dimiliki',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.palette_outlined, size: 48, color: AppColors.orange),
               ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Mainkan mini games kuliner untuk peroleh poin dan tukarkan border.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _tabController.animateTo(0),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.orange,
-                foregroundColor: Colors.white,
+              const SizedBox(height: 14),
+              const Text(
+                'Belum Ada Border di Koleksi',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
               ),
-              child: const Text('Buka Toko Border'),
-            ),
-          ],
+              const SizedBox(height: 6),
+              const Text(
+                'Tukarkan Poin Rasa dari mini games untuk membuka koleksi border profil.\nSetiap border yang sudah ditukar akan tersimpan di sini dan bebas dipakai kapan saja secara gratis!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.4),
+              ),
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: () => _tabController.animateTo(0),
+                icon: const Icon(Icons.storefront_rounded, size: 16),
+                label: const Text('Buka Toko Border'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
-      ),
-      itemCount: _ownedBorders.length,
-      itemBuilder: (context, index) {
-        final border = _ownedBorders[index];
-        return _buildBorderCard(border);
-      },
+    final activeBorderObj = _allBorders.where((b) => b.id == _activeBorderId).firstOrNull;
+
+    return Column(
+      children: [
+        // Header Status Border Aktif & Koleksi
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.line),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              ProfileBorderAvatar(
+                avatarUrl: Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'],
+                border: activeBorderObj,
+                size: 40,
+                fallbackText: SupabaseService.instance.guestName,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeBorderObj != null
+                          ? 'Aktif: ${activeBorderObj.name}'
+                          : 'Belum Ada Border Aktif',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_ownedBorders.length} border di koleksi • Gratis ganti kapan saja',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.greenDark,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (activeBorderObj != null)
+                TextButton(
+                  onPressed: _unequipBorder,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  ),
+                  child: const Text('Lepas', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                ),
+            ],
+          ),
+        ),
+
+        // Grid Koleksi Border
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.70,
+            ),
+            itemCount: _ownedBorders.length,
+            itemBuilder: (context, index) {
+              final border = _ownedBorders[index];
+              return _buildBorderCard(border);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -591,7 +682,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
         // Seksi Riwayat Poin
         const Text(
-          'RIWAYAT POIN FOODIE',
+          'RIWAYAT POIN RASA',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -610,7 +701,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               border: Border.all(color: AppColors.line),
             ),
             child: const Text(
-              'Belum ada riwayat transaksi poin.',
+              'Belum ada riwayat transaksi Poin Rasa.',
               style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           )
@@ -937,7 +1028,7 @@ class _RewardsShopPageState extends State<RewardsShopPage>
             ),
           ),
           Text(
-            '${tx.isCredit ? '+' : ''}${tx.amount} Poin',
+            '${tx.isCredit ? '+' : ''}${tx.amount} Poin Rasa',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -1028,6 +1119,42 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               ),
               const SizedBox(height: 20),
 
+              // Info Status Kepemilikan & Koleksi Gratis
+              if (isOwned) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.greenDark.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.greenDark.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: AppColors.greenDark, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Sudah Ada di Koleksi Anda',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.greenDark),
+                            ),
+                            Text(
+                              isActive
+                                  ? 'Sedang terpasang sebagai border profil Anda.'
+                                  : 'Tersimpan permanen. Anda dapat menggunakan border ini kapan saja secara GRATIS!',
+                              style: const TextStyle(fontSize: 11, color: AppColors.charcoal),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               // Info Blockchain Verification
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1063,14 +1190,16 @@ class _RewardsShopPageState extends State<RewardsShopPage>
               // Action Button
               SizedBox(
                 width: double.infinity,
-                height: 46,
+                height: 48,
                 child: isOwned
                     ? (isActive
-                        ? OutlinedButton(
+                        ? OutlinedButton.icon(
                             onPressed: () {
                               Navigator.pop(ctx);
                               _unequipBorder();
                             },
+                            icon: const Icon(Icons.remove_circle_outline, size: 18),
+                            label: const Text('Lepas Border Aktif'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.red,
                               side: const BorderSide(color: AppColors.red),
@@ -1078,13 +1207,17 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text('Lepas Border Aktif'),
                           )
-                        : ElevatedButton(
+                        : ElevatedButton.icon(
                             onPressed: () {
                               Navigator.pop(ctx);
                               _equipBorder(border.id);
                             },
+                            icon: const Icon(Icons.check_circle_rounded, size: 18),
+                            label: const Text(
+                              'Gunakan Border Ini (Gratis)',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.greenDark,
                               foregroundColor: Colors.white,
@@ -1092,15 +1225,21 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text('Gunakan Border Ini'),
                           ))
-                    : ElevatedButton(
+                    : ElevatedButton.icon(
                         onPressed: canAfford
                             ? () {
                                 Navigator.pop(ctx);
                                 _confirmPurchase(border);
                               }
                             : null,
+                        icon: const Icon(Icons.stars_rounded, size: 18),
+                        label: Text(
+                          canAfford
+                              ? 'Tukar ${border.pricePoints} Poin Rasa (Simpan ke Koleksi)'
+                              : 'Poin Rasa Tidak Cukup (${border.pricePoints} Butuh)',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.orange,
                           foregroundColor: Colors.white,
@@ -1108,12 +1247,6 @@ class _RewardsShopPageState extends State<RewardsShopPage>
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                        child: Text(
-                          canAfford
-                              ? 'Beli Seharga ${border.pricePoints} Poin'
-                              : 'Poin Tidak Cukup (${border.pricePoints} Butuh)',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),
               ),
@@ -1129,22 +1262,71 @@ class _RewardsShopPageState extends State<RewardsShopPage>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Konfirmasi Pembelian'),
-        content: Text(
-          'Tukarkan ${border.pricePoints} poin untuk membuka "${border.name}"?',
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.orange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.stars_rounded, color: AppColors.orange, size: 24),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Tukar Poin Rasa Border',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tukarkan ${border.pricePoints} Poin Rasa untuk membuka "${border.name}"?',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.charcoal),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.inventory_2_outlined, color: AppColors.greenDark, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Border akan tersimpan permanen di tab Koleksi. Anda dapat menukar lebih dari satu border dan menggunakannya kapan saja secara gratis.',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
+            child: const Text('Batal', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.orange,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Beli'),
+            child: Text('Tukar (${border.pricePoints} Poin Rasa)'),
           ),
         ],
       ),

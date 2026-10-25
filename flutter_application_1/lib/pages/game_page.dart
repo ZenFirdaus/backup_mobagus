@@ -937,7 +937,7 @@ class _GamePageState extends State<GamePage> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '+$points Poin',
+                            '+$points Poin Rasa',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -1131,7 +1131,7 @@ class _GamePageState extends State<GamePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Poin detektif tidak cukup untuk pemulihan cepat (butuh 50 poin).',
+            'Poin Rasa tidak cukup untuk pemulihan cepat (butuh 50 Poin Rasa).',
           ),
           backgroundColor: AppColors.tomato,
         ),
@@ -1881,7 +1881,7 @@ class _GamePageState extends State<GamePage> {
                 Navigator.of(ctx).pop();
                 _instantRestoreDetectiveLives();
               },
-              child: const Text('Pulihkan (50 Poin)'),
+              child: const Text('Pulihkan (50 Poin Rasa)'),
             ),
           ],
         );
@@ -2773,7 +2773,7 @@ class _GamePageState extends State<GamePage> {
           child: Column(
             children: [
               Text(
-                'Skor Didapat: +$_quizScoreInLevel Poin',
+                'Skor Didapat: +$_quizScoreInLevel Poin Rasa',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -5038,7 +5038,7 @@ class _GamePageState extends State<GamePage> {
               Column(
                 children: [
                   Text(
-                    'POIN KULINER',
+                    'POIN RASA',
                     style: AppText.display(8.5, color: AppColors.slateBlue),
                   ),
                   const SizedBox(height: 4),

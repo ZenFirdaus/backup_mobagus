@@ -725,7 +725,7 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
           ),
           // Total Score
           Text(
-            '$_totalScore Poin',
+            '$_totalScore Poin Rasa',
             style: const TextStyle(color: AppColors.charcoal, fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
@@ -931,7 +931,7 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
                       ),
                       const Spacer(),
                       Text(
-                        '+${c.baseReward} Poin',
+                        '+${c.baseReward} Poin Rasa',
                         style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.green),
                       ),
                     ],
@@ -1412,7 +1412,7 @@ class _DetectiveGameViewState extends State<DetectiveGameView> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Lencana: ${ending.badgeName}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.orange)),
-                            Text('+${ending.rewardPoints} Poin', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.green)),
+                            Text('+${ending.rewardPoints} Poin Rasa', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.green)),
                           ],
                         ),
                       ],
