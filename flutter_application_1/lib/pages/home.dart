@@ -149,6 +149,7 @@ class _HomePageState extends State<HomePage> {
                       id: _profile!.id,
                       displayName: newName,
                       avatarUrl: _profile!.avatarUrl,
+                      activeBorderId: _profile!.activeBorderId,
                       points: _profile!.points,
                       createdAt: _profile!.createdAt,
                     );
@@ -166,6 +167,7 @@ class _HomePageState extends State<HomePage> {
                       id: _profile!.id,
                       displayName: _profile!.displayName,
                       avatarUrl: clean,
+                      activeBorderId: _profile!.activeBorderId,
                       points: _profile!.points,
                       createdAt: _profile!.createdAt,
                     );

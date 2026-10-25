@@ -429,17 +429,50 @@ class SupabaseService {
           final p = Profile.fromJson(res);
           final effectiveAvatar = isAvatarDeleted
               ? null
-              : (localAvatar != null && localAvatar.isNotEmpty)
-                  ? localAvatar
-                  : (p.avatarUrl != null && p.avatarUrl!.isNotEmpty)
-                      ? p.avatarUrl
+              : (p.avatarUrl != null && p.avatarUrl!.isNotEmpty)
+                  ? p.avatarUrl
+                  : (localAvatar != null && localAvatar.isNotEmpty)
+                      ? localAvatar
                       : metaAvatar;
 
-          final effectiveName = (localName != null && localName.trim().isNotEmpty)
-              ? localName.trim()
-              : p.displayName.trim().isNotEmpty
-                  ? p.displayName.trim()
-                  : defaultFallbackName;
+          // PRIORITAS NAMA:
+          // 1. Jika pengguna telah menyimpan nama lokal (hasil edit profil oleh user):
+          //    Nama lokal adalah pilihan eksplisit user dan HARUS dipertahankan, jangan tertimpa nama lama Supabase.
+          // 2. Jika nama di database Supabase berbeda dan valid (bukan prefix email jika ada nama di userMetadata),
+          //    atau lokal belum pernah diatur (misal login baru di perangkat ini), gunakan dari database / metadata.
+          String effectiveName;
+          if (localName != null && localName.trim().isNotEmpty) {
+            effectiveName = localName.trim();
+            // Jika database di Supabase masih memiliki nama lama, sinkronkan nama baru ke Supabase di background
+            if (p.displayName.trim() != effectiveName) {
+              _safeClient!
+                  .from('profiles')
+                  .update({'display_name': effectiveName})
+                  .eq('id', uid)
+                  .catchError((_) {});
+              () async {
+                try {
+                  await _client.auth.updateUser(UserAttributes(data: {'name': effectiveName, 'display_name': effectiveName}));
+                } catch (_) {}
+              }();
+            }
+          } else if (p.displayName.trim().isNotEmpty && p.displayName.trim() != defaultFallbackName) {
+            effectiveName = p.displayName.trim();
+          } else if ((currentUser?.userMetadata?['name'] as String?)?.trim().isNotEmpty == true) {
+            effectiveName = (currentUser!.userMetadata!['name'] as String).trim();
+          } else if (p.displayName.trim().isNotEmpty) {
+            effectiveName = p.displayName.trim();
+          } else {
+            effectiveName = defaultFallbackName;
+          }
+
+          curatorName = effectiveName;
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('foodie_name_$keyUid', effectiveName);
+            await prefs.setString('foodie_current_display_name', effectiveName);
+            await prefs.setString('foodie_last_user_name', effectiveName);
+          } catch (_) {}
 
           final effectiveActiveBorder = (p.activeBorderId != null && p.activeBorderId!.isNotEmpty)
               ? p.activeBorderId
@@ -455,6 +488,18 @@ class SupabaseService {
             points: effectivePoints,
             createdAt: p.createdAt,
           );
+        } else {
+          // Baris profil belum ada di database, buat otomatis
+          final initialName = (localName != null && localName.trim().isNotEmpty)
+              ? localName.trim()
+              : defaultFallbackName;
+          try {
+            await _safeClient!.from('profiles').insert({
+              'id': uid,
+              'display_name': initialName,
+              'avatar_url': metaAvatar,
+            });
+          } catch (_) {}
         }
       } catch (e) {
         debugPrint('Supabase getProfile error: $e');
@@ -488,14 +533,15 @@ class SupabaseService {
   }) async {
     final uid = userId;
     final keyUid = uid ?? 'guest';
-    curatorName = displayName;
+    final cleanName = displayName.trim();
+    curatorName = cleanName;
 
     // 1. Simpan di SharedPreferences lokal secara persisten di berbagai key
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('foodie_name_$keyUid', displayName);
-      await prefs.setString('foodie_current_display_name', displayName);
-      await prefs.setString('foodie_last_user_name', displayName);
+      await prefs.setString('foodie_name_$keyUid', cleanName);
+      await prefs.setString('foodie_current_display_name', cleanName);
+      await prefs.setString('foodie_last_user_name', cleanName);
 
       if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
         await prefs.setString('foodie_avatar_$keyUid', avatarUrl.trim());
@@ -514,6 +560,19 @@ class SupabaseService {
       }
     } catch (_) {}
 
+    // Perbarui juga data di cache ulasan lokal agar langsung sinkron di UI ulasan
+    for (int i = 0; i < _localReviews.length; i++) {
+      final r = _localReviews[i];
+      if (uid == null || uid == 'guest' || r.userId == uid || r.userId == 'guest' || r.userId.isEmpty) {
+        _localReviews[i] = r.copyWith(
+          userName: cleanName,
+          userAvatar: (avatarUrl != null && avatarUrl.trim().isNotEmpty) ? avatarUrl.trim() : null,
+          userActiveBorder: activeBorderId,
+        );
+      }
+    }
+    _persistReviews();
+
     // Jika user adalah guest murni
     if (uid == null) {
       _profileChangedController.add(null);
@@ -522,7 +581,10 @@ class SupabaseService {
 
     // 2. Simpan di Supabase Auth user metadata
     try {
-      final data = <String, dynamic>{'name': displayName};
+      final data = <String, dynamic>{
+        'name': cleanName,
+        'display_name': cleanName,
+      };
       if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
         data['avatar_url'] = avatarUrl.trim();
       } else {
@@ -533,28 +595,67 @@ class SupabaseService {
       debugPrint('Supabase auth.updateUser error: $e');
     }
 
-    // 3. Simpan di tabel public.profiles di Supabase
+    // 3. Simpan di tabel public.profiles di Supabase (coba UPDATE dulu, fallback ke UPSERT)
     try {
-      final payload = <String, dynamic>{
-        'id': uid,
-        'display_name': displayName,
+      final updateData = <String, dynamic>{
+        'display_name': cleanName,
         'avatar_url': (avatarUrl != null && avatarUrl.trim().isNotEmpty)
             ? avatarUrl.trim()
             : null,
       };
       if (activeBorderId != null) {
-        payload['active_border_id'] = activeBorderId.trim().isNotEmpty
+        updateData['active_border_id'] = activeBorderId.trim().isNotEmpty
             ? activeBorderId.trim()
             : null;
       }
-      await _client.from('profiles').upsert(payload, onConflict: 'id');
+
+      // Coba UPDATE berdasarkan id
+      final res = await _client
+          .from('profiles')
+          .update(updateData)
+          .eq('id', uid)
+          .select();
+
+      if (res.isEmpty) {
+        // Jika row belum ada, lakukan upsert / insert
+        updateData['id'] = uid;
+        await _client.from('profiles').upsert(updateData, onConflict: 'id');
+      }
     } catch (e) {
-      debugPrint('Supabase profiles.upsert with avatar_url error: $e');
+      debugPrint('Supabase profiles update/upsert error: $e');
       try {
-        await _client.from('profiles').upsert({
-          'id': uid,
-          'display_name': displayName,
-        }, onConflict: 'id');
+        await _client.from('profiles').update({
+          'display_name': cleanName,
+        }).eq('id', uid);
+      } catch (_) {}
+    }
+
+    // 4. Perbarui nama di tabel reviews di Supabase untuk ulasan milik user ini
+    try {
+      final revUpdate = <String, dynamic>{'user_name': cleanName};
+      if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
+        revUpdate['user_avatar'] = avatarUrl.trim();
+      }
+      if (activeBorderId != null && activeBorderId.trim().isNotEmpty) {
+        revUpdate['user_active_border'] = activeBorderId.trim();
+      }
+      await _client.from('reviews').update(revUpdate).eq('user_id', uid);
+    } catch (_) {}
+
+    // 5. Update profil biometrik Hive jika user ini terdaftar
+    final userEmail = currentUser?.email;
+    if (userEmail != null && userEmail.isNotEmpty) {
+      try {
+        final hiveProf = HiveService.instance.getBiometricProfile(userEmail);
+        if (hiveProf != null) {
+          await HiveService.instance.saveBiometricProfile(
+            email: userEmail,
+            name: cleanName,
+            password: hiveProf['password'] as String?,
+            metrics: (hiveProf['metrics'] as Map?)?.cast<String, dynamic>() ?? {},
+            userId: uid,
+          );
+        }
       } catch (_) {}
     }
 
@@ -1721,6 +1822,9 @@ class SupabaseService {
   Future<List<Review>> getReviews(String restaurantId) async {
     List<Review> remote = [];
     final parsedId = int.tryParse(restaurantId);
+    final Map<String, String> userNames = {};
+    final Map<String, String> userAvatars = {};
+    final Map<String, String> userBorders = {};
     try {
       dynamic res;
       try {
@@ -1749,9 +1853,6 @@ class SupabaseService {
           .cast<String>()
           .toList();
 
-      final Map<String, String> userNames = {};
-      final Map<String, String> userAvatars = {};
-      final Map<String, String> userBorders = {};
       if (userIds.isNotEmpty) {
         try {
           final profileRes = await _client
@@ -1776,12 +1877,20 @@ class SupabaseService {
         } catch (_) {}
       }
 
-      // Jika user saat ini ada di ulasan dan punya border aktif lokal, gunakan untuk ulasannya
+      // Jika user saat ini ada di ulasan dan punya nama / avatar / border lokal terkini, terapkan langsung
       final currentUid = userId;
       if (currentUid != null) {
         try {
           final prefs = await SharedPreferences.getInstance();
+          final localName = prefs.getString('foodie_name_$currentUid');
+          final localAvatar = prefs.getString('foodie_avatar_$currentUid');
           final localBorder = prefs.getString('foodie_active_border_$currentUid');
+          if (localName != null && localName.trim().isNotEmpty) {
+            userNames[currentUid] = localName.trim();
+          }
+          if (localAvatar != null && localAvatar.trim().isNotEmpty) {
+            userAvatars[currentUid] = localAvatar.trim();
+          }
           if (localBorder != null && localBorder.isNotEmpty) {
             userBorders[currentUid] = localBorder;
           }
@@ -1791,21 +1900,38 @@ class SupabaseService {
       // Gabungkan nama, avatar, & border aktif terkini ke setiap review
       remote = rawList.map((e) {
         final uid = e['user_id']?.toString() ?? '';
+        final resolvedName = userNames[uid] ?? e['user_name'] ?? 'Kurator Rasa';
+        final resolvedAvatar = userAvatars[uid] ?? e['user_avatar'];
+        final resolvedBorder = userBorders[uid] ?? e['user_active_border'];
         return Review.fromJson({
           ...e,
-          'user_name': e['user_name'] ?? userNames[uid] ?? 'Kurator Rasa',
-          'user_avatar': e['user_avatar'] ?? userAvatars[uid],
-          'user_active_border': userBorders[uid] ?? e['user_active_border'],
+          'user_name': resolvedName,
+          'user_avatar': resolvedAvatar,
+          'user_active_border': resolvedBorder,
         });
       }).toList();
     } catch (_) {}
 
     final defaultList = kDefaultReviews[restaurantId] ?? [];
+    final currentUid = userId;
+    final effectiveCuratorName = (currentUid != null ? userNames[currentUid] : null) ?? curatorName;
+    final effectiveCuratorAvatar = currentUid != null ? userAvatars[currentUid] : null;
+    final effectiveCuratorBorder = currentUid != null ? userBorders[currentUid] : null;
+
     final localList = _localReviews.where((r) =>
         r.restaurantId == restaurantId ||
         r.restaurantId == 'resto_$restaurantId' ||
         (restaurantId.startsWith('resto_') &&
-            r.restaurantId == restaurantId.replaceFirst('resto_', ''))).toList();
+            r.restaurantId == restaurantId.replaceFirst('resto_', ''))).map((r) {
+      if (currentUid == null || currentUid == 'guest' || r.userId == currentUid || r.userId == 'guest' || r.userId.isEmpty) {
+        return r.copyWith(
+          userName: effectiveCuratorName,
+          userAvatar: effectiveCuratorAvatar ?? r.userAvatar,
+          userActiveBorder: effectiveCuratorBorder ?? r.userActiveBorder,
+        );
+      }
+      return r;
+    }).toList();
 
     final all = [...localList, ...remote, ...defaultList];
     final seen = <String>{};
@@ -2181,12 +2307,43 @@ class SupabaseService {
 
         final all = [...local, ...remote];
         final seen = <String>{};
-        return all.where((r) => seen.add(r.id)).toList();
+        final unique = all.where((r) => seen.add(r.id)).toList();
+
+        final prof = await getProfile();
+        final effName = prof?.displayName ?? curatorName;
+        final effAvatar = prof?.avatarUrl;
+        final effBorder = prof?.activeBorderId;
+
+        return unique.map((r) {
+          if (uid == 'guest' || r.userId == uid || r.userId == 'guest' || r.userId.isEmpty) {
+            return r.copyWith(
+              userName: effName,
+              userAvatar: effAvatar ?? r.userAvatar,
+              userActiveBorder: effBorder ?? r.userActiveBorder,
+            );
+          }
+          return r;
+        }).toList();
       } catch (e) {
         debugPrint('getUserReviews error: $e');
       }
     }
-    return local;
+
+    final prof = await getProfile();
+    final effName = prof?.displayName ?? curatorName;
+    final effAvatar = prof?.avatarUrl;
+    final effBorder = prof?.activeBorderId;
+
+    return local.map((r) {
+      if (uid == null || uid == 'guest' || r.userId == uid || r.userId == 'guest' || r.userId.isEmpty) {
+        return r.copyWith(
+          userName: effName,
+          userAvatar: effAvatar ?? r.userAvatar,
+          userActiveBorder: effBorder ?? r.userActiveBorder,
+        );
+      }
+      return r;
+    }).toList();
   }
 
   // ─── GAME SCORES ───

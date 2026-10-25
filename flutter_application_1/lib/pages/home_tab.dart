@@ -107,13 +107,14 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void didUpdateWidget(covariant HomeTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.name != widget.name) {
+    if (oldWidget.name != widget.name && widget.name.trim().isNotEmpty) {
       if (_profile != null) {
         setState(() {
           _profile = Profile(
             id: _profile!.id,
             displayName: widget.name,
             avatarUrl: _profile!.avatarUrl,
+            activeBorderId: _profile!.activeBorderId,
             points: _profile!.points,
             createdAt: _profile!.createdAt,
           );
@@ -247,10 +248,12 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    final activeName = widget.name.trim().isNotEmpty
-        ? widget.name.trim()
-        : (_profile?.displayName != null && _profile!.displayName.trim().isNotEmpty)
-            ? _profile!.displayName.trim()
+    final pName = _profile?.displayName.trim();
+    final wName = widget.name.trim();
+    final activeName = (pName != null && pName.isNotEmpty)
+        ? pName
+        : (wName.isNotEmpty)
+            ? wName
             : 'Foodie';
     final first = activeName.split(' ').first;
 

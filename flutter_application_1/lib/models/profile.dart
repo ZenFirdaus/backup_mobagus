@@ -51,4 +51,37 @@ class Profile {
         return 'Pemula Rasa';
     }
   }
+
+  /// Target poin untuk mencapai tingkatan level berikutnya
+  int get nextLevelPoints {
+    if (curatorLevel == 1) return 300;
+    if (curatorLevel == 2) return 800;
+    if (curatorLevel == 3) return 1500;
+    if (curatorLevel == 4) return 2500;
+    return 2500; // Level 5 (Maksimal)
+  }
+
+  /// Batas minimal poin tingkatan level saat ini
+  int get currentLevelBasePoints {
+    if (curatorLevel == 1) return 0;
+    if (curatorLevel == 2) return 300;
+    if (curatorLevel == 3) return 800;
+    if (curatorLevel == 4) return 1500;
+    return 2500;
+  }
+
+  /// Sisa poin yang dibutuhkan untuk naik level
+  int get pointsToNextLevel {
+    if (curatorLevel >= 5) return 0;
+    return (nextLevelPoints - points).clamp(0, nextLevelPoints);
+  }
+
+  /// Persentase progres dari level saat ini menuju level berikutnya (0.0 – 1.0)
+  double get levelProgress {
+    if (curatorLevel >= 5) return 1.0;
+    final range = nextLevelPoints - currentLevelBasePoints;
+    if (range <= 0) return 1.0;
+    final current = points - currentLevelBasePoints;
+    return (current / range).clamp(0.0, 1.0);
+  }
 }

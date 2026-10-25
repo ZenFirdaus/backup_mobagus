@@ -147,7 +147,7 @@ class _ProfileTabState extends State<ProfileTab>
   @override
   void didUpdateWidget(covariant ProfileTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.name != widget.name) {
+    if (oldWidget.name != widget.name && widget.name.trim().isNotEmpty) {
       if (_profile != null) {
         setState(() {
           _profile = Profile(
@@ -525,6 +525,349 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
+  // ─── INFORMASI LEVEL & POIN KURATOR ───
+
+  void _showLevelInfoSheet() {
+    final p = _profile;
+    final currentLv = p?.curatorLevel ?? 1;
+    final currentTitle = p?.levelTitle ?? 'Pemula Rasa';
+    final currentPts = p?.points ?? 100;
+    final neededPts = p?.pointsToNextLevel ?? (300 - currentPts).clamp(0, 300);
+
+    final levels = [
+      {'lv': 1, 'title': 'Pemula Rasa', 'range': '0 - 299 Poin', 'desc': 'Baru memulai petualangan kuliner di Jogja & Jateng.'},
+      {'lv': 2, 'title': 'Penjelajah Kuliner', 'range': '300 - 799 Poin', 'desc': 'Mulai rajin menjelajahi warung & kuliner legendaris.'},
+      {'lv': 3, 'title': 'Kurator Kuliner', 'range': '800 - 1499 Poin', 'desc': 'Rasa dan ulasan Anda menjadi rujukan sesama pencinta rasa.'},
+      {'lv': 4, 'title': 'Penjelajah Kuliner Sejati', 'range': '1500 - 2499 Poin', 'desc': 'Koleksi pengalaman rasa yang luas dan berwawasan tinggi.'},
+      {'lv': 5, 'title': 'Kurator Utama', 'range': '≥ 2500 Poin', 'desc': 'Gelar tertinggi kurator kuliner kehormatan FOODIE.'},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.orange.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.stars_rounded, color: AppColors.orange, size: 24),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tingkatan Kurator Kuliner', style: AppText.display(17)),
+                        const Text(
+                          'Sistem reputasi dan akumulasi poin kurator FOODIE',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Status Kartu Pengguna Saat Ini
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.charcoal, Color(0xFF333333)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.orange,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Level $currentLv',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          currentTitle,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '$currentPts Poin',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFFFD54F),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: p?.levelProgress ?? 0.3,
+                        minHeight: 6,
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD54F)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      currentLv >= 5
+                          ? 'Selamat! Anda telah mencapai tingkatan kurator tertinggi.'
+                          : 'Butuh $neededPts poin lagi untuk naik ke Level ${currentLv + 1} (${levels[currentLv]['title']}).',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+              const Text(
+                'Cara Mendapatkan Poin',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 8),
+              _buildPointActionTile(
+                icon: Icons.rate_review_rounded,
+                color: AppColors.orange,
+                title: 'Tulis Ulasan & Rating',
+                reward: '+20 Poin',
+                desc: 'Bagikan ulasan jujur kuliner yang Anda nikmati.',
+              ),
+              const SizedBox(height: 6),
+              _buildPointActionTile(
+                icon: Icons.location_on_rounded,
+                color: AppColors.greenDark,
+                title: 'Check-in di Restoran',
+                reward: '+50 Poin',
+                desc: 'Verifikasi kunjungan langsung saat bersantap di lokasi.',
+              ),
+              const SizedBox(height: 6),
+              _buildPointActionTile(
+                icon: Icons.sports_esports_rounded,
+                color: const Color(0xFF6C5CE7),
+                title: 'Mainkan Mini-Game',
+                reward: 's/d +350 Poin',
+                desc: 'Selesaikan tebak rasa Kulinerdle dan Kasus Detektif.',
+              ),
+
+              const SizedBox(height: 18),
+              const Text(
+                'Daftar Tingkatan Level',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 8),
+              ...levels.map((item) {
+                final lvNum = item['lv'] as int;
+                final isCurrent = lvNum == currentLv;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isCurrent ? AppColors.orange.withValues(alpha: 0.08) : AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isCurrent ? AppColors.orange : AppColors.line.withValues(alpha: 0.5),
+                      width: isCurrent ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: isCurrent ? AppColors.orange : AppColors.charcoal.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$lvNum',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: isCurrent ? Colors.white : AppColors.charcoal,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  item['title'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                                    color: isCurrent ? AppColors.orange : AppColors.textDark,
+                                  ),
+                                ),
+                                if (isCurrent) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.orange,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'Level Anda',
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item['desc'] as String,
+                              style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        item['range'] as String,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.charcoal),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.shopping_bag_rounded, size: 18),
+                  label: const Text(
+                    'Tukar Poin di Toko Border Hadiah',
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const RewardsShopPage()),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPointActionTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String reward,
+    required String desc,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                const SizedBox(height: 1),
+                Text(desc, style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              reward,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── EDIT PROFILE SHEET ───
 
   void _showEditProfile() {
@@ -789,6 +1132,7 @@ class _ProfileTabState extends State<ProfileTab>
                         activeBorderId: activeBorder,
                       );
                       await _load();
+                      await _loadHistory();
 
                       if (mounted) {
                         ScaffoldMessenger.of(context)
@@ -1800,24 +2144,90 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                 ],
                 const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _profile != null
-                        ? 'Level ${_profile!.curatorLevel}: ${_profile!.levelTitle}'
-                        : 'Kurator Yogyakarta',
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                GestureDetector(
+                  onTap: _showLevelInfoSheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.stars_rounded,
+                            size: 13, color: Color(0xFFFFD54F)),
+                        const SizedBox(width: 4),
+                        Text(
+                          _profile != null
+                              ? 'Level ${_profile!.curatorLevel}: ${_profile!.levelTitle}'
+                              : 'Kurator Yogyakarta',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 11,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+                if (_profile != null) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _showLevelInfoSheet,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '${_profile!.points} Poin',
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFFFFE082),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              _profile!.curatorLevel >= 5
+                                  ? 'Level Maksimal'
+                                  : 'Target Lv ${_profile!.curatorLevel + 1}: ${_profile!.nextLevelPoints} Poin',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: _profile!.levelProgress,
+                            minHeight: 4,
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Color(0xFFFFD54F),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -42,7 +42,18 @@ class _LoginPageState extends State<LoginPage> {
       [String? password]) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('foodie_last_user_name', name);
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      final existingName = uid != null ? prefs.getString('foodie_name_$uid') : null;
+      final emailPrefix = email.split('@').first;
+      final effectiveName = (existingName != null && existingName.trim().isNotEmpty && (name == emailPrefix || name.isEmpty))
+          ? existingName.trim()
+          : name;
+
+      await prefs.setString('foodie_last_user_name', effectiveName);
+      await prefs.setString('foodie_current_display_name', effectiveName);
+      if (uid != null) {
+        await prefs.setString('foodie_name_$uid', effectiveName);
+      }
       await prefs.setString('foodie_last_user_email', email);
       if (password != null && password.isNotEmpty) {
         await prefs.setString('foodie_saved_password', password);
@@ -90,12 +101,17 @@ class _LoginPageState extends State<LoginPage> {
       );
       if (!mounted) return;
       setState(() => _loading = false);
-      final name =
-          res.user?.userMetadata?['name'] as String? ??
-          _email.text.trim().split('@').first;
-      await _saveUserSession(name, _email.text.trim(), pwd);
-      await SupabaseService.instance.initStorage(force: true);
 
+      // Inisialisasi storage dan ambil nama sebenarnya dari database profiles
+      await SupabaseService.instance.initStorage(force: true);
+      final prof = await SupabaseService.instance.getProfile();
+      final name = (prof?.displayName != null && prof!.displayName.trim().isNotEmpty)
+          ? prof.displayName.trim()
+          : ((res.user?.userMetadata?['name'] as String?)?.trim().isNotEmpty == true
+              ? (res.user!.userMetadata!['name'] as String).trim()
+              : _email.text.trim().split('@').first);
+
+      await _saveUserSession(name, _email.text.trim(), pwd);
       await _handlePostLoginNavigation(name, _email.text.trim(), pwd);
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -215,8 +231,13 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     // 5. Autentikasi valid & terverifikasi resmi: simpan sesi dan buka Home
-    await _saveUserSession(name, cleanEmail, resolvedPassword);
     await SupabaseService.instance.initStorage(force: true);
+    final prof = await SupabaseService.instance.getProfile();
+    final effectiveName = (prof?.displayName != null && prof!.displayName.trim().isNotEmpty)
+        ? prof.displayName.trim()
+        : name;
+
+    await _saveUserSession(effectiveName, cleanEmail, resolvedPassword);
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -231,7 +252,7 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Face ID terverifikasi. Selamat datang kembali, $name',
+                'Face ID terverifikasi. Selamat datang kembali, $effectiveName',
               ),
             ),
           ],
@@ -241,7 +262,7 @@ class _LoginPageState extends State<LoginPage> {
         duration: const Duration(seconds: 2),
       ),
     );
-    _goHome(name, biometricOn: true);
+    _goHome(effectiveName, biometricOn: true);
   }
 
   /// Tombol Login Wajah di halaman login:

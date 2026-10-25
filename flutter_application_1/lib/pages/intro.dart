@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/face_biometric_service.dart';
+import '../services/supabase_service.dart';
 import '../widgets/foodie_logo.dart';
+import 'home.dart';
 import 'onboarding.dart';
 
-/// Splash screen FOODIE — tampil 3 detik, fade ke Onboarding.
-/// Menggunakan logo teks putih di atas background oranye paprika.
+/// Splash screen FOODIE — tampil animasi, cek sesi Supabase aktif.
+/// Jika ada sesi login aktif, otomatis langsung masuk ke HomePage.
+/// Jika belum login atau sesi habis, fade ke OnboardingPage.
 class IntroPage extends StatefulWidget {
   const IntroPage({super.key});
 
@@ -27,10 +33,63 @@ class _IntroPageState extends State<IntroPage>
   void initState() {
     super.initState();
     _ctrl.forward();
-    Future.delayed(const Duration(seconds: 3), _toOnboarding);
+    _checkSessionAndNavigate();
   }
 
-  void _toOnboarding() {
+  Future<void> _checkSessionAndNavigate() async {
+    // Tampilkan animasi splash screen minimal 2 detik
+    await Future.delayed(const Duration(milliseconds: 2000));
+    if (!mounted) return;
+
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      final user = Supabase.instance.client.auth.currentUser;
+
+      // Jika ada session dan token belum expired
+      if (session != null && user != null && !session.isExpired) {
+        await SupabaseService.instance.initStorage();
+        final profile = await SupabaseService.instance.getProfile();
+
+        final prefs = await SharedPreferences.getInstance();
+        final savedName = prefs.getString('foodie_current_display_name') ??
+            prefs.getString('foodie_name_${user.id}') ??
+            prefs.getString('foodie_last_user_name');
+
+        final effectiveName = (profile?.displayName != null &&
+                profile!.displayName.trim().isNotEmpty)
+            ? profile.displayName.trim()
+            : (savedName != null && savedName.trim().isNotEmpty)
+                ? savedName.trim()
+                : (user.userMetadata?['name'] as String?)?.trim().isNotEmpty ==
+                        true
+                    ? (user.userMetadata!['name'] as String).trim()
+                    : (user.email != null && user.email!.isNotEmpty)
+                        ? user.email!.split('@').first
+                        : 'Kurator Rasa';
+
+        final biometricEnrolled =
+            await FaceBiometricService.instance.isFaceEnrolled(
+          email: user.email,
+        );
+
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => HomePage(
+              name: effectiveName,
+              biometricOn: biometricEnrolled,
+            ),
+            transitionDuration: const Duration(milliseconds: 450),
+            transitionsBuilder: (_, anim, _, child) =>
+                FadeTransition(opacity: anim, child: child),
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error pengecekan sesi: $e');
+    }
+
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
