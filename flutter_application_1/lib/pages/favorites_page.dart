@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/restaurant.dart';
@@ -6,7 +7,7 @@ import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
-import '../widgets/common_widgets.dart';
+import '../widgets/restaurant_image.dart';
 import 'detail_page.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -124,11 +125,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   void _openDetail(Restaurant r) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DetailPage(restaurant: r),
-      ),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => DetailPage(restaurant: r)));
   }
 
   @override
@@ -203,19 +201,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
         child: Row(
           children: [
             Expanded(
-              child: _tabButton(
-                0,
-                'Favorit ($count)',
-                Icons.favorite_rounded,
-              ),
+              child: _tabButton(0, 'Favorit ($count)', Icons.favorite_rounded),
             ),
-            Expanded(
-              child: _tabButton(
-                1,
-                'Riwayat',
-                Icons.history_rounded,
-              ),
-            ),
+            Expanded(child: _tabButton(1, 'Riwayat', Icons.history_rounded)),
           ],
         ),
       ),
@@ -303,15 +291,19 @@ class _FavoritesPageState extends State<FavoritesPage> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-            FoodImage(
-              imageUrl:
-                  r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null,
-              width: 54,
-              height: 54,
-              borderRadius: BorderRadius.circular(14),
-              icon: Icons.restaurant_rounded,
-            ),
-            const SizedBox(width: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  width: 54,
+                  height: 54,
+                  child: RestaurantImage(
+                    imageUrl: r.imageUrl,
+                    category: r.category,
+                    dishType: r.dishType,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,8 +341,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    size: 20, color: AppColors.red),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 20,
+                  color: AppColors.red,
+                ),
                 onPressed: () => _removeFavorite(r),
               ),
             ],
@@ -470,10 +465,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textMuted,
-              ),
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           ],
         ),

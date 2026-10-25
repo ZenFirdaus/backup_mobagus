@@ -10,7 +10,7 @@ import '../pages/detail_page.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/supabase_service.dart';
-import 'common_widgets.dart';
+import 'restaurant_image.dart';
 
 /// Membuka bottom sheet "Shake to Decide" dengan dadu 3D interaktif real-time gyro.
 Future<void> showDecideSheet(BuildContext context) {
@@ -90,7 +90,11 @@ class _DecideSheetState extends State<_DecideSheet>
       vsync: this,
       duration: const Duration(milliseconds: 16),
     )..addListener(_physicsTick);
-    _tickerController.repeat(min: 0, max: 1, period: const Duration(milliseconds: 16));
+    _tickerController.repeat(
+      min: 0,
+      max: 1,
+      period: const Duration(milliseconds: 16),
+    );
   }
 
   void _initFaces() {
@@ -369,7 +373,10 @@ class _DecideSheetState extends State<_DecideSheet>
                   IconButton(
                     tooltip: 'Kembali',
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 18,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -576,8 +583,10 @@ class _DecideSheetState extends State<_DecideSheet>
   /// Desain satu sisi dadu dengan pips nyata dan shading pencahayaan
   Widget _buildDiceFace(int number, double diffuse) {
     // Shading overlay berdasarkan intensitas cahaya
-    final shadeOpacity =
-        ((1.0 - (0.5 + 0.5 * diffuse)) * 0.35).clamp(0.0, 0.35);
+    final shadeOpacity = ((1.0 - (0.5 + 0.5 * diffuse)) * 0.35).clamp(
+      0.0,
+      0.35,
+    );
 
     return Container(
       width: _diceSize,
@@ -585,16 +594,8 @@ class _DecideSheetState extends State<_DecideSheet>
       decoration: BoxDecoration(
         color: const Color(0xFFFCFBF9),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0x1F000000),
-          width: 1.2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 4,
-          ),
-        ],
+        border: Border.all(color: const Color(0x1F000000), width: 1.2),
+        boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 4)],
       ),
       child: Stack(
         children: [
@@ -877,12 +878,17 @@ class _DecideSheetState extends State<_DecideSheet>
                 // Data Restoran
                 Row(
                   children: [
-                    FoodImage(
-                      imageUrl: _result!.effectiveImageUrl,
-                      width: 60,
-                      height: 60,
+                    ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      icon: Icons.restaurant_rounded,
+                      child: SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: RestaurantImage(
+                          imageUrl: _result!.imageUrl,
+                          category: _result!.category,
+                          dishType: _result!.dishType,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

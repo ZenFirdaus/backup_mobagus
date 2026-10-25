@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -15,6 +16,7 @@ import '../services/hive_service.dart';
 import '../services/location_service.dart';
 import '../widgets/ai_reasoning_sheet.dart';
 import '../widgets/decide.dart';
+import '../widgets/restaurant_image.dart';
 import 'ai_profile_page.dart';
 import 'notifications_page.dart';
 
@@ -53,7 +55,7 @@ class _HomeTabState extends State<HomeTab> {
   final _aiPageCtrl = PageController(viewportFraction: 0.88);
 
   Profile? _profile;
-  List<Restaurant> _picks = [];       // Rekomendasi terdekat (LBS)
+  List<Restaurant> _picks = []; // Rekomendasi terdekat (LBS)
   List<AiRecommendationResult> _aiPicks = []; // Rekomendasi personal AI
   UserAiProfile? _aiProfile;
   List<String> _categories = [];
@@ -68,7 +70,9 @@ class _HomeTabState extends State<HomeTab> {
     super.initState();
     LocationService.instance.currentLocation.addListener(_onLocationUpdated);
     LocationService.instance.isLoading.addListener(_onLocationLoadingChanged);
-    AiRecommendationService.instance.profileNotifier.addListener(_onAiProfileUpdated);
+    AiRecommendationService.instance.profileNotifier.addListener(
+      _onAiProfileUpdated,
+    );
     _load();
     // Auto-detect lokasi GPS pengguna saat aplikasi dibuka
     LocationService.instance.fetchGpsLocation();
@@ -128,8 +132,12 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void dispose() {
     LocationService.instance.currentLocation.removeListener(_onLocationUpdated);
-    LocationService.instance.isLoading.removeListener(_onLocationLoadingChanged);
-    AiRecommendationService.instance.profileNotifier.removeListener(_onAiProfileUpdated);
+    LocationService.instance.isLoading.removeListener(
+      _onLocationLoadingChanged,
+    );
+    AiRecommendationService.instance.profileNotifier.removeListener(
+      _onAiProfileUpdated,
+    );
     _profileSub?.cancel();
     _rewardSub?.cancel();
     _pageCtrl.dispose();
@@ -163,8 +171,18 @@ class _HomeTabState extends State<HomeTab> {
         userLat = loc.lat;
         userLng = loc.lng;
         restos.sort((a, b) {
-          final dA = LocationService.instance.distanceM(userLat!, userLng!, a.lat, a.lng);
-          final dB = LocationService.instance.distanceM(userLat, userLng, b.lat, b.lng);
+          final dA = LocationService.instance.distanceM(
+            userLat!,
+            userLng!,
+            a.lat,
+            a.lng,
+          );
+          final dB = LocationService.instance.distanceM(
+            userLat,
+            userLng,
+            b.lat,
+            b.lng,
+          );
           return dA.compareTo(dB);
         });
       } else {
@@ -210,13 +228,22 @@ class _HomeTabState extends State<HomeTab> {
   IconData _iconFor(String c) {
     // Normalisasi: lowercase + ganti underscore/tanda hubung → spasi
     final s = c.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
-    if (s.contains('fast food') || s.contains('fastfood') || s.contains('fast') || s.contains('cepat')) {
+    if (s.contains('fast food') ||
+        s.contains('fastfood') ||
+        s.contains('fast') ||
+        s.contains('cepat')) {
       return Icons.fastfood_rounded;
     }
-    if (s.contains('food court') || s.contains('foodcourt') || s.contains('court') || s.contains('sentra')) {
+    if (s.contains('food court') ||
+        s.contains('foodcourt') ||
+        s.contains('court') ||
+        s.contains('sentra')) {
       return Icons.storefront_rounded;
     }
-    if (s.contains('cafe') || s.contains('kafe') || s.contains('coffee') || s.contains('kopi')) {
+    if (s.contains('cafe') ||
+        s.contains('kafe') ||
+        s.contains('coffee') ||
+        s.contains('kopi')) {
       return Icons.local_cafe_rounded;
     }
     if (s.contains('angkringan')) {
@@ -225,7 +252,9 @@ class _HomeTabState extends State<HomeTab> {
     if (s.contains('warung')) {
       return Icons.store_mall_directory_rounded;
     }
-    if (s.contains('resto') || s.contains('restaurant') || s.contains('rumah makan')) {
+    if (s.contains('resto') ||
+        s.contains('restaurant') ||
+        s.contains('rumah makan')) {
       return Icons.restaurant_rounded;
     }
     return Icons.restaurant_menu_rounded;
@@ -238,12 +267,19 @@ class _HomeTabState extends State<HomeTab> {
     if (lower == 'food_court' || lower == 'food court') return 'Food Court';
     if (lower == 'cafe' || lower == 'kafe') return 'Cafe';
     if (lower == 'restoran' || lower == 'restaurant') return 'Restoran';
-    if (lower == 'warung_tradisional' || lower == 'warung tradisional' || lower == 'warung') return 'Warung Tradisional';
+    if (lower == 'warung_tradisional' ||
+        lower == 'warung tradisional' ||
+        lower == 'warung')
+      return 'Warung Tradisional';
     if (lower == 'angkringan') return 'Angkringan';
-    return c.replaceAll('_', ' ').split(' ').map((w) {
-      if (w.isEmpty) return '';
-      return w[0].toUpperCase() + w.substring(1);
-    }).join(' ');
+    return c
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((w) {
+          if (w.isEmpty) return '';
+          return w[0].toUpperCase() + w.substring(1);
+        })
+        .join(' ');
   }
 
   @override
@@ -253,8 +289,8 @@ class _HomeTabState extends State<HomeTab> {
     final activeName = (pName != null && pName.isNotEmpty)
         ? pName
         : (wName.isNotEmpty)
-            ? wName
-            : 'Foodie';
+        ? wName
+        : 'Foodie';
     final first = activeName.split(' ').first;
 
     return ColoredBox(
@@ -292,7 +328,10 @@ class _HomeTabState extends State<HomeTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Terdekat dari Lokasimu', style: AppText.display(20)),
+                        Text(
+                          'Terdekat dari Lokasimu',
+                          style: AppText.display(20),
+                        ),
                         Text(
                           'Kuliner paling dekat dengan kamu saat ini',
                           style: TextStyle(
@@ -351,7 +390,8 @@ class _HomeTabState extends State<HomeTab> {
                 return GestureDetector(
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                        builder: (_) => const NotificationsPage()),
+                      builder: (_) => const NotificationsPage(),
+                    ),
                   ),
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -379,8 +419,10 @@ class _HomeTabState extends State<HomeTab> {
                             decoration: BoxDecoration(
                               color: AppColors.orange,
                               shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: Colors.white, width: 1.5),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
@@ -602,11 +644,17 @@ class _HomeTabState extends State<HomeTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Pilih Titik Lokasi Kamu', style: AppText.display(18)),
+                          Text(
+                            'Pilih Titik Lokasi Kamu',
+                            style: AppText.display(18),
+                          ),
                           const SizedBox(height: 2),
                           const Text(
                             'Rekomendasi terdekat dihitung dari titik ini',
-                            style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -614,7 +662,10 @@ class _HomeTabState extends State<HomeTab> {
                     IconButton(
                       tooltip: 'Tutup',
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -644,7 +695,9 @@ class _HomeTabState extends State<HomeTab> {
                               );
                             }
                           } else {
-                            final msg = locSvc.statusMessage.value ?? 'Gagal mengakses GPS';
+                            final msg =
+                                locSvc.statusMessage.value ??
+                                'Gagal mengakses GPS';
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -654,7 +707,8 @@ class _HomeTabState extends State<HomeTab> {
                                   action: SnackBarAction(
                                     label: 'Pengaturan',
                                     textColor: AppColors.yellow,
-                                    onPressed: () => Geolocator.openAppSettings(),
+                                    onPressed: () =>
+                                        Geolocator.openAppSettings(),
                                   ),
                                 ),
                               );
@@ -686,8 +740,8 @@ class _HomeTabState extends State<HomeTab> {
                             color: isGpsLoading
                                 ? AppColors.tint(AppColors.orange, 0.15)
                                 : ((currentLoc?.isGps ?? false)
-                                    ? AppColors.greenDark
-                                    : Colors.white),
+                                      ? AppColors.greenDark
+                                      : Colors.white),
                             shape: BoxShape.circle,
                           ),
                           child: isGpsLoading
@@ -725,7 +779,9 @@ class _HomeTabState extends State<HomeTab> {
                                     const SizedBox(width: 6),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.greenDark,
                                         borderRadius: BorderRadius.circular(6),
@@ -745,10 +801,11 @@ class _HomeTabState extends State<HomeTab> {
                               const SizedBox(height: 2),
                               Text(
                                 isGpsLoading
-                                    ? (locSvc.statusMessage.value ?? 'Mencari koordinat GPS...')
+                                    ? (locSvc.statusMessage.value ??
+                                          'Mencari koordinat GPS...')
                                     : ((currentLoc?.isGps ?? false)
-                                        ? currentLoc!.address
-                                        : 'Deteksi koordinat posisi ponsel saat ini'),
+                                          ? currentLoc!.address
+                                          : 'Deteksi koordinat posisi ponsel saat ini'),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -798,7 +855,8 @@ class _HomeTabState extends State<HomeTab> {
                   final lat = reg['lat'] as double;
                   final lng = reg['lng'] as double;
 
-                  final isSelected = !(currentLoc?.isGps ?? true) &&
+                  final isSelected =
+                      !(currentLoc?.isGps ?? true) &&
                       (currentLoc?.city == city ||
                           currentLoc?.address.contains(name) == true);
 
@@ -829,7 +887,9 @@ class _HomeTabState extends State<HomeTab> {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.tint(AppColors.orange, 0.08)
@@ -928,8 +988,8 @@ class _HomeTabState extends State<HomeTab> {
                 color: isLoading
                     ? AppColors.tint(AppColors.orange, 0.12)
                     : (isGps
-                        ? AppColors.tint(AppColors.greenDark, 0.12)
-                        : AppColors.tint(AppColors.orange, 0.1)),
+                          ? AppColors.tint(AppColors.greenDark, 0.12)
+                          : AppColors.tint(AppColors.orange, 0.1)),
                 shape: BoxShape.circle,
               ),
               child: isLoading
@@ -966,7 +1026,9 @@ class _HomeTabState extends State<HomeTab> {
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 1.5),
+                          horizontal: 5,
+                          vertical: 1.5,
+                        ),
                         decoration: BoxDecoration(
                           color: isGps
                               ? AppColors.tint(AppColors.greenDark, 0.15)
@@ -978,7 +1040,9 @@ class _HomeTabState extends State<HomeTab> {
                           style: TextStyle(
                             fontSize: 8.5,
                             fontWeight: FontWeight.w800,
-                            color: isGps ? AppColors.greenDark : AppColors.orange,
+                            color: isGps
+                                ? AppColors.greenDark
+                                : AppColors.orange,
                           ),
                         ),
                       ),
@@ -999,10 +1063,7 @@ class _HomeTabState extends State<HomeTab> {
                   const SizedBox(height: 1),
                   const Text(
                     'Ketuk untuk ubah lokasi atau GPS',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textMuted,
-                    ),
+                    style: TextStyle(fontSize: 10, color: AppColors.textMuted),
                   ),
                 ],
               ),
@@ -1070,11 +1131,7 @@ class _HomeTabState extends State<HomeTab> {
                       color: AppColors.greenDark,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Icon(
-                      _iconFor(c),
-                      size: 27,
-                      color: AppColors.orange,
-                    ),
+                    child: Icon(_iconFor(c), size: 27, color: AppColors.orange),
                   ),
                   const SizedBox(height: 7),
                   Text(
@@ -1147,11 +1204,14 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
             GestureDetector(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AiProfilePage()),
-              ),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const AiProfilePage())),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.orange, 0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -1228,10 +1288,7 @@ class _HomeTabState extends State<HomeTab> {
                     ),
                     Text(
                       'Personalisasi pencarian kuliner',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFC7CED1),
-                      ),
+                      style: TextStyle(fontSize: 11, color: Color(0xFFC7CED1)),
                     ),
                   ],
                 ),
@@ -1249,9 +1306,8 @@ class _HomeTabState extends State<HomeTab> {
           ),
           const SizedBox(height: 14),
           GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AiProfilePage()),
-            ),
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const AiProfilePage())),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
@@ -1322,7 +1378,6 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _aiCard(AiRecommendationResult result) {
     final r = result.restaurant;
-    final img = r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -1343,21 +1398,20 @@ class _HomeTabState extends State<HomeTab> {
           GestureDetector(
             onTap: () => _open(r),
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(22),
+              ),
               child: SizedBox(
                 height: 135,
                 width: double.infinity,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (img != null)
-                      Image.network(
-                        img,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _cardFallback(),
-                      )
-                    else
-                      _cardFallback(),
+                    RestaurantImage(
+                      imageUrl: r.imageUrl,
+                      category: r.category,
+                      dishType: r.dishType,
+                    ),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -1375,7 +1429,10 @@ class _HomeTabState extends State<HomeTab> {
                       top: 10,
                       left: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.orange,
                           borderRadius: BorderRadius.circular(8),
@@ -1401,7 +1458,10 @@ class _HomeTabState extends State<HomeTab> {
                         top: 10,
                         right: 10,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(8),
@@ -1409,7 +1469,11 @@ class _HomeTabState extends State<HomeTab> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.near_me_rounded, size: 9, color: Colors.white),
+                              const Icon(
+                                Icons.near_me_rounded,
+                                size: 9,
+                                color: Colors.white,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 '${result.distanceKm.toStringAsFixed(1)} km',
@@ -1464,7 +1528,10 @@ class _HomeTabState extends State<HomeTab> {
                         ),
                       ),
                     ),
-                    const Text(' • ', style: TextStyle(color: AppColors.textMuted)),
+                    const Text(
+                      ' • ',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
                     Flexible(
                       child: Text(
                         r.priceRange,
@@ -1478,7 +1545,11 @@ class _HomeTabState extends State<HomeTab> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.star_rounded, size: 14, color: AppColors.orange),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 14,
+                      color: AppColors.orange,
+                    ),
                     const SizedBox(width: 2),
                     Text(
                       '${r.rating}',
@@ -1497,7 +1568,10 @@ class _HomeTabState extends State<HomeTab> {
                   runSpacing: 4,
                   children: result.tags.map((t) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.tint(AppColors.orange, 0.10),
                         borderRadius: BorderRadius.circular(6),
@@ -1522,14 +1596,21 @@ class _HomeTabState extends State<HomeTab> {
                     onOpenDetail: () => _open(r),
                   ),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5F3EF),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.psychology_rounded, size: 14, color: AppColors.orange),
+                        Icon(
+                          Icons.psychology_rounded,
+                          size: 14,
+                          color: AppColors.orange,
+                        ),
                         SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -1543,7 +1624,11 @@ class _HomeTabState extends State<HomeTab> {
                             ),
                           ),
                         ),
-                        Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.textMuted),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 10,
+                          color: AppColors.textMuted,
+                        ),
                       ],
                     ),
                   ),
@@ -1615,13 +1700,16 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   Widget _nearbyCard(Restaurant r) {
-    final img = r.effectiveImageUrl.isNotEmpty ? r.effectiveImageUrl : null;
-
     // Hitung jarak jika koordinat tersedia
     String? distLabel;
     final loc = LocationService.instance.currentLocation.value;
     if (loc != null && (r.lat != 0 || r.lng != 0)) {
-      final dist = LocationService.instance.distanceM(loc.lat, loc.lng, r.lat, r.lng);
+      final dist = LocationService.instance.distanceM(
+        loc.lat,
+        loc.lng,
+        r.lat,
+        r.lng,
+      );
       distLabel = LocationService.instance.formatDistance(dist);
     }
 
@@ -1632,14 +1720,11 @@ class _HomeTabState extends State<HomeTab> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (img != null)
-              Image.network(
-                img,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _cardFallback(),
-              )
-            else
-              _cardFallback(),
+            RestaurantImage(
+              imageUrl: r.imageUrl,
+              category: r.category,
+              dishType: r.dishType,
+            ),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -1672,8 +1757,11 @@ class _HomeTabState extends State<HomeTab> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.near_me_rounded,
-                                size: 9, color: Colors.white),
+                            const Icon(
+                              Icons.near_me_rounded,
+                              size: 9,
+                              color: Colors.white,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               distLabel != null
@@ -1813,25 +1901,6 @@ class _HomeTabState extends State<HomeTab> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _cardFallback() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.charcoal, AppColors.tint(AppColors.orange, 0.5)],
-        ),
-      ),
-      alignment: Alignment.topRight,
-      padding: const EdgeInsets.all(26),
-      child: Icon(
-        Icons.ramen_dining_rounded,
-        size: 46,
-        color: Colors.white.withValues(alpha: 0.25),
       ),
     );
   }

@@ -56,13 +56,16 @@ class Restaurant {
       priceMin: json['price_min'] as int? ?? 0,
       priceMax: json['price_max'] as int? ?? 0,
       openingHours: json['opening_hours'] as String?,
-      imageUrl: null, // Dinonaktifkan sesuai permintaan user
+      imageUrl: json['image_url'] as String?,
       phone: json['phone'] as String?,
       website: json['website'] as String?,
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
-      rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
+      rating:
+          (json['avg_rating'] as num?)?.toDouble() ??
+          (json['rating'] as num?)?.toDouble() ??
+          4.5,
       reviewCount: json['review_count'] as int? ?? 0,
       description: json['description'] as String?,
       kabupatenKota: json['kabupaten_kota'] as String?,

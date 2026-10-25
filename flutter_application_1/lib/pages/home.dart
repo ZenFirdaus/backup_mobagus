@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/profile.dart';
 import '../props/app_colors.dart';
+import '../services/dish_image_service.dart';
 import '../services/supabase_service.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/decide.dart';
@@ -54,6 +55,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _currentName = widget.name;
     _loadProfile();
+    DishImageService.instance.load();
     _profileSub = SupabaseService.instance.onProfileChanged.listen((_) {
       if (mounted) _loadProfile();
     });
