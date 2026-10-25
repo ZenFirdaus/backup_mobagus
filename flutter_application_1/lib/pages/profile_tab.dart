@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/profile.dart';
+import '../models/restaurant.dart';
 import '../models/review.dart';
 import '../models/seed_data.dart';
 import '../models/user_ai_profile.dart';
@@ -64,12 +65,13 @@ class _ProfileTabState extends State<ProfileTab>
   Map<String, int> _stats = {'favorites': 0, 'checkins': 0, 'reviews': 0};
   bool _loading = true;
 
-  // Tab controller untuk RIWAYAT
-  late final TabController _histTab = TabController(length: 2, vsync: this);
+  // Tab controller untuk JEJAK KULINER (Ulasan, Favorit, Pencarian)
+  late final TabController _histTab = TabController(length: 3, vsync: this);
 
-  // Data history pencarian & ulasan
+  // Data history pencarian, ulasan & resto favorit
   List<Map<String, dynamic>> _searchHistory = [];
   List<Review> _myReviews = [];
+  List<Restaurant> _favRestaurants = [];
   bool _histLoading = true;
 
   StreamSubscription<void>? _profileSub;
@@ -141,6 +143,7 @@ class _ProfileTabState extends State<ProfileTab>
         _stats['favorites'] = favs.length;
       });
       _load();
+      _loadHistory();
     });
   }
 
@@ -433,11 +436,15 @@ class _ProfileTabState extends State<ProfileTab>
     final results = await Future.wait([
       svc.getSearchHistory(),
       svc.getUserReviews(),
+      svc.getFavoriteRestaurants(),
     ]);
     if (!mounted) return;
     setState(() {
       _searchHistory = results[0] as List<Map<String, dynamic>>;
       _myReviews = results[1] as List<Review>;
+      _favRestaurants = results[2] as List<Restaurant>;
+      _stats['favorites'] = _favRestaurants.length;
+      _stats['reviews'] = _myReviews.length;
       _histLoading = false;
     });
   }
@@ -1519,46 +1526,19 @@ class _ProfileTabState extends State<ProfileTab>
                     _aiPersonaCard(),
                     const SizedBox(height: 14),
                     _statsRow(),
-                    const SizedBox(height: 14),
-                    _quizBanner(),
+                    const SizedBox(height: 18),
+
+                    // ── Arena Gamifikasi & Rewards ──
+                    _sectionLabel('ARENA GAMIFIKASI & REWARDS'),
+                    const SizedBox(height: 8),
+                    _gamificationBentoGrid(),
                     const SizedBox(height: 20),
 
-                    // ── Riwayat Aktivitas ──
-                    _sectionLabel('RIWAYAT AKTIVITAS'),
+                    // ── Jejak Kuliner ──
+                    _sectionLabel('JEJAK KULINER KURATOR'),
                     const SizedBox(height: 8),
                     _historySection(),
                     const SizedBox(height: 20),
-
-                    _sectionLabel('AKTIVITAS KULINER'),
-                    const SizedBox(height: 8),
-                    _group([
-                      _tile(
-                        Icons.storefront_rounded,
-                        'Toko Border & Rewards',
-                        trailing: '${_profile?.points ?? 0} Poin',
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const RewardsShopPage(),
-                            ),
-                          );
-                          _load();
-                        },
-                      ),
-                      _tile(
-                        Icons.favorite_border,
-                        'Favorit & Koleksi',
-                        trailing: '${_stats['favorites'] ?? 0}',
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const FavoritesPage()),
-                          );
-                          _load();
-                          _loadHistory();
-                        },
-                      ),
-                    ]),
                     const SizedBox(height: 16),
                     _sectionLabel('UTILITAS WISATAWAN'),
                     const SizedBox(height: 8),
@@ -1637,45 +1617,88 @@ class _ProfileTabState extends State<ProfileTab>
 
   // ─── HISTORY SECTION ───
 
+  // ─── JEJAK KULINER SECTION (TAB: ULASAN, FAVORIT, PENCARIAN) ───
+
   Widget _historySection() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
-            blurRadius: 10,
+            blurRadius: 12,
             offset: Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         children: [
-          // Tab bar
+          // Segmented Tab Bar Modern
           Container(
+            padding: const EdgeInsets.all(5),
             decoration: const BoxDecoration(
-              border: Border(
-                  bottom: BorderSide(color: AppColors.line, width: 1)),
+              color: Color(0xFFF5F4F0),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: TabBar(
               controller: _histTab,
               labelColor: AppColors.charcoal,
               unselectedLabelColor: AppColors.textMuted,
-              indicatorColor: AppColors.orange,
-              indicatorWeight: 2.5,
+              indicator: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
               labelStyle: const TextStyle(
-                  fontSize: 12.5, fontWeight: FontWeight.w700),
+                  fontSize: 11.5, fontWeight: FontWeight.w800),
               unselectedLabelStyle: const TextStyle(
-                  fontSize: 12.5, fontWeight: FontWeight.w600),
-              tabs: const [
-                Tab(text: 'Pencarian'),
-                Tab(text: 'Ulasan Saya'),
+                  fontSize: 11.5, fontWeight: FontWeight.w600),
+              tabs: [
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.favorite_rounded, size: 13),
+                      const SizedBox(width: 4),
+                      Text('Favorit (${_favRestaurants.length})'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.rate_review_rounded, size: 13),
+                      const SizedBox(width: 4),
+                      Text('Ulasan (${_myReviews.length})'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.history_rounded, size: 13),
+                      const SizedBox(width: 4),
+                      Text('Pencarian (${_searchHistory.length})'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
           SizedBox(
-            height: 240,
+            height: 290,
             child: _histLoading
                 ? const Center(
                     child:
@@ -1683,8 +1706,9 @@ class _ProfileTabState extends State<ProfileTab>
                 : TabBarView(
                     controller: _histTab,
                     children: [
-                      _searchHistoryTab(),
+                      _favoritesTab(),
                       _reviewsTab(),
+                      _searchHistoryTab(),
                     ],
                   ),
           ),
@@ -1693,181 +1717,65 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
-  Widget _searchHistoryTab() {
-    if (_searchHistory.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off_rounded, size: 32, color: AppColors.line),
-            SizedBox(height: 8),
-            Text(
-              'Belum ada riwayat pencarian',
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-          ],
-        ),
-      );
-    }
-    return Column(
-      children: [
-        // header hapus semua
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _reviewsTab() {
+    if (_myReviews.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                '${_searchHistory.length} pencarian',
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textMuted),
-              ),
-              GestureDetector(
-                onTap: () async {
-                  await SupabaseService.instance.clearSearchHistory();
-                  setState(() => _searchHistory = []);
-                },
-                child: const Text(
-                  'Hapus semua',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.red,
-                    fontWeight: FontWeight.w700,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.rate_review_rounded,
+                    size: 26, color: AppColors.orange),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Belum Ada Ulasan Ditulis',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Kunjungi restoran favoritmu dan bagikan pengalaman rasa pertama Anda!',
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            itemCount: _searchHistory.length,
-            itemBuilder: (_, i) {
-              final item = _searchHistory[i];
-              final q = item['query'] as String? ?? '';
-              return Material(
-                color: Colors.transparent,
-                child: ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.history_rounded,
-                      size: 18, color: AppColors.textMuted),
-                  title: Text(
-                    q,
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.textDark),
-                  ),
-                  trailing: GestureDetector(
-                    onTap: () async {
-                      await SupabaseService.instance.removeSearchItem(q);
-                      setState(() =>
-                          _searchHistory.removeWhere((e) => e['query'] == q));
-                    },
-                    child: const Icon(Icons.close_rounded,
-                        size: 16, color: AppColors.textMuted),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _reviewsTab() {
-    if (_myReviews.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.rate_review_rounded,
-                size: 32, color: AppColors.line),
-            SizedBox(height: 8),
-            Text(
-              'Belum ada ulasan',
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Kunjungi restoran dan tulis ulasan pertamamu!',
-              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       itemCount: _myReviews.length,
-      separatorBuilder: (_, _) => Divider(
-        height: 1,
-        indent: 52,
-        color: AppColors.line.withValues(alpha: 0.5),
-      ),
+      separatorBuilder: (_, _) => const SizedBox(height: 6),
       itemBuilder: (_, i) {
         final rev = _myReviews[i];
-        return Material(
-          color: Colors.transparent,
-          child: ListTile(
-            dense: true,
-            leading: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.orange.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.restaurant_rounded,
-                size: 18, color: AppColors.orange),
-          ),
-          title: Text(
-            (rev.restaurantName != null &&
-                    rev.restaurantName!.isNotEmpty &&
-                    rev.restaurantName != rev.restaurantId)
-                ? rev.restaurantName!
-                : (kDefaultRestaurants
-                        .where((r) =>
-                            r.id == rev.restaurantId ||
-                            r.id == 'resto_${rev.restaurantId}' ||
-                            (rev.restaurantId.startsWith('resto_') &&
-                                r.id ==
-                                    rev.restaurantId.replaceFirst('resto_', '')))
-                        .firstOrNull
-                        ?.name ??
-                    'Tempat Kuliner'),
-            style: const TextStyle(
-                fontSize: 12.5, fontWeight: FontWeight.w700),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 3),
-              Row(
-                children: List.generate(
-                  5,
-                  (j) => Icon(
-                    j < rev.rating
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    size: 13,
-                    color: AppColors.orange,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                rev.comment.isNotEmpty ? rev.comment : 'Tidak ada ulasan tertulis',
-                style: const TextStyle(
-                    fontSize: 11.5, color: AppColors.textDark, height: 1.3),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+        final restoName = (rev.restaurantName != null &&
+                rev.restaurantName!.isNotEmpty &&
+                rev.restaurantName != rev.restaurantId)
+            ? rev.restaurantName!
+            : (kDefaultRestaurants
+                    .where((r) =>
+                        r.id == rev.restaurantId ||
+                        r.id == 'resto_${rev.restaurantId}' ||
+                        (rev.restaurantId.startsWith('resto_') &&
+                            r.id ==
+                                rev.restaurantId.replaceFirst('resto_', '')))
+                    .firstOrNull
+                    ?.name ??
+                'Tempat Kuliner');
+
+        return InkWell(
+          borderRadius: BorderRadius.circular(12),
           onTap: () async {
             final resto = await SupabaseService.instance
                     .getRestaurant(rev.restaurantId) ??
@@ -1888,9 +1796,423 @@ class _ProfileTabState extends State<ProfileTab>
               _loadHistory();
             }
           },
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.line.withValues(alpha: 0.6)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.restaurant_rounded,
+                      size: 18, color: AppColors.orange),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        restoName,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: List.generate(
+                          5,
+                          (j) => Icon(
+                            j < rev.rating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 12.5,
+                            color: AppColors.orange,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        rev.comment.isNotEmpty
+                            ? rev.comment
+                            : 'Tidak ada ulasan tertulis',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textDark,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 16, color: AppColors.textMuted),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _favoritesTab() {
+    if (_favRestaurants.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.favorite_border_rounded,
+                    size: 26, color: AppColors.orange),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Belum Ada Restoran Favorit',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Tandai ikon hati pada kuliner yang kamu suka untuk diakses cepat di sini.',
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
-      },
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8, right: 8, top: 4, bottom: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${_favRestaurants.length} Kuliner Tersimpan',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              InkWell(
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                  );
+                  _load();
+                  _loadHistory();
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Buka Halaman Favorit',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(Icons.arrow_forward_ios_rounded,
+                        size: 10, color: AppColors.orange),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            itemCount: _favRestaurants.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 6),
+            itemBuilder: (ctx, i) {
+              final r = _favRestaurants[i];
+              return InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => DetailPage(restaurant: r)),
+                  );
+                  _load();
+                  _loadHistory();
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppColors.line.withValues(alpha: 0.6)),
+                  ),
+                  child: Row(
+                    children: [
+                      FoodImage(
+                        imageUrl: r.effectiveImageUrl.isNotEmpty
+                            ? r.effectiveImageUrl
+                            : null,
+                        width: 48,
+                        height: 48,
+                        borderRadius: BorderRadius.circular(10),
+                        icon: Icons.restaurant_rounded,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              r.name,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.star_rounded,
+                                    size: 12.5, color: AppColors.orange),
+                                const SizedBox(width: 2),
+                                Text(
+                                  r.rating.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '• ${r.category}',
+                                    style: const TextStyle(
+                                        fontSize: 10.5,
+                                        color: AppColors.textMuted),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              r.priceRange.isNotEmpty
+                                  ? r.priceRange
+                                  : 'Harga terjangkau',
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.greenDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded,
+                          size: 16, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _searchHistoryTab() {
+    if (_searchHistory.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.manage_search_rounded,
+                    size: 26, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Belum Ada Riwayat Pencarian',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Kata kunci pencarian kuliner Anda akan tersimpan otomatis di sini.',
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${_searchHistory.length} kata kunci tersimpan',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Hapus Semua Riwayat?'),
+                      content: const Text(
+                          'Semua jejak kata kunci pencarian Anda akan dihapus.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Batal'),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Hapus Semua'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (ok == true) {
+                    await SupabaseService.instance.clearSearchHistory();
+                    setState(() => _searchHistory = []);
+                  }
+                },
+                child: const Row(
+                  children: [
+                    Icon(Icons.delete_outline_rounded,
+                        size: 13, color: AppColors.red),
+                    SizedBox(width: 3),
+                    Text(
+                      'Hapus semua',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.red,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _searchHistory.map((item) {
+                final q = item['query'] as String? ?? '';
+                if (q.trim().isEmpty) return const SizedBox.shrink();
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F7F6),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.line.withValues(alpha: 0.8)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.history_rounded,
+                          size: 13, color: AppColors.textMuted),
+                      const SizedBox(width: 5),
+                      Text(
+                        q,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () async {
+                          await SupabaseService.instance.removeSearchItem(q);
+                          setState(() => _searchHistory
+                              .removeWhere((e) => e['query'] == q));
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close_rounded,
+                              size: 11, color: AppColors.textMuted),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2260,98 +2582,278 @@ class _ProfileTabState extends State<ProfileTab>
   }
 
   Widget _statsRow() {
+    final favCount = _favRestaurants.isNotEmpty ? _favRestaurants.length : (_stats['favorites'] ?? 0);
+    final revCount = _myReviews.isNotEmpty ? _myReviews.length : (_stats['reviews'] ?? 0);
+    final pts = _profile?.points ?? 100;
+
     return Row(
       children: [
-        _stat('${_stats['favorites'] ?? 0}', 'Favorit'),
-        const SizedBox(width: 12),
-        _stat('${_stats['reviews'] ?? 0}', 'Ulasan'),
+        _stat(
+          '$favCount',
+          'Favorit',
+          icon: Icons.favorite_rounded,
+          onTap: () {
+            _histTab.animateTo(0);
+          },
+        ),
+        const SizedBox(width: 10),
+        _stat(
+          '$revCount',
+          'Ulasan',
+          icon: Icons.rate_review_rounded,
+          onTap: () {
+            _histTab.animateTo(1);
+          },
+        ),
+        const SizedBox(width: 10),
+        _stat(
+          '$pts',
+          'Poin Rasa',
+          icon: Icons.stars_rounded,
+          isPoints: true,
+          onTap: _showLevelInfoSheet,
+        ),
       ],
     );
   }
 
-  Widget _quizBanner() {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const GamePage()),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x06000000),
-                blurRadius: 10,
-                offset: Offset(0, 3)),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.orange,
-                borderRadius: BorderRadius.circular(12),
+  Widget _gamificationBentoGrid() {
+    final pts = _profile?.points ?? 100;
+    return Row(
+      children: [
+        // Bento Card 1: Mini Games Kuliner
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GamePage()),
+                );
+                _load();
+                _loadHistory();
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.orange.withValues(alpha: 0.16)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x06000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.orange.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.sports_esports_rounded,
+                              size: 20, color: AppColors.orange),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            '3 Game',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.orange,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Mini Games',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Main & raih poin',
+                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-              child: const Icon(Icons.sports_esports_rounded,
-                  size: 20, color: Colors.white),
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mini Games Kuliner',
-                    style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    '3 Game: Kuis Rasa Mataraman, Kulinerdle & Detektif Kuliner',
-                    style:
-                        TextStyle(fontSize: 11, color: AppColors.textMuted),
-                  ),
-                ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Bento Card 2: Toko Border & Rewards
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RewardsShopPage()),
+                );
+                _load();
+                _loadHistory();
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.greenDark.withValues(alpha: 0.16)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x06000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.greenDark.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.storefront_rounded,
+                              size: 20, color: AppColors.greenDark),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.greenDark.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$pts Poin',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.greenDark,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Toko Rewards',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Tukar border avatar',
+                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _stat(String value, String label) {
+  Widget _stat(
+    String value,
+    String label, {
+    VoidCallback? onTap,
+    IconData? icon,
+    bool isPoints = false,
+  }) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x06000000),
-                blurRadius: 10,
-                offset: Offset(0, 3)),
-          ],
-        ),
-        child: Column(
-          children: [
-            Text(value, style: AppText.display(20)),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isPoints
+                    ? AppColors.orange.withValues(alpha: 0.28)
+                    : AppColors.line.withValues(alpha: 0.4),
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x06000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
             ),
-          ],
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: isPoints ? AppColors.orange : AppColors.charcoal,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      value,
+                      style: AppText.display(18).copyWith(
+                        color: isPoints ? AppColors.orange : AppColors.textDark,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: isPoints ? AppColors.orange : AppColors.textMuted,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
