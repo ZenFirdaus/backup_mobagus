@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -10,11 +11,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/restaurant.dart';
-import '../models/food.dart';
 import '../models/review.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/location_service.dart';
+import '../services/maps_link_service.dart';
 import '../services/supabase_service.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
@@ -46,9 +47,6 @@ class _DetailPageState extends State<DetailPage> {
   String? _routeDuration;
   bool _showRoute = false;
 
-  List<Food> _foods = [];
-  bool _foodsLoading = true;
-  String? _foodsError;
   List<Review> _reviews = [];
   bool _reviewsLoading = true;
   String? _reviewsError;
@@ -65,7 +63,6 @@ class _DetailPageState extends State<DetailPage> {
     _currentReviewCount = _r.reviewCount;
     _checkFavorite();
     _checkReminder();
-    _loadFoods();
     _loadReviews();
     _subscribeRealtime();
     _fetchRoute();
@@ -95,8 +92,10 @@ class _DetailPageState extends State<DetailPage> {
           final route = data['routes'][0];
           final coords = (route['geometry']['coordinates'] as List);
           final points = coords
-              .map<LatLng>((c) => LatLng(
-                  (c[1] as num).toDouble(), (c[0] as num).toDouble()))
+              .map<LatLng>(
+                (c) =>
+                    LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()),
+              )
               .toList();
 
           final meters = (route['distance'] as num?)?.toDouble() ?? 0;
@@ -126,10 +125,7 @@ class _DetailPageState extends State<DetailPage> {
 
     if (mounted) {
       setState(() {
-        _routePoints = [
-          LatLng(userLat, userLng),
-          LatLng(_r.lat, _r.lng),
-        ];
+        _routePoints = [LatLng(userLat, userLng), LatLng(_r.lat, _r.lng)];
         _routeDistance =
             '${_calcDistance(userLat, userLng, _r.lat, _r.lng)} km';
         _routeDuration = '~10 menit';
@@ -141,10 +137,10 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  double _calcDistance(
-      double lat1, double lon1, double lat2, double lon2) {
+  double _calcDistance(double lat1, double lon1, double lat2, double lon2) {
     const p = 0.017453292519943295;
-    final a = 0.5 -
+    final a =
+        0.5 -
         math.cos((lat2 - lat1) * p) / 2 +
         math.cos(lat1 * p) *
             math.cos(lat2 * p) *
@@ -223,21 +219,6 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  Future<void> _loadFoods() async {
-    setState(() {
-      _foodsLoading = true;
-      _foodsError = null;
-    });
-    try {
-      final list = await SupabaseService.instance.getFoods(_r.id, _r);
-      if (mounted) setState(() => _foods = list);
-    } catch (e) {
-      if (mounted) setState(() => _foodsError = e.toString());
-    } finally {
-      if (mounted) setState(() => _foodsLoading = false);
-    }
-  }
-
   Future<void> _loadReviews() async {
     setState(() {
       _reviewsLoading = true;
@@ -299,20 +280,27 @@ class _DetailPageState extends State<DetailPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.rate_review_rounded,
-                  color: AppColors.orange, size: 22),
+              const Icon(
+                Icons.rate_review_rounded,
+                color: AppColors.orange,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               Text('Tulis Ulasan', style: AppText.display(18)),
               const Spacer(),
               IconButton(
                 tooltip: 'Tutup',
                 onPressed: () => Navigator.pop(ctx),
-                icon: const Icon(Icons.close_rounded,
-                    size: 20, color: AppColors.textMuted),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 20,
+                  color: AppColors.textMuted,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -354,8 +342,10 @@ class _DetailPageState extends State<DetailPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: AppColors.orange, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.orange,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -371,7 +361,8 @@ class _DetailPageState extends State<DetailPage> {
                 backgroundColor: AppColors.orange,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () async {
                 if (commentCtrl.text.trim().isEmpty) return;
@@ -390,8 +381,7 @@ class _DetailPageState extends State<DetailPage> {
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content:
-                          Text('Ulasan berhasil ditambahkan (+20 Poin)'),
+                      content: Text('Ulasan berhasil ditambahkan (+20 Poin)'),
                       backgroundColor: AppColors.greenDark,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -407,7 +397,8 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future<void> _shareRestaurant() async {
-    final text = 'Rekomendasi Kuliner:\n\n'
+    final text =
+        'Rekomendasi Kuliner:\n\n'
         '*${_r.name}*\n'
         'Kategori: ${_r.category}\n'
         'Rating: ${_r.rating.toStringAsFixed(1)} / 5.0\n'
@@ -434,7 +425,9 @@ class _DetailPageState extends State<DetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Informasi ${_r.name} berhasil disalin ke papan klip!'),
+            content: Text(
+              'Informasi ${_r.name} berhasil disalin ke papan klip!',
+            ),
             backgroundColor: AppColors.greenDark,
             behavior: SnackBarBehavior.floating,
           ),
@@ -453,11 +446,14 @@ class _DetailPageState extends State<DetailPage> {
     final existingIndex = existingReminders.indexWhere(
       (r) => r['restoId'] == _r.id && r['isCompleted'] != true,
     );
-    final Map<String, dynamic>? existing =
-        existingIndex != -1 ? existingReminders[existingIndex] : null;
+    final Map<String, dynamic>? existing = existingIndex != -1
+        ? existingReminders[existingIndex]
+        : null;
 
     if (existing != null) {
-      final parsed = DateTime.tryParse(existing['scheduledAt']?.toString() ?? '');
+      final parsed = DateTime.tryParse(
+        existing['scheduledAt']?.toString() ?? '',
+      );
       if (parsed != null) {
         selectedDate = parsed;
         selectedTime = TimeOfDay(hour: parsed.hour, minute: parsed.minute);
@@ -521,8 +517,10 @@ class _DetailPageState extends State<DetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Jadwal Kunjungan Kuliner',
-                              style: AppText.display(17)),
+                          Text(
+                            'Jadwal Kunjungan Kuliner',
+                            style: AppText.display(17),
+                          ),
                           Text(
                             _r.name,
                             style: const TextStyle(
@@ -539,7 +537,10 @@ class _DetailPageState extends State<DetailPage> {
                     IconButton(
                       tooltip: 'Tutup',
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -562,8 +563,9 @@ class _DetailPageState extends State<DetailPage> {
                             ctx,
                             initialDate: selectedDate,
                             firstDate: DateTime.now(),
-                            lastDate:
-                                DateTime.now().add(const Duration(days: 90)),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 90),
+                            ),
                             title: 'Pilih Tanggal Rencana',
                           );
                           if (picked != null) {
@@ -572,7 +574,9 @@ class _DetailPageState extends State<DetailPage> {
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -586,8 +590,11 @@ class _DetailPageState extends State<DetailPage> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_today_rounded,
-                                  size: 16, color: AppColors.greenDark),
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 16,
+                                color: AppColors.greenDark,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -619,7 +626,9 @@ class _DetailPageState extends State<DetailPage> {
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -633,8 +642,11 @@ class _DetailPageState extends State<DetailPage> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.access_time_rounded,
-                                  size: 16, color: AppColors.greenDark),
+                              const Icon(
+                                Icons.access_time_rounded,
+                                size: 16,
+                                color: AppColors.greenDark,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -659,16 +671,22 @@ class _DetailPageState extends State<DetailPage> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) =>
                       FocusManager.instance.primaryFocus?.unfocus(),
-                  style:
-                      const TextStyle(fontSize: 12.5, color: AppColors.textDark),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textDark,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Catatan (misal: Santap bersama keluarga)...',
                     hintStyle: const TextStyle(
-                        fontSize: 12, color: AppColors.textMuted),
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: AppColors.line),
@@ -695,10 +713,12 @@ class _DetailPageState extends State<DetailPage> {
                           ),
                           onPressed: () async {
                             final idStr = existing['id'].toString();
-                            final intId = int.tryParse(idStr) ??
+                            final intId =
+                                int.tryParse(idStr) ??
                                 (_r.id.hashCode.abs() % 100000);
-                            await HiveService.instance
-                                .deleteVisitReminder(idStr);
+                            await HiveService.instance.deleteVisitReminder(
+                              idStr,
+                            );
                             await NotificationService.instance
                                 .cancelNotification(intId);
                             _checkReminder();
@@ -732,8 +752,10 @@ class _DetailPageState extends State<DetailPage> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        icon: const Icon(Icons.check_circle_outline_rounded,
-                            size: 18),
+                        icon: const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 18,
+                        ),
                         label: Text(
                           existing != null
                               ? 'Perbarui Jadwal'
@@ -750,7 +772,8 @@ class _DetailPageState extends State<DetailPage> {
                           );
 
                           final now = DateTime.now();
-                          final isCurrentOrFuture = scheduledAt.isAfter(now) ||
+                          final isCurrentOrFuture =
+                              scheduledAt.isAfter(now) ||
                               (scheduledAt.year == now.year &&
                                   scheduledAt.month == now.month &&
                                   scheduledAt.day == now.day &&
@@ -760,8 +783,9 @@ class _DetailPageState extends State<DetailPage> {
                           if (!isCurrentOrFuture && scheduledAt.isBefore(now)) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
                               const SnackBar(
-                                content:
-                                    Text('Pilih tanggal dan jam di masa depan'),
+                                content: Text(
+                                  'Pilih tanggal dan jam di masa depan',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -782,11 +806,11 @@ class _DetailPageState extends State<DetailPage> {
 
                           await NotificationService.instance
                               .scheduleVisitReminder(
-                            id: notifId,
-                            restoName: _r.name,
-                            scheduledDate: scheduledAt,
-                            note: noteCtrl.text.trim(),
-                          );
+                                id: notifId,
+                                restoName: _r.name,
+                                scheduledDate: scheduledAt,
+                                note: noteCtrl.text.trim(),
+                              );
 
                           _checkReminder();
                           if (ctx.mounted) Navigator.pop(ctx);
@@ -864,9 +888,8 @@ class _DetailPageState extends State<DetailPage> {
               _r.effectiveImageUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => _fallbackImage(),
-              loadingBuilder: (_, child, progress) => progress == null
-                  ? child
-                  : _fallbackImage(),
+              loadingBuilder: (_, child, progress) =>
+                  progress == null ? child : _fallbackImage(),
             )
           else
             _fallbackImage(),
@@ -897,7 +920,9 @@ class _DetailPageState extends State<DetailPage> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 4),
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.orange,
                         borderRadius: BorderRadius.circular(8),
@@ -916,7 +941,9 @@ class _DetailPageState extends State<DetailPage> {
                     if (_r.openingHours != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 9, vertical: 4),
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
@@ -924,9 +951,11 @@ class _DetailPageState extends State<DetailPage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.schedule_rounded,
-                                size: 10,
-                                color: Colors.white.withValues(alpha: 0.9)),
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 10,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               _r.openingHours!,
@@ -954,8 +983,11 @@ class _DetailPageState extends State<DetailPage> {
                 const SizedBox(height: 5),
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded,
-                        size: 14, color: AppColors.yellow),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 14,
+                      color: AppColors.yellow,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       _currentRating.toStringAsFixed(1),
@@ -1028,7 +1060,9 @@ class _DetailPageState extends State<DetailPage> {
             ),
             const Spacer(),
             _circleButton(
-              _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              _isFavorite
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
               color: _isFavorite ? AppColors.red : AppColors.textDark,
               onTap: _toggleFavorite,
             ),
@@ -1068,8 +1102,11 @@ class _DetailPageState extends State<DetailPage> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.location_on_rounded,
-                size: 15, color: AppColors.red),
+            const Icon(
+              Icons.location_on_rounded,
+              size: 15,
+              color: AppColors.red,
+            ),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -1086,8 +1123,11 @@ class _DetailPageState extends State<DetailPage> {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(Icons.payments_rounded,
-                size: 16, color: AppColors.greenDark),
+            const Icon(
+              Icons.payments_rounded,
+              size: 16,
+              color: AppColors.greenDark,
+            ),
             const SizedBox(width: 6),
             Text(
               _r.priceRange,
@@ -1106,8 +1146,11 @@ class _DetailPageState extends State<DetailPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.phone_rounded,
-                        size: 14, color: AppColors.textMuted),
+                    const Icon(
+                      Icons.phone_rounded,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       _r.phone!,
@@ -1239,8 +1282,11 @@ class _DetailPageState extends State<DetailPage> {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: Row(
               children: [
-                const Icon(Icons.location_on_rounded,
-                    size: 16, color: AppColors.red),
+                const Icon(
+                  Icons.location_on_rounded,
+                  size: 16,
+                  color: AppColors.red,
+                ),
                 const SizedBox(width: 6),
                 Text('Lokasi & Rute', style: AppText.display(14)),
                 const Spacer(),
@@ -1263,14 +1309,19 @@ class _DetailPageState extends State<DetailPage> {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _showRoute
                           ? const Color(0xFF2563EB).withValues(alpha: 0.12)
                           : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: _showRoute ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+                        color: _showRoute
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFFCBD5E1),
                         width: 1,
                       ),
                     ),
@@ -1278,9 +1329,13 @@ class _DetailPageState extends State<DetailPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _showRoute ? Icons.close_rounded : Icons.alt_route_rounded,
+                          _showRoute
+                              ? Icons.close_rounded
+                              : Icons.alt_route_rounded,
                           size: 12.5,
-                          color: _showRoute ? const Color(0xFF2563EB) : AppColors.charcoal,
+                          color: _showRoute
+                              ? const Color(0xFF2563EB)
+                              : AppColors.charcoal,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -1288,7 +1343,9 @@ class _DetailPageState extends State<DetailPage> {
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
-                            color: _showRoute ? const Color(0xFF2563EB) : AppColors.charcoal,
+                            color: _showRoute
+                                ? const Color(0xFF2563EB)
+                                : AppColors.charcoal,
                           ),
                         ),
                       ],
@@ -1314,7 +1371,10 @@ class _DetailPageState extends State<DetailPage> {
                     mapController: _mapController,
                     options: MapOptions(
                       initialCenter: _showRoute
-                          ? LatLng((userLat + _r.lat) / 2, (userLng + _r.lng) / 2)
+                          ? LatLng(
+                              (userLat + _r.lat) / 2,
+                              (userLng + _r.lng) / 2,
+                            )
                           : targetLatLng,
                       initialZoom: _showRoute ? 13.2 : _currentMapZoom,
                       minZoom: 10.0,
@@ -1326,7 +1386,8 @@ class _DetailPageState extends State<DetailPage> {
                     children: [
                       // Layer Peta Dasar OpenStreetMap
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.foodie.app',
                       ),
 
@@ -1358,7 +1419,9 @@ class _DetailPageState extends State<DetailPage> {
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(8),
@@ -1389,10 +1452,14 @@ class _DetailPageState extends State<DetailPage> {
                                     color: AppColors.red,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                        color: Colors.white, width: 2.5),
+                                      color: Colors.white,
+                                      width: 2.5,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.red.withValues(alpha: 0.45),
+                                        color: AppColors.red.withValues(
+                                          alpha: 0.45,
+                                        ),
                                         blurRadius: 8,
                                         offset: const Offset(0, 3),
                                       ),
@@ -1420,12 +1487,17 @@ class _DetailPageState extends State<DetailPage> {
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 2.5),
+                                      horizontal: 7,
+                                      vertical: 2.5,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF2563EB),
                                       borderRadius: BorderRadius.circular(6),
                                       boxShadow: const [
-                                        BoxShadow(color: Color(0x25000000), blurRadius: 4),
+                                        BoxShadow(
+                                          color: Color(0x25000000),
+                                          blurRadius: 4,
+                                        ),
                                       ],
                                     ),
                                     child: const Text(
@@ -1444,9 +1516,15 @@ class _DetailPageState extends State<DetailPage> {
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF2563EB),
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2.5),
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2.5,
+                                      ),
                                       boxShadow: const [
-                                        BoxShadow(color: Color(0x35000000), blurRadius: 6),
+                                        BoxShadow(
+                                          color: Color(0x35000000),
+                                          blurRadius: 6,
+                                        ),
                                       ],
                                     ),
                                     child: const Icon(
@@ -1469,12 +1547,20 @@ class _DetailPageState extends State<DetailPage> {
                       top: 10,
                       left: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: const [BoxShadow(color: Color(0x20000000), blurRadius: 6)],
-                          border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.35)),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x20000000), blurRadius: 6),
+                          ],
+                          border: Border.all(
+                            color: const Color(0xFF2563EB)
+                                .withValues(alpha: 0.35),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1483,7 +1569,10 @@ class _DetailPageState extends State<DetailPage> {
                               const SizedBox(
                                 width: 12,
                                 height: 12,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF2563EB),
+                                ),
                               ),
                               const SizedBox(width: 6),
                               const Text(
@@ -1495,7 +1584,11 @@ class _DetailPageState extends State<DetailPage> {
                                 ),
                               ),
                             ] else ...[
-                              const Icon(Icons.directions_car_rounded, size: 14, color: Color(0xFF2563EB)),
+                              const Icon(
+                                Icons.directions_car_rounded,
+                                size: 14,
+                                color: Color(0xFF2563EB),
+                              ),
                               const SizedBox(width: 5),
                               Text(
                                 '${_routeDistance ?? "-"} • ${_routeDuration ?? "-"}',
@@ -1522,8 +1615,14 @@ class _DetailPageState extends State<DetailPage> {
                           icon: Icons.add_rounded,
                           tooltip: 'Perbesar',
                           onTap: () {
-                            _currentMapZoom = (_currentMapZoom + 1).clamp(10.0, 18.5);
-                            _mapController.move(_mapController.camera.center, _currentMapZoom);
+                            _currentMapZoom = (_currentMapZoom + 1).clamp(
+                              10.0,
+                              18.5,
+                            );
+                            _mapController.move(
+                              _mapController.camera.center,
+                              _currentMapZoom,
+                            );
                           },
                         ),
                         const SizedBox(height: 5),
@@ -1531,8 +1630,14 @@ class _DetailPageState extends State<DetailPage> {
                           icon: Icons.remove_rounded,
                           tooltip: 'Perkecil',
                           onTap: () {
-                            _currentMapZoom = (_currentMapZoom - 1).clamp(10.0, 18.5);
-                            _mapController.move(_mapController.camera.center, _currentMapZoom);
+                            _currentMapZoom = (_currentMapZoom - 1).clamp(
+                              10.0,
+                              18.5,
+                            );
+                            _mapController.move(
+                              _mapController.camera.center,
+                              _currentMapZoom,
+                            );
                           },
                         ),
                         const SizedBox(height: 5),
@@ -1553,7 +1658,10 @@ class _DetailPageState extends State<DetailPage> {
                     left: 10,
                     bottom: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3.5,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(6),
@@ -1564,7 +1672,11 @@ class _DetailPageState extends State<DetailPage> {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.touch_app_rounded, size: 11, color: AppColors.textMuted),
+                          Icon(
+                            Icons.touch_app_rounded,
+                            size: 11,
+                            color: AppColors.textMuted,
+                          ),
                           SizedBox(width: 4),
                           Text(
                             'Geser & Cubit untuk Zoom',
@@ -1618,7 +1730,9 @@ class _DetailPageState extends State<DetailPage> {
                   onTap: _openMaps,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.greenDark,
                       borderRadius: BorderRadius.circular(12),
@@ -1626,8 +1740,11 @@ class _DetailPageState extends State<DetailPage> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.navigation_rounded,
-                            size: 14, color: Colors.white),
+                        Icon(
+                          Icons.navigation_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Navigasi',
@@ -1672,216 +1789,49 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // ── Menu Section ──
+  // ── Menu & Foto di Google Maps ──
   Widget _menuSection() {
+    final label = dishLabel(_r.dishType);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            const Icon(Icons.restaurant_menu_rounded,
-                size: 18, color: AppColors.charcoal),
-            const SizedBox(width: 8),
-            Expanded(child: Text('Menu Unggulan', style: AppText.display(16))),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (_foodsLoading)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: CircularProgressIndicator(color: AppColors.orange),
+        if (label != null) ...[
+          Text(
+            'Jenis sajian: $label',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
             ),
-          )
-        else if (_foodsError != null)
-          _errorTile(_foodsError!, _loadFoods)
-        else if (_foods.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              'Belum ada menu yang terdaftar.',
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-          )
-        else
-          ..._foods.map(_foodTile),
-      ],
-    );
-  }
-
-  Widget _foodTile(Food f) {
-    final lower = '${f.name} ${f.category ?? ''}'.toLowerCase();
-    final IconData menuIcon;
-    final Color iconColor;
-    final Color iconBg;
-
-    if (lower.contains('teh') ||
-        lower.contains('kopi') ||
-        lower.contains('coffee') ||
-        lower.contains('es ') ||
-        lower.contains('wedang') ||
-        lower.contains('jus') ||
-        lower.contains('minuman')) {
-      menuIcon = Icons.local_cafe_rounded;
-      iconColor = AppColors.orange;
-      iconBg = AppColors.tint(AppColors.orange, 0.12);
-    } else if (lower.contains('bakpia') ||
-        lower.contains('pia ') ||
-        lower.contains('roti') ||
-        lower.contains('cake') ||
-        lower.contains('pastry')) {
-      menuIcon = Icons.bakery_dining_rounded;
-      iconColor = AppColors.orange;
-      iconBg = AppColors.tint(AppColors.orange, 0.15);
-    } else if (lower.contains('padang') ||
-        lower.contains('rendang') ||
-        lower.contains('pop') ||
-        lower.contains('gulai')) {
-      menuIcon = Icons.rice_bowl_rounded;
-      iconColor = AppColors.paprika;
-      iconBg = AppColors.tint(AppColors.paprika, 0.12);
-    } else if (lower.contains('pempek') ||
-        lower.contains('ikan') ||
-        lower.contains('seafood') ||
-        lower.contains('lele') ||
-        lower.contains('udang') ||
-        lower.contains('cumi')) {
-      menuIcon = Icons.set_meal_rounded;
-      iconColor = AppColors.paprika;
-      iconBg = AppColors.tint(AppColors.paprika, 0.12);
-    } else if (lower.contains('soto') ||
-        lower.contains('sop') ||
-        lower.contains('soup')) {
-      menuIcon = Icons.soup_kitchen_rounded;
-      iconColor = AppColors.greenDark;
-      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
-    } else if (lower.contains('bakso')) {
-      menuIcon = Icons.ramen_dining_rounded;
-      iconColor = AppColors.greenDark;
-      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
-    } else if (lower.contains('sate') ||
-        lower.contains('kambing') ||
-        lower.contains('tongseng') ||
-        lower.contains('ayam') ||
-        lower.contains('bebek')) {
-      menuIcon = Icons.kebab_dining_rounded;
-      iconColor = AppColors.paprika;
-      iconBg = AppColors.tint(AppColors.paprika, 0.12);
-    } else if (lower.contains('bakmi') ||
-        lower.contains('mie') ||
-        lower.contains('bihun') ||
-        lower.contains('kwetiau')) {
-      menuIcon = Icons.ramen_dining_rounded;
-      iconColor = AppColors.greenDark;
-      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
-    } else if (lower.contains('mendoan') ||
-        lower.contains('gorengan') ||
-        lower.contains('camilan') ||
-        lower.contains('snack')) {
-      menuIcon = Icons.cookie_rounded;
-      iconColor = AppColors.yellow;
-      iconBg = AppColors.tint(AppColors.yellow, 0.2);
-    } else {
-      menuIcon = Icons.restaurant_rounded;
-      iconColor = AppColors.greenDark;
-      iconBg = AppColors.tint(AppColors.greenDark, 0.12);
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
           ),
+          const SizedBox(height: 12),
         ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(menuIcon, size: 22, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  f.name,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final ok = await openInGoogleMaps(_r.name, _r.kabupatenKota);
+              if (!ok && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tidak dapat membuka Google Maps'),
+                    behavior: SnackBarBehavior.floating,
                   ),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    if (f.category != null && f.category!.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceSubtle,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          f.category!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    if (f.description != null && f.description!.isNotEmpty)
-                      Expanded(
-                        child: Text(
-                          f.description!,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: AppColors.textMuted,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.greenDark, 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              f.priceLabel,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: AppColors.greenDark,
+                );
+              }
+            },
+            icon: const Icon(Icons.map_outlined, size: 20),
+            label: const Text('Lihat menu & foto di Google Maps'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: const BorderSide(color: AppColors.line),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1892,8 +1842,11 @@ class _DetailPageState extends State<DetailPage> {
       children: [
         Row(
           children: [
-            const Icon(Icons.forum_rounded,
-                size: 18, color: AppColors.charcoal),
+            const Icon(
+              Icons.forum_rounded,
+              size: 18,
+              color: AppColors.charcoal,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text('Catatan Rasa Kurator', style: AppText.display(16)),
@@ -1901,8 +1854,10 @@ class _DetailPageState extends State<DetailPage> {
             GestureDetector(
               onTap: _showAddReviewDialog,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.tint(AppColors.red, 0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -1945,13 +1900,15 @@ class _DetailPageState extends State<DetailPage> {
             ),
             child: Column(
               children: [
-                const Icon(Icons.rate_review_rounded,
-                    size: 32, color: AppColors.line),
+                const Icon(
+                  Icons.rate_review_rounded,
+                  size: 32,
+                  color: AppColors.line,
+                ),
                 const SizedBox(height: 8),
                 const Text(
                   'Belum ada ulasan untuk tempat ini.',
-                  style:
-                      TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
@@ -1979,7 +1936,7 @@ class _DetailPageState extends State<DetailPage> {
     ];
     final colorIdx =
         (r.userName?.isNotEmpty == true ? r.userName![0].codeUnitAt(0) : 0) %
-            colors.length;
+        colors.length;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -2062,8 +2019,18 @@ class _DetailPageState extends State<DetailPage> {
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

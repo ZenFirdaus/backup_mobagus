@@ -17,6 +17,8 @@ class Restaurant {
   final double rating;
   final int reviewCount;
   final String? description;
+  final String? kabupatenKota;
+  final String? dishType;
 
   const Restaurant({
     required this.id,
@@ -37,6 +39,8 @@ class Restaurant {
     this.rating = 4.5,
     this.reviewCount = 0,
     this.description,
+    this.kabupatenKota,
+    this.dishType,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -61,6 +65,8 @@ class Restaurant {
       rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
       reviewCount: json['review_count'] as int? ?? 0,
       description: json['description'] as String?,
+      kabupatenKota: json['kabupaten_kota'] as String?,
+      dishType: json['dish_type'] as String?,
     );
   }
 
@@ -81,6 +87,8 @@ class Restaurant {
     'rating': rating,
     'review_count': reviewCount,
     'description': description,
+    'kabupaten_kota': kabupatenKota,
+    'dish_type': dishType,
   };
 
   /// Gambar dinonaktifkan/dihapus sesuai permintaan user agar tidak ada gambar kuliner yang keliru.

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,7 +87,9 @@ class _ProfileTabState extends State<ProfileTab>
     _load();
     _loadHistory();
     _subscribeRealtime();
-    AiRecommendationService.instance.profileNotifier.addListener(_onAiProfileChanged);
+    AiRecommendationService.instance.profileNotifier.addListener(
+      _onAiProfileChanged,
+    );
     _loadAiProfile();
   }
 
@@ -170,7 +173,9 @@ class _ProfileTabState extends State<ProfileTab>
 
   @override
   void dispose() {
-    AiRecommendationService.instance.profileNotifier.removeListener(_onAiProfileChanged);
+    AiRecommendationService.instance.profileNotifier.removeListener(
+      _onAiProfileChanged,
+    );
     _profileSub?.cancel();
     _rewardSub?.cancel();
     _reviewAddedSub?.cancel();
@@ -183,7 +188,9 @@ class _ProfileTabState extends State<ProfileTab>
     try {
       final currentEmail = Supabase.instance.client.auth.currentUser?.email;
       if (currentEmail != null && currentEmail.isNotEmpty) {
-        _biometric = await FaceBiometricService.instance.isFaceEnrolled(email: currentEmail);
+        _biometric = await FaceBiometricService.instance.isFaceEnrolled(
+          email: currentEmail,
+        );
       } else {
         _biometric = await FaceBiometricService.instance.isFaceEnrolled();
       }
@@ -233,10 +240,16 @@ class _ProfileTabState extends State<ProfileTab>
                 SnackBar(
                   content: Row(
                     children: [
-                      const Icon(Icons.face_unlock_rounded, color: Colors.white, size: 20),
+                      const Icon(
+                        Icons.face_unlock_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text('Apple Face ID berhasil diaktifkan untuk $currentName.'),
+                        child: Text(
+                          'Apple Face ID berhasil diaktifkan untuk $currentName.',
+                        ),
                       ),
                     ],
                   ),
@@ -254,7 +267,9 @@ class _ProfileTabState extends State<ProfileTab>
 
     setState(() => _biometric = false);
     try {
-      await FaceBiometricService.instance.removeEnrolledFace(email: currentEmail);
+      await FaceBiometricService.instance.removeEnrolledFace(
+        email: currentEmail,
+      );
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -299,8 +314,8 @@ class _ProfileTabState extends State<ProfileTab>
             content: Text(
               val
                   ? (_mealIsSet
-                      ? 'Notifikasi aktif (Jadwal: $_mealLabel $_mealHour:${_mealMinute.toString().padLeft(2, '0')} WIB)'
-                      : 'Notifikasi aktif')
+                        ? 'Notifikasi aktif (Jadwal: $_mealLabel $_mealHour:${_mealMinute.toString().padLeft(2, '0')} WIB)'
+                        : 'Notifikasi aktif')
                   : 'Semua notifikasi dinonaktifkan',
             ),
             backgroundColor: val ? AppColors.greenDark : AppColors.charcoal,
@@ -327,8 +342,9 @@ class _ProfileTabState extends State<ProfileTab>
       final action = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text('Pengingat Makan Harian', style: AppText.display(16)),
           content: Text(
             'Saat ini diatur untuk $_mealLabel pukul ${_mealHour.toString().padLeft(2, '0')}:${_mealMinute.toString().padLeft(2, '0')} WIB.',
@@ -337,15 +353,18 @@ class _ProfileTabState extends State<ProfileTab>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, 'delete'),
-              child: const Text('Hapus Pengingat',
-                  style: TextStyle(color: AppColors.red)),
+              child: const Text(
+                'Hapus Pengingat',
+                style: TextStyle(color: AppColors.red),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.greenDark,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () => Navigator.pop(ctx, 'edit'),
               child: const Text('Ubah Jam'),
@@ -425,7 +444,8 @@ class _ProfileTabState extends State<ProfileTab>
       NotificationService.showInAppBanner(
         context,
         title: 'Pengingat Makan Diatur',
-        body: '$newLabel • Pukul ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')} WIB',
+        body:
+            '$newLabel • Pukul ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')} WIB',
         icon: Icons.schedule_rounded,
       );
     }
@@ -469,7 +489,10 @@ class _ProfileTabState extends State<ProfileTab>
             const Text(
               'FOODIE mengkurasi warisan kuliner secara eksklusif pada wilayah:',
               style: TextStyle(
-                  fontSize: 12.5, color: AppColors.textMuted, height: 1.4),
+                fontSize: 12.5,
+                color: AppColors.textMuted,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -491,9 +514,10 @@ class _ProfileTabState extends State<ProfileTab>
                   Text(
                     '1. Daerah Istimewa Yogyakarta (DIY)',
                     style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -504,9 +528,10 @@ class _ProfileTabState extends State<ProfileTab>
                   Text(
                     '2. Provinsi Jawa Tengah',
                     style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -542,11 +567,36 @@ class _ProfileTabState extends State<ProfileTab>
     final neededPts = p?.pointsToNextLevel ?? (300 - currentPts).clamp(0, 300);
 
     final levels = [
-      {'lv': 1, 'title': 'Pemula Rasa', 'range': '0 - 299 Poin', 'desc': 'Baru memulai petualangan kuliner di Jogja & Jateng.'},
-      {'lv': 2, 'title': 'Penjelajah Kuliner', 'range': '300 - 799 Poin', 'desc': 'Mulai rajin menjelajahi warung & kuliner legendaris.'},
-      {'lv': 3, 'title': 'Kurator Kuliner', 'range': '800 - 1499 Poin', 'desc': 'Rasa dan ulasan Anda menjadi rujukan sesama pencinta rasa.'},
-      {'lv': 4, 'title': 'Penjelajah Kuliner Sejati', 'range': '1500 - 2499 Poin', 'desc': 'Koleksi pengalaman rasa yang luas dan berwawasan tinggi.'},
-      {'lv': 5, 'title': 'Kurator Utama', 'range': '≥ 2500 Poin', 'desc': 'Gelar tertinggi kurator kuliner kehormatan FOODIE.'},
+      {
+        'lv': 1,
+        'title': 'Pemula Rasa',
+        'range': '0 - 299 Poin',
+        'desc': 'Baru memulai petualangan kuliner di Jogja & Jateng.',
+      },
+      {
+        'lv': 2,
+        'title': 'Penjelajah Kuliner',
+        'range': '300 - 799 Poin',
+        'desc': 'Mulai rajin menjelajahi warung & kuliner legendaris.',
+      },
+      {
+        'lv': 3,
+        'title': 'Kurator Kuliner',
+        'range': '800 - 1499 Poin',
+        'desc': 'Rasa dan ulasan Anda menjadi rujukan sesama pencinta rasa.',
+      },
+      {
+        'lv': 4,
+        'title': 'Penjelajah Kuliner Sejati',
+        'range': '1500 - 2499 Poin',
+        'desc': 'Koleksi pengalaman rasa yang luas dan berwawasan tinggi.',
+      },
+      {
+        'lv': 5,
+        'title': 'Kurator Utama',
+        'range': '≥ 2500 Poin',
+        'desc': 'Gelar tertinggi kurator kuliner kehormatan FOODIE.',
+      },
     ];
 
     showModalBottomSheet(
@@ -583,17 +633,27 @@ class _ProfileTabState extends State<ProfileTab>
                       color: AppColors.orange.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.stars_rounded, color: AppColors.orange, size: 24),
+                    child: const Icon(
+                      Icons.stars_rounded,
+                      color: AppColors.orange,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Tingkatan Kurator Kuliner', style: AppText.display(17)),
+                        Text(
+                          'Tingkatan Kurator Kuliner',
+                          style: AppText.display(17),
+                        ),
                         const Text(
                           'Sistem reputasi dan akumulasi poin kurator FOODIE',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -619,7 +679,10 @@ class _ProfileTabState extends State<ProfileTab>
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.orange,
                             borderRadius: BorderRadius.circular(8),
@@ -660,7 +723,9 @@ class _ProfileTabState extends State<ProfileTab>
                         value: p?.levelProgress ?? 0.3,
                         minHeight: 6,
                         backgroundColor: Colors.white.withValues(alpha: 0.2),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD54F)),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFFFD54F),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -680,7 +745,11 @@ class _ProfileTabState extends State<ProfileTab>
               const SizedBox(height: 18),
               const Text(
                 'Cara Mendapatkan Poin',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 8),
               _buildPointActionTile(
@@ -710,7 +779,11 @@ class _ProfileTabState extends State<ProfileTab>
               const SizedBox(height: 18),
               const Text(
                 'Daftar Tingkatan Level',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 8),
               ...levels.map((item) {
@@ -718,12 +791,19 @@ class _ProfileTabState extends State<ProfileTab>
                 final isCurrent = lvNum == currentLv;
                 return Container(
                   margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: isCurrent ? AppColors.orange.withValues(alpha: 0.08) : AppColors.surfaceSubtle,
+                    color: isCurrent
+                        ? AppColors.orange.withValues(alpha: 0.08)
+                        : AppColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isCurrent ? AppColors.orange : AppColors.line.withValues(alpha: 0.5),
+                      color: isCurrent
+                          ? AppColors.orange
+                          : AppColors.line.withValues(alpha: 0.5),
                       width: isCurrent ? 1.5 : 1,
                     ),
                   ),
@@ -734,7 +814,9 @@ class _ProfileTabState extends State<ProfileTab>
                         height: 28,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: isCurrent ? AppColors.orange : AppColors.charcoal.withValues(alpha: 0.1),
+                          color: isCurrent
+                              ? AppColors.orange
+                              : AppColors.charcoal.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Text(
@@ -742,7 +824,9 @@ class _ProfileTabState extends State<ProfileTab>
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
-                            color: isCurrent ? Colors.white : AppColors.charcoal,
+                            color: isCurrent
+                                ? Colors.white
+                                : AppColors.charcoal,
                           ),
                         ),
                       ),
@@ -757,21 +841,32 @@ class _ProfileTabState extends State<ProfileTab>
                                   item['title'] as String,
                                   style: TextStyle(
                                     fontSize: 12.5,
-                                    fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
-                                    color: isCurrent ? AppColors.orange : AppColors.textDark,
+                                    fontWeight: isCurrent
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    color: isCurrent
+                                        ? AppColors.orange
+                                        : AppColors.textDark,
                                   ),
                                 ),
                                 if (isCurrent) ...[
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1.5,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: AppColors.orange,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: const Text(
                                       'Level Anda',
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -780,14 +875,21 @@ class _ProfileTabState extends State<ProfileTab>
                             const SizedBox(height: 2),
                             Text(
                               item['desc'] as String,
-                              style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       Text(
                         item['range'] as String,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.charcoal),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.charcoal,
+                        ),
                       ),
                     ],
                   ),
@@ -802,17 +904,24 @@ class _ProfileTabState extends State<ProfileTab>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.orange,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   icon: const Icon(Icons.shopping_bag_rounded, size: 18),
                   label: const Text(
                     'Tukar Poin di Toko Border Hadiah',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   onPressed: () {
                     Navigator.pop(ctx);
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RewardsShopPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const RewardsShopPage(),
+                      ),
                     );
                   },
                 ),
@@ -853,9 +962,22 @@ class _ProfileTabState extends State<ProfileTab>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
                 const SizedBox(height: 1),
-                Text(desc, style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AppColors.textMuted,
+                  ),
+                ),
               ],
             ),
           ),
@@ -867,7 +989,11 @@ class _ProfileTabState extends State<ProfileTab>
             ),
             child: Text(
               reward,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -920,7 +1046,10 @@ class _ProfileTabState extends State<ProfileTab>
                     IconButton(
                       tooltip: 'Kembali',
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 18,
+                      ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
@@ -928,8 +1057,11 @@ class _ProfileTabState extends State<ProfileTab>
                     IconButton(
                       tooltip: 'Tutup',
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded,
-                          size: 22, color: AppColors.textMuted),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 22,
+                        color: AppColors.textMuted,
+                      ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
@@ -945,7 +1077,9 @@ class _ProfileTabState extends State<ProfileTab>
                         onTap: () async {
                           await _showPhotoSourceSheet(
                             parentContext: ctx,
-                            hasExistingPhoto: tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty,
+                            hasExistingPhoto:
+                                tempAvatarUrl != null &&
+                                tempAvatarUrl!.trim().isNotEmpty,
                             onPicked: (url) {
                               tempAvatarUrl = url;
                               setSheet(() {});
@@ -983,8 +1117,11 @@ class _ProfileTabState extends State<ProfileTab>
                                   color: AppColors.orange,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.camera_alt_rounded,
-                                    size: 14, color: Colors.white),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ],
@@ -1001,19 +1138,32 @@ class _ProfileTabState extends State<ProfileTab>
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
                             ),
-                            icon: const Icon(Icons.add_a_photo_rounded, size: 16, color: AppColors.orange),
+                            icon: const Icon(
+                              Icons.add_a_photo_rounded,
+                              size: 16,
+                              color: AppColors.orange,
+                            ),
                             label: Text(
-                              (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty)
+                              (tempAvatarUrl != null &&
+                                      tempAvatarUrl!.trim().isNotEmpty)
                                   ? 'Ubah Foto'
                                   : 'Pilih Foto',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             onPressed: () async {
                               await _showPhotoSourceSheet(
                                 parentContext: ctx,
-                                hasExistingPhoto: tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty,
+                                hasExistingPhoto:
+                                    tempAvatarUrl != null &&
+                                    tempAvatarUrl!.trim().isNotEmpty,
                                 onPicked: (url) {
                                   tempAvatarUrl = url;
                                   setSheet(() {});
@@ -1025,7 +1175,8 @@ class _ProfileTabState extends State<ProfileTab>
                               );
                             },
                           ),
-                          if (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty) ...[
+                          if (tempAvatarUrl != null &&
+                              tempAvatarUrl!.trim().isNotEmpty) ...[
                             const SizedBox(width: 8),
                             OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
@@ -1034,12 +1185,21 @@ class _ProfileTabState extends State<ProfileTab>
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
                               ),
-                              icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 16,
+                              ),
                               label: const Text(
                                 'Hapus',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               onPressed: () {
                                 tempAvatarUrl = null;
@@ -1071,13 +1231,17 @@ class _ProfileTabState extends State<ProfileTab>
                   onSubmitted: (_) =>
                       FocusManager.instance.primaryFocus?.unfocus(),
                   style: const TextStyle(
-                      fontSize: 14, color: AppColors.textDark),
+                    fontSize: 14,
+                    color: AppColors.textDark,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Nama kurator Anda',
                     filled: true,
                     fillColor: AppColors.surfaceSubtle,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: AppColors.line),
@@ -1089,7 +1253,9 @@ class _ProfileTabState extends State<ProfileTab>
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(
-                          color: AppColors.orange, width: 1.5),
+                        color: AppColors.orange,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -1112,7 +1278,9 @@ class _ProfileTabState extends State<ProfileTab>
                       if (newName.isEmpty) return;
                       Navigator.pop(ctx);
 
-                      final cleanAvatar = (tempAvatarUrl != null && tempAvatarUrl!.trim().isNotEmpty)
+                      final cleanAvatar =
+                          (tempAvatarUrl != null &&
+                              tempAvatarUrl!.trim().isNotEmpty)
                           ? tempAvatarUrl!.trim()
                           : null;
 
@@ -1121,7 +1289,10 @@ class _ProfileTabState extends State<ProfileTab>
                       // 1. Update UI langsung tanpa delay
                       setState(() {
                         _profile = Profile(
-                          id: _profile?.id ?? SupabaseService.instance.userId ?? 'curator_user',
+                          id:
+                              _profile?.id ??
+                              SupabaseService.instance.userId ??
+                              'curator_user',
                           displayName: newName,
                           avatarUrl: cleanAvatar,
                           activeBorderId: activeBorder,
@@ -1156,7 +1327,9 @@ class _ProfileTabState extends State<ProfileTab>
                     child: const Text(
                       'Simpan Perubahan',
                       style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -1185,7 +1358,9 @@ class _ProfileTabState extends State<ProfileTab>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengakses $sourceName: ${e.toString().split(':').first}'),
+            content: Text(
+              'Gagal mengakses $sourceName: ${e.toString().split(':').first}',
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1228,20 +1403,19 @@ class _ProfileTabState extends State<ProfileTab>
       final mimeType = (ext == 'png')
           ? 'image/png'
           : (ext == 'webp')
-              ? 'image/webp'
-              : 'image/jpeg';
+          ? 'image/webp'
+          : 'image/jpeg';
       final filePath = '$uid/profile.$ext';
       final supabase = Supabase.instance.client;
 
       try {
-        await supabase.storage.from('avatars').uploadBinary(
-          filePath,
-          bytes,
-          fileOptions: FileOptions(
-            contentType: mimeType,
-            upsert: true,
-          ),
-        );
+        await supabase.storage
+            .from('avatars')
+            .uploadBinary(
+              filePath,
+              bytes,
+              fileOptions: FileOptions(contentType: mimeType, upsert: true),
+            );
 
         uploadedUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
         uploadedUrl = '$uploadedUrl?t=${DateTime.now().millisecondsSinceEpoch}';
@@ -1256,7 +1430,9 @@ class _ProfileTabState extends State<ProfileTab>
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
-              content: Text('Gagal memproses foto: ${e.toString().split(':').first}'),
+              content: Text(
+                'Gagal memproses foto: ${e.toString().split(':').first}',
+              ),
               backgroundColor: AppColors.red,
               behavior: SnackBarBehavior.floating,
             ),
@@ -1310,7 +1486,11 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pop(sheetCtx),
-                    child: const Icon(Icons.close_rounded, size: 20, color: AppColors.textMuted),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -1411,7 +1591,11 @@ class _ProfileTabState extends State<ProfileTab>
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: AppColors.textMuted.withValues(alpha: 0.5), size: 18),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textMuted.withValues(alpha: 0.5),
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -1459,8 +1643,7 @@ class _ProfileTabState extends State<ProfileTab>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Keluar akun?'),
-        content:
-            const Text('Kamu perlu login lagi untuk masuk ke FOODIE.'),
+        content: const Text('Kamu perlu login lagi untuk masuk ke FOODIE.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1468,8 +1651,7 @@ class _ProfileTabState extends State<ProfileTab>
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child:
-                const Text('Keluar', style: TextStyle(color: AppColors.red)),
+            child: const Text('Keluar', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -1484,16 +1666,16 @@ class _ProfileTabState extends State<ProfileTab>
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final currentUser = Supabase.instance.client.auth.currentUser;
     final name = _profile?.displayName.isNotEmpty == true
         ? _profile!.displayName
         : widget.name.trim().isNotEmpty
-            ? widget.name.trim()
-            : (currentUser?.userMetadata?['name'] as String? ?? 'Kurator Rasa');
-    final email = currentUser?.email ??
+        ? widget.name.trim()
+        : (currentUser?.userMetadata?['name'] as String? ?? 'Kurator Rasa');
+    final email =
+        currentUser?.email ??
         (widget.name.isNotEmpty
             ? '${widget.name.toLowerCase().replaceAll(' ', '.')}@culinary.id'
             : 'kurator@foodie.id');
@@ -1502,8 +1684,8 @@ class _ProfileTabState extends State<ProfileTab>
         bottom: false,
         child: _loading
             ? const Center(
-                child:
-                    CircularProgressIndicator(color: AppColors.orange))
+                child: CircularProgressIndicator(color: AppColors.orange),
+              )
             : RefreshIndicator(
                 color: AppColors.orange,
                 onRefresh: () async {
@@ -1548,7 +1730,8 @@ class _ProfileTabState extends State<ProfileTab>
                         'Konverter Kurs & Zona Waktu',
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => const ConverterPage()),
+                            builder: (_) => const ConverterPage(),
+                          ),
                         ),
                       ),
                     ]),
@@ -1573,14 +1756,17 @@ class _ProfileTabState extends State<ProfileTab>
                         'Jadwal Pengingat Makan',
                         trailing: _notif
                             ? (_mealIsSet
-                                ? '${_mealHour.toString().padLeft(2, '0')}:${_mealMinute.toString().padLeft(2, '0')} WIB'
-                                : 'Belum Diatur >')
+                                  ? '${_mealHour.toString().padLeft(2, '0')}:${_mealMinute.toString().padLeft(2, '0')} WIB'
+                                  : 'Belum Diatur >')
                             : 'Notifikasi Nonaktif',
                         onTap: _showMealReminderPicker,
                       ),
-                      _tile(Icons.map_rounded, 'Cakupan Wilayah',
-                          trailing: 'DIY & Jateng',
-                          onTap: _showCoverageDialog),
+                      _tile(
+                        Icons.map_rounded,
+                        'Cakupan Wilayah',
+                        trailing: 'DIY & Jateng',
+                        onTap: _showCoverageDialog,
+                      ),
                       _tile(
                         Icons.rate_review_rounded,
                         'Saran & Kesan',
@@ -1660,9 +1846,13 @@ class _ProfileTabState extends State<ProfileTab>
               dividerColor: Colors.transparent,
               labelPadding: const EdgeInsets.symmetric(horizontal: 2),
               labelStyle: const TextStyle(
-                  fontSize: 11.5, fontWeight: FontWeight.w800),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+              ),
               unselectedLabelStyle: const TextStyle(
-                  fontSize: 11.5, fontWeight: FontWeight.w600),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
               tabs: [
                 Tab(
                   child: Row(
@@ -1701,8 +1891,8 @@ class _ProfileTabState extends State<ProfileTab>
             height: 290,
             child: _histLoading
                 ? const Center(
-                    child:
-                        CircularProgressIndicator(color: AppColors.orange))
+                    child: CircularProgressIndicator(color: AppColors.orange),
+                  )
                 : TabBarView(
                     controller: _histTab,
                     children: [
@@ -1731,16 +1921,20 @@ class _ProfileTabState extends State<ProfileTab>
                   color: AppColors.orange.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.rate_review_rounded,
-                    size: 26, color: AppColors.orange),
+                child: const Icon(
+                  Icons.rate_review_rounded,
+                  size: 26,
+                  color: AppColors.orange,
+                ),
               ),
               const SizedBox(height: 10),
               const Text(
                 'Belum Ada Ulasan Ditulis',
                 style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -1759,38 +1953,49 @@ class _ProfileTabState extends State<ProfileTab>
       separatorBuilder: (_, _) => const SizedBox(height: 6),
       itemBuilder: (_, i) {
         final rev = _myReviews[i];
-        final restoName = (rev.restaurantName != null &&
+        final restoName =
+            (rev.restaurantName != null &&
                 rev.restaurantName!.isNotEmpty &&
                 rev.restaurantName != rev.restaurantId)
             ? rev.restaurantName!
             : (kDefaultRestaurants
-                    .where((r) =>
-                        r.id == rev.restaurantId ||
-                        r.id == 'resto_${rev.restaurantId}' ||
-                        (rev.restaurantId.startsWith('resto_') &&
-                            r.id ==
-                                rev.restaurantId.replaceFirst('resto_', '')))
-                    .firstOrNull
-                    ?.name ??
-                'Tempat Kuliner');
+                      .where(
+                        (r) =>
+                            r.id == rev.restaurantId ||
+                            r.id == 'resto_${rev.restaurantId}' ||
+                            (rev.restaurantId.startsWith('resto_') &&
+                                r.id ==
+                                    rev.restaurantId.replaceFirst(
+                                      'resto_',
+                                      '',
+                                    )),
+                      )
+                      .firstOrNull
+                      ?.name ??
+                  'Tempat Kuliner');
 
         return InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () async {
-            final resto = await SupabaseService.instance
-                    .getRestaurant(rev.restaurantId) ??
+            final resto =
+                await SupabaseService.instance.getRestaurant(
+                  rev.restaurantId,
+                ) ??
                 kDefaultRestaurants
-                    .where((r) =>
-                        r.id == rev.restaurantId ||
-                        r.id == 'resto_${rev.restaurantId}' ||
-                        (rev.restaurantId.startsWith('resto_') &&
-                            r.id ==
-                                rev.restaurantId.replaceFirst('resto_', '')))
+                    .where(
+                      (r) =>
+                          r.id == rev.restaurantId ||
+                          r.id == 'resto_${rev.restaurantId}' ||
+                          (rev.restaurantId.startsWith('resto_') &&
+                              r.id ==
+                                  rev.restaurantId.replaceFirst('resto_', '')),
+                    )
                     .firstOrNull;
             if (resto != null && mounted) {
               await Navigator.of(context).push(
                 MaterialPageRoute(
-                    builder: (_) => DetailPage(restaurant: resto)),
+                  builder: (_) => DetailPage(restaurant: resto),
+                ),
               );
               _load();
               _loadHistory();
@@ -1813,8 +2018,11 @@ class _ProfileTabState extends State<ProfileTab>
                     color: AppColors.orange.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.restaurant_rounded,
-                      size: 18, color: AppColors.orange),
+                  child: const Icon(
+                    Icons.restaurant_rounded,
+                    size: 18,
+                    color: AppColors.orange,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1860,8 +2068,11 @@ class _ProfileTabState extends State<ProfileTab>
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    size: 16, color: AppColors.textMuted),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
               ],
             ),
           ),
@@ -1884,16 +2095,20 @@ class _ProfileTabState extends State<ProfileTab>
                   color: AppColors.orange.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.favorite_border_rounded,
-                    size: 26, color: AppColors.orange),
+                child: const Icon(
+                  Icons.favorite_border_rounded,
+                  size: 26,
+                  color: AppColors.orange,
+                ),
               ),
               const SizedBox(height: 10),
               const Text(
                 'Belum Ada Restoran Favorit',
                 style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -1942,8 +2157,11 @@ class _ProfileTabState extends State<ProfileTab>
                       ),
                     ),
                     SizedBox(width: 2),
-                    Icon(Icons.arrow_forward_ios_rounded,
-                        size: 10, color: AppColors.orange),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 10,
+                      color: AppColors.orange,
+                    ),
                   ],
                 ),
               ),
@@ -1962,7 +2180,8 @@ class _ProfileTabState extends State<ProfileTab>
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
-                        builder: (_) => DetailPage(restaurant: r)),
+                      builder: (_) => DetailPage(restaurant: r),
+                    ),
                   );
                   _load();
                   _loadHistory();
@@ -1973,7 +2192,8 @@ class _ProfileTabState extends State<ProfileTab>
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: AppColors.line.withValues(alpha: 0.6)),
+                      color: AppColors.line.withValues(alpha: 0.6),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -2004,8 +2224,11 @@ class _ProfileTabState extends State<ProfileTab>
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                const Icon(Icons.star_rounded,
-                                    size: 12.5, color: AppColors.orange),
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 12.5,
+                                  color: AppColors.orange,
+                                ),
                                 const SizedBox(width: 2),
                                 Text(
                                   r.rating.toStringAsFixed(1),
@@ -2020,8 +2243,9 @@ class _ProfileTabState extends State<ProfileTab>
                                   child: Text(
                                     '• ${r.category}',
                                     style: const TextStyle(
-                                        fontSize: 10.5,
-                                        color: AppColors.textMuted),
+                                      fontSize: 10.5,
+                                      color: AppColors.textMuted,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -2042,8 +2266,11 @@ class _ProfileTabState extends State<ProfileTab>
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right_rounded,
-                          size: 16, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: AppColors.textMuted,
+                      ),
                     ],
                   ),
                 ),
@@ -2069,16 +2296,20 @@ class _ProfileTabState extends State<ProfileTab>
                   color: AppColors.orange.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.manage_search_rounded,
-                    size: 26, color: AppColors.textMuted),
+                child: const Icon(
+                  Icons.manage_search_rounded,
+                  size: 26,
+                  color: AppColors.textMuted,
+                ),
               ),
               const SizedBox(height: 10),
               const Text(
                 'Belum Ada Riwayat Pencarian',
                 style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -2114,10 +2345,12 @@ class _ProfileTabState extends State<ProfileTab>
                     context: context,
                     builder: (ctx) => AlertDialog(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       title: const Text('Hapus Semua Riwayat?'),
                       content: const Text(
-                          'Semua jejak kata kunci pencarian Anda akan dihapus.'),
+                        'Semua jejak kata kunci pencarian Anda akan dihapus.',
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
@@ -2141,8 +2374,11 @@ class _ProfileTabState extends State<ProfileTab>
                 },
                 child: const Row(
                   children: [
-                    Icon(Icons.delete_outline_rounded,
-                        size: 13, color: AppColors.red),
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 13,
+                      color: AppColors.red,
+                    ),
                     SizedBox(width: 3),
                     Text(
                       'Hapus semua',
@@ -2168,17 +2404,25 @@ class _ProfileTabState extends State<ProfileTab>
                 final q = item['query'] as String? ?? '';
                 if (q.trim().isEmpty) return const SizedBox.shrink();
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF7F7F6),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.line.withValues(alpha: 0.8)),
+                    border: Border.all(
+                      color: AppColors.line.withValues(alpha: 0.8),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.history_rounded,
-                          size: 13, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.history_rounded,
+                        size: 13,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(width: 5),
                       Text(
                         q,
@@ -2192,8 +2436,11 @@ class _ProfileTabState extends State<ProfileTab>
                       GestureDetector(
                         onTap: () async {
                           await SupabaseService.instance.removeSearchItem(q);
-                          setState(() => _searchHistory
-                              .removeWhere((e) => e['query'] == q));
+                          setState(
+                            () => _searchHistory.removeWhere(
+                              (e) => e['query'] == q,
+                            ),
+                          );
                         },
                         child: Container(
                           padding: const EdgeInsets.all(2),
@@ -2201,8 +2448,11 @@ class _ProfileTabState extends State<ProfileTab>
                             color: Colors.black.withValues(alpha: 0.06),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.close_rounded,
-                              size: 11, color: AppColors.textMuted),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 11,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ],
@@ -2223,9 +2473,8 @@ class _ProfileTabState extends State<ProfileTab>
 
     return GestureDetector(
       onTap: () async {
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AiProfilePage()),
-        );
+        await Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const AiProfilePage()));
         _loadAiProfile();
       },
       child: Container(
@@ -2298,8 +2547,10 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: isComplete ? AppColors.greenDark : AppColors.orange,
                     borderRadius: BorderRadius.circular(10),
@@ -2401,8 +2652,11 @@ class _ProfileTabState extends State<ProfileTab>
                       color: AppColors.orange,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.edit_rounded,
-                        size: 10, color: Colors.white),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      size: 10,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -2429,7 +2683,9 @@ class _ProfileTabState extends State<ProfileTab>
                       onTap: _showEditProfile,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
@@ -2437,15 +2693,19 @@ class _ProfileTabState extends State<ProfileTab>
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.edit_rounded,
-                                size: 12, color: Colors.white),
+                            Icon(
+                              Icons.edit_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'Edit',
                               style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700),
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ],
                         ),
@@ -2470,7 +2730,9 @@ class _ProfileTabState extends State<ProfileTab>
                   onTap: _showLevelInfoSheet,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(8),
@@ -2482,8 +2744,11 @@ class _ProfileTabState extends State<ProfileTab>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.stars_rounded,
-                            size: 13, color: Color(0xFFFFD54F)),
+                        const Icon(
+                          Icons.stars_rounded,
+                          size: 13,
+                          color: Color(0xFFFFD54F),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           _profile != null
@@ -2540,7 +2805,9 @@ class _ProfileTabState extends State<ProfileTab>
                           child: LinearProgressIndicator(
                             value: _profile!.levelProgress,
                             minHeight: 4,
-                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.2,
+                            ),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               Color(0xFFFFD54F),
                             ),
@@ -2567,13 +2834,16 @@ class _ProfileTabState extends State<ProfileTab>
       ),
       child: const Row(
         children: [
-          Icon(Icons.celebration_rounded,
-              size: 20, color: AppColors.orange),
+          Icon(Icons.celebration_rounded, size: 20, color: AppColors.orange),
           SizedBox(width: 12),
           Expanded(
             child: Text(
               'Akun berhasil dibuat! Lengkapi profilmu agar rekomendasi makin pas.',
-              style: TextStyle(fontSize: 12, height: 1.45, color: AppColors.textDark),
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: AppColors.textDark,
+              ),
             ),
           ),
         ],
@@ -2582,8 +2852,12 @@ class _ProfileTabState extends State<ProfileTab>
   }
 
   Widget _statsRow() {
-    final favCount = _favRestaurants.isNotEmpty ? _favRestaurants.length : (_stats['favorites'] ?? 0);
-    final revCount = _myReviews.isNotEmpty ? _myReviews.length : (_stats['reviews'] ?? 0);
+    final favCount = _favRestaurants.isNotEmpty
+        ? _favRestaurants.length
+        : (_stats['favorites'] ?? 0);
+    final revCount = _myReviews.isNotEmpty
+        ? _myReviews.length
+        : (_stats['reviews'] ?? 0);
     final pts = _profile?.points ?? 100;
 
     return Row(
@@ -2627,9 +2901,8 @@ class _ProfileTabState extends State<ProfileTab>
             color: Colors.transparent,
             child: InkWell(
               onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const GamePage()),
-                );
+                await Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const GamePage()));
                 _load();
                 _loadHistory();
               },
@@ -2639,7 +2912,9 @@ class _ProfileTabState extends State<ProfileTab>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.orange.withValues(alpha: 0.16)),
+                  border: Border.all(
+                    color: AppColors.orange.withValues(alpha: 0.16),
+                  ),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x06000000),
@@ -2660,11 +2935,17 @@ class _ProfileTabState extends State<ProfileTab>
                             color: AppColors.orange.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.sports_esports_rounded,
-                              size: 20, color: AppColors.orange),
+                          child: const Icon(
+                            Icons.sports_esports_rounded,
+                            size: 20,
+                            color: AppColors.orange,
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
@@ -2692,7 +2973,10 @@ class _ProfileTabState extends State<ProfileTab>
                     const SizedBox(height: 2),
                     const Text(
                       'Main & raih poin',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2721,7 +3005,9 @@ class _ProfileTabState extends State<ProfileTab>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.greenDark.withValues(alpha: 0.16)),
+                  border: Border.all(
+                    color: AppColors.greenDark.withValues(alpha: 0.16),
+                  ),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x06000000),
@@ -2742,11 +3028,17 @@ class _ProfileTabState extends State<ProfileTab>
                             color: AppColors.greenDark.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.storefront_rounded,
-                              size: 20, color: AppColors.greenDark),
+                          child: const Icon(
+                            Icons.storefront_rounded,
+                            size: 20,
+                            color: AppColors.greenDark,
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.greenDark.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
@@ -2774,7 +3066,10 @@ class _ProfileTabState extends State<ProfileTab>
                     const SizedBox(height: 2),
                     const Text(
                       'Tukar border avatar',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2878,7 +3173,10 @@ class _ProfileTabState extends State<ProfileTab>
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 3)),
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -2901,8 +3199,12 @@ class _ProfileTabState extends State<ProfileTab>
     return Icon(icon, size: 21, color: AppColors.greenDark);
   }
 
-  Widget _tile(IconData icon, String title,
-      {String? trailing, VoidCallback? onTap}) {
+  Widget _tile(
+    IconData icon,
+    String title, {
+    String? trailing,
+    VoidCallback? onTap,
+  }) {
     return Material(
       color: Colors.transparent,
       child: ListTile(
@@ -2911,18 +3213,27 @@ class _ProfileTabState extends State<ProfileTab>
         title: Text(
           title,
           style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.greenDark),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.greenDark,
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (trailing != null)
-              Text(trailing,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textMuted)),
-            const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+              Text(
+                trailing,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppColors.textMuted,
+            ),
           ],
         ),
         onTap: onTap ?? () {},
@@ -2944,9 +3255,10 @@ class _ProfileTabState extends State<ProfileTab>
         title: Text(
           title,
           style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.greenDark),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.greenDark,
+          ),
         ),
         trailing: Switch(
           value: value,
