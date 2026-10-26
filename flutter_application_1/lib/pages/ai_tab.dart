@@ -5,6 +5,7 @@ import '../props/app_colors.dart';
 import '../props/app_text.dart';
 import '../services/ai_recommendation_service.dart';
 import '../services/food_ai.dart';
+import '../services/gemini_chat_service.dart';
 import '../services/supabase_service.dart';
 import '../widgets/auth_widgets.dart';
 
@@ -26,8 +27,16 @@ class _Msg {
   final List<QuickReply> chips;
 }
 
-/// FOODIE AI: asisten rekomendasi yang mencari langsung di data Supabase.
-/// Logika percakapan ada di services/food_ai.dart; file ini hanya tampilan.
+/// Setelan API Key Google Gemini untuk Chatbot AI di Tab ini.
+/// Anda dapat mengisi API Key di sini (contoh: 'AIzaSy...') atau melalui
+/// argument build: --dart-define=GEMINI_API_KEY=AIzaSy...
+const String kGeminiApiKey = String.fromEnvironment(
+  'GEMINI_API_KEY',
+  defaultValue: '', // Masukkan API Key Gemini di sini jika ada
+);
+
+/// FOODIE AI: asisten rekomendasi cerdas ditenagai oleh Google Gemini LLM
+/// dan database kuliner Yogyakarta / Jawa Tengah dari Supabase.
 class AiTab extends StatefulWidget {
   const AiTab({super.key, this.onOpenRestaurant, this.onOpenExplore});
 
@@ -60,6 +69,9 @@ class _AiTabState extends State<AiTab> {
   @override
   void initState() {
     super.initState();
+    GeminiChatService.instance.init(defaultApiKey: kGeminiApiKey).then((_) {
+      if (mounted) setState(() {});
+    });
     _initPersonalizedWelcome();
   }
 
@@ -117,10 +129,20 @@ class _AiTabState extends State<AiTab> {
     _scrollDown();
 
     final started = DateTime.now();
-    final reply = await _ai.reply(t);
 
-    // Jeda kecil supaya terasa natural: lebih panjang jawaban, lebih lama.
-    final wait = (450 + reply.text.length * 4).clamp(500, 1300).toInt();
+    // Memuat data restoran dan profil pengguna untuk RAG Context Grounding
+    final userProfile = await AiRecommendationService.instance.getProfile();
+    final allRestaurants = await _svc.getRestaurants();
+
+    final reply = await GeminiChatService.instance.reply(
+      input: t,
+      availableRestaurants: allRestaurants,
+      userProfile: userProfile,
+      fallbackAi: _ai,
+    );
+
+    // Jeda kecil supaya terasa natural
+    final wait = (350 + reply.text.length * 3).clamp(400, 1000).toInt();
     final elapsed = DateTime.now().difference(started).inMilliseconds;
     if (elapsed < wait) {
       await Future.delayed(Duration(milliseconds: wait - elapsed));
@@ -136,6 +158,7 @@ class _AiTabState extends State<AiTab> {
 
   void _newChat() {
     _ai.reset();
+    GeminiChatService.instance.reset();
     setState(() {
       _session++;
       _typing = false;
@@ -200,6 +223,8 @@ class _AiTabState extends State<AiTab> {
   }
 
   Widget _header() {
+    final hasGemini = GeminiChatService.instance.hasKey;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
@@ -208,13 +233,24 @@ class _AiTabState extends State<AiTab> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: AppColors.greenDark,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: const Icon(
-              Icons.chat_bubble_rounded,
+              Icons.auto_awesome_rounded,
               size: 22,
-              color: AppColors.yellow,
+              color: Colors.white,
             ),
           ),
           const SizedBox(width: 12),
@@ -222,11 +258,13 @@ class _AiTabState extends State<AiTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('FOODIE AI', style: AppText.display(20)),
+                Text('FOODIE AI', style: AppText.display(19)),
                 Text(
                   _typing
-                      ? 'Sedang mengetik...'
-                      : 'Asisten kuliner DIY & Jawa Tengah',
+                      ? 'Sedang menyusun jawaban...'
+                      : (hasGemini
+                          ? 'Ditenagai Gemini AI & Database Jogja'
+                          : 'Asisten kuliner DIY & Jawa Tengah'),
                   style: TextStyle(
                     fontSize: 11,
                     color: _typing ? AppColors.orange : AppColors.textMuted,
