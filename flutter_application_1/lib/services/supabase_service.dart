@@ -13,6 +13,7 @@ import '../models/checkin.dart';
 import '../models/seed_data.dart';
 import '../models/course_feedback.dart';
 import 'hive_service.dart';
+import 'reward_border_service.dart';
 
 class SupabaseService {
   SupabaseService._() {
@@ -161,10 +162,26 @@ class SupabaseService {
             event: PostgresChangeEvent.all,
             schema: 'public',
             table: 'course_feedback',
-            callback: (payload) {
+            callback: (payload) async {
               if (payload.newRecord.isNotEmpty) {
                 try {
-                  final fb = CourseFeedback.fromJson(payload.newRecord);
+                  var fb = CourseFeedback.fromJson(payload.newRecord);
+                  if (fb.userActiveBorder == null &&
+                      fb.userId.isNotEmpty &&
+                      fb.userId != 'guest' &&
+                      !fb.userId.startsWith('guest')) {
+                    try {
+                      final p = await _client
+                          .from('profiles')
+                          .select('active_border_id')
+                          .eq('id', fb.userId)
+                          .maybeSingle();
+                      if (p != null && p['active_border_id'] != null) {
+                        fb = fb.copyWith(
+                            userActiveBorder: p['active_border_id'].toString());
+                      }
+                    } catch (_) {}
+                  }
                   _courseFeedbackAddedController.add(fb);
                 } catch (_) {}
               }
@@ -399,9 +416,17 @@ class SupabaseService {
     try {
       final prefs = await SharedPreferences.getInstance();
       // Hanya ambil preferensi nama & avatar & border yang terikat pada keyUid pengguna saat ini
-      localName = prefs.getString('foodie_name_$keyUid');
+      localName = prefs.getString('foodie_name_$keyUid') ??
+          prefs.getString('foodie_current_display_name') ??
+          prefs.getString('foodie_last_user_name');
       localAvatar = prefs.getString('foodie_avatar_$keyUid');
-      localActiveBorder = prefs.getString('foodie_active_border_$keyUid');
+      localActiveBorder = RewardBorderService.instance.activeBorderId ??
+          prefs.getString('foodie_active_border_$keyUid') ??
+          prefs.getString('foodie_active_border_global') ??
+          prefs.getString('foodie_active_border_guest') ??
+          prefs.getString('foodie_active_border_guest_mhs') ??
+          HiveService.instance.getActiveBorderId(keyUid) ??
+          currentUser?.userMetadata?['foodie_active_border_id']?.toString();
       localSavedPoints = prefs.getInt('foodie_points_$keyUid');
       isAvatarDeleted = prefs.getBool('foodie_avatar_deleted_$keyUid') ?? false;
     } catch (_) {}
@@ -474,9 +499,20 @@ class SupabaseService {
             await prefs.setString('foodie_last_user_name', effectiveName);
           } catch (_) {}
 
-          final effectiveActiveBorder = (p.activeBorderId != null && p.activeBorderId!.isNotEmpty)
-              ? p.activeBorderId
-              : localActiveBorder;
+          final effectiveActiveBorder = (localActiveBorder != null && localActiveBorder.isNotEmpty)
+              ? localActiveBorder
+              : (p.activeBorderId != null && p.activeBorderId!.isNotEmpty
+                  ? p.activeBorderId
+                  : null);
+
+          // Jika Supabase masih memiliki border lama atau kosong, sinkronkan ke Supabase di background
+          if (effectiveActiveBorder != null && p.activeBorderId != effectiveActiveBorder) {
+            _safeClient!
+                .from('profiles')
+                .update({'active_border_id': effectiveActiveBorder})
+                .eq('id', uid)
+                .catchError((_) {});
+          }
 
           final effectivePoints = localSavedPoints ?? (p.points + _localBonusPoints);
 
@@ -640,6 +676,18 @@ class SupabaseService {
         revUpdate['user_active_border'] = activeBorderId.trim();
       }
       await _client.from('reviews').update(revUpdate).eq('user_id', uid);
+    } catch (_) {}
+
+    // 4b. Perbarui juga data di tabel course_feedback
+    try {
+      final cfUpdate = <String, dynamic>{'user_name': cleanName};
+      if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
+        cfUpdate['user_avatar'] = avatarUrl.trim();
+      }
+      if (activeBorderId != null && activeBorderId.trim().isNotEmpty) {
+        cfUpdate['user_active_border'] = activeBorderId.trim();
+      }
+      await _client.from('course_feedback').update(cfUpdate).eq('user_id', uid);
     } catch (_) {}
 
     // 5. Update profil biometrik Hive jika user ini terdaftar
@@ -2409,30 +2457,103 @@ class SupabaseService {
   // ─── COURSE FEEDBACK (MATA KULIAH PEMROGRAMAN APLIKASI MOBILE) ───
 
   Future<List<CourseFeedback>> getCourseFeedbacks() async {
+    List<Map<String, dynamic>> rawList = [];
     try {
       final res = await _client
           .from('course_feedback')
-          .select('*, profiles:user_id(display_name, avatar_url)')
+          .select()
           .order('created_at', ascending: false);
-      final list = (res as List)
-          .map((e) => CourseFeedback.fromJson(e as Map<String, dynamic>))
-          .toList();
-      return list;
+      rawList = List<Map<String, dynamic>>.from(res as List);
     } catch (e) {
-      debugPrint('getCourseFeedbacks fallback to simple select: $e');
+      debugPrint('getCourseFeedbacks select error: $e');
+      return _getLocalCachedFeedbacks();
+    }
+
+    // Resolusi nama profil, avatar profil, dan BORDER AKTIF dari tabel profiles di Supabase
+    // Ini memungkinkan border avatar seorang user tampil secara publik dan bisa dilihat oleh user lain
+    final userNames = <String, String>{};
+    final userAvatars = <String, String>{};
+    final userBorders = <String, String>{};
+
+    final userIds = rawList
+        .map((e) => e['user_id']?.toString())
+        .where((id) => id != null && id.isNotEmpty && id != 'guest' && !id.startsWith('guest'))
+        .toSet()
+        .cast<String>()
+        .toList();
+
+    if (userIds.isNotEmpty) {
       try {
-        final res = await _client
-            .from('course_feedback')
-            .select()
-            .order('created_at', ascending: false);
-        return (res as List)
-            .map((e) => CourseFeedback.fromJson(e as Map<String, dynamic>))
-            .toList();
+        final profileRes = await _client
+            .from('profiles')
+            .select('id, display_name, avatar_url, active_border_id')
+            .inFilter('id', userIds);
+        for (final p in profileRes as List) {
+          final uid = p['id']?.toString() ?? '';
+          final name = p['display_name']?.toString();
+          final av = p['avatar_url']?.toString();
+          final border = p['active_border_id']?.toString();
+          if (uid.isNotEmpty && name != null && name.isNotEmpty) {
+            userNames[uid] = name;
+          }
+          if (uid.isNotEmpty && av != null && av.isNotEmpty) {
+            userAvatars[uid] = av;
+          }
+          if (uid.isNotEmpty && border != null && border.isNotEmpty) {
+            userBorders[uid] = border;
+          }
+        }
       } catch (err) {
-        debugPrint('getCourseFeedbacks fallback to local: $err');
-        return _getLocalCachedFeedbacks();
+        debugPrint('getCourseFeedbacks fetch profiles error: $err');
       }
     }
+
+    // Periksa preferensi lokal pengguna saat ini jika ada
+    final currentUid = userId;
+    final myActiveBorder = RewardBorderService.instance.activeBorderId;
+    if (currentUid != null) {
+      if (myActiveBorder != null && myActiveBorder.isNotEmpty) {
+        userBorders[currentUid] = myActiveBorder;
+      }
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final localBorder = myActiveBorder ??
+            prefs.getString('foodie_active_border_$currentUid') ??
+            prefs.getString('foodie_active_border_global') ??
+            prefs.getString('foodie_active_border_guest');
+        if (localBorder != null && localBorder.isNotEmpty) {
+          userBorders[currentUid] = localBorder;
+        }
+      } catch (_) {}
+    }
+    if (myActiveBorder != null && myActiveBorder.isNotEmpty) {
+      userBorders['guest'] = myActiveBorder;
+      userBorders['guest_mhs'] = myActiveBorder;
+    }
+
+    // Gabungkan data profil dan border aktif ke setiap item CourseFeedback
+    final list = rawList.map((e) {
+      final uid = e['user_id']?.toString() ?? '';
+      final resolvedName = userNames[uid] ?? e['user_name'] ?? 'Mahasiswa';
+      final resolvedAvatar = userAvatars[uid] ?? e['user_avatar'];
+      final resolvedBorder = userBorders[uid] ?? e['user_active_border'] ?? e['active_border_id'];
+
+      return CourseFeedback.fromJson({
+        ...e,
+        'user_name': resolvedName,
+        'user_avatar': resolvedAvatar,
+        'user_active_border': resolvedBorder,
+      });
+    }).toList();
+
+    // Cache feedback terkini ke penyimpanan lokal
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = list.map((item) => jsonEncode(item.toJson())).toList();
+      await prefs.setStringList('local_course_feedbacks', jsonList);
+    } catch (_) {}
+
+    return list;
   }
 
   Future<CourseFeedback?> submitCourseFeedback({
@@ -2447,6 +2568,9 @@ class SupabaseService {
         guestName;
     final avatar = profile?.avatarUrl ??
         currentUser?.userMetadata?['avatar_url'] as String?;
+    final activeBorder = RewardBorderService.instance.activeBorderId ??
+        profile?.activeBorderId ??
+        await RewardBorderService.instance.getActiveBorderId();
 
     final Map<String, dynamic> payload = {
       'user_id': uid,
@@ -2457,6 +2581,9 @@ class SupabaseService {
       'rating': rating,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     };
+    if (activeBorder != null && activeBorder.isNotEmpty) {
+      payload['user_active_border'] = activeBorder;
+    }
 
     CourseFeedback? created;
     try {
@@ -2465,23 +2592,46 @@ class SupabaseService {
           .insert(payload)
           .select()
           .single();
-      created = CourseFeedback.fromJson(res);
+      final data = Map<String, dynamic>.from(res);
+      data['user_active_border'] ??= activeBorder;
+      created = CourseFeedback.fromJson(data);
       _courseFeedbackAddedController.add(created);
     } catch (e) {
-      debugPrint('submitCourseFeedback error in supabase: $e');
-      created = CourseFeedback(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: uid,
-        userName: name,
-        userAvatar: avatar,
-        kesan: kesan,
-        saran: saran,
-        rating: rating,
-        createdAt: DateTime.now(),
-      );
-      _courseFeedbackAddedController.add(created);
-      await _cacheLocalFeedback(created);
+      debugPrint('submitCourseFeedback primary insert error: $e');
+      try {
+        // Fallback jika tabel Supabase belum memiliki kolom user_active_border
+        final fallbackPayload = Map<String, dynamic>.from(payload)
+          ..remove('user_active_border');
+        final res = await _client
+            .from('course_feedback')
+            .insert(fallbackPayload)
+            .select()
+            .single();
+        final data = Map<String, dynamic>.from(res);
+        data['user_active_border'] = activeBorder;
+        created = CourseFeedback.fromJson(data);
+        _courseFeedbackAddedController.add(created);
+      } catch (err) {
+        debugPrint('submitCourseFeedback error in supabase: $err');
+        created = CourseFeedback(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          userId: uid,
+          userName: name,
+          userAvatar: avatar,
+          userActiveBorder: activeBorder,
+          kesan: kesan,
+          saran: saran,
+          rating: rating,
+          createdAt: DateTime.now(),
+        );
+      }
     }
+
+    if (created.userActiveBorder == null && activeBorder != null) {
+      created = created.copyWith(userActiveBorder: activeBorder);
+    }
+    _courseFeedbackAddedController.add(created);
+    await _cacheLocalFeedback(created);
     return created;
   }
 
@@ -2553,6 +2703,7 @@ class SupabaseService {
           userId: old.userId,
           userName: old.userName,
           userAvatar: old.userAvatar,
+          userActiveBorder: old.userActiveBorder,
           kesan: kesan,
           saran: saran,
           rating: rating,

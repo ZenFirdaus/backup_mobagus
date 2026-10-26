@@ -15,6 +15,24 @@ class Profile {
     required this.createdAt,
   });
 
+  Profile copyWith({
+    String? id,
+    String? displayName,
+    String? avatarUrl,
+    String? activeBorderId,
+    int? points,
+    DateTime? createdAt,
+  }) {
+    return Profile(
+      id: id ?? this.id,
+      displayName: displayName ?? this.displayName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      activeBorderId: activeBorderId ?? this.activeBorderId,
+      points: points ?? this.points,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
       id: json['id'].toString(),

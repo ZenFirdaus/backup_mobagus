@@ -21,6 +21,8 @@ class RewardBorderService {
   Stream<void> get onRewardsChanged => _changeController.stream;
   Stream<void> get onChange => _changeController.stream;
 
+  String? get activeBorderId => _localActiveBorderId;
+
   List<RewardBorder> _cachedBorders = [];
   Set<String> _localOwnedBorderIds = {};
   String? _localActiveBorderId;
@@ -403,34 +405,54 @@ class RewardBorderService {
     final ownedList = _localOwnedBorderIds.toList();
     await prefs.setString('foodie_active_border_$uid', borderId);
     await prefs.setString('foodie_active_border_global', borderId);
+    await prefs.setString('foodie_active_border_guest', borderId);
+    await prefs.setString('foodie_active_border_guest_mhs', borderId);
+    final supaId = SupabaseService.instance.userId;
+    if (supaId != null && supaId.isNotEmpty) {
+      await prefs.setString('foodie_active_border_$supaId', borderId);
+    }
     await prefs.setStringList('foodie_owned_borders_$uid', ownedList);
     await prefs.setStringList('foodie_owned_borders_global', ownedList);
     await HiveService.instance.saveActiveBorderId(borderId, uid);
     await HiveService.instance.saveOwnedBorderIds(_localOwnedBorderIds, uid);
 
-    if (client != null && client.auth.currentUser != null) {
-      try {
-        await client.rpc('equip_user_border', params: {'p_border_id': borderId});
-      } catch (_) {
+    if (client != null) {
+      final currentAuthUser = client.auth.currentUser;
+      final targetUid = currentAuthUser?.id ?? supaId ?? uid;
+
+      if (currentAuthUser != null) {
         try {
-          await client.from('profiles').update({'active_border_id': borderId}).eq('id', uid);
-          await client.from('user_rewards').update({'is_active': false}).eq('user_id', uid);
-          await client.from('user_rewards').update({'is_active': true}).eq('user_id', uid).eq('border_id', borderId);
+          await client.rpc('equip_user_border', params: {'p_border_id': borderId});
         } catch (_) {}
       }
 
-      try {
-        final meta = client.auth.currentUser!.userMetadata ?? {};
-        await client.auth.updateUser(
-          UserAttributes(
-            data: {
-              ...meta,
-              'foodie_active_border_id': borderId,
-              'foodie_owned_borders': ownedList,
-            },
-          ),
-        );
-      } catch (_) {}
+      if (targetUid.isNotEmpty && targetUid != 'guest' && !targetUid.startsWith('guest')) {
+        try {
+          await client.from('profiles').update({'active_border_id': borderId}).eq('id', targetUid);
+        } catch (_) {}
+        try {
+          await client.from('user_rewards').update({'is_active': false}).eq('user_id', targetUid);
+          await client.from('user_rewards').update({'is_active': true}).eq('user_id', targetUid).eq('border_id', borderId);
+        } catch (_) {}
+        try {
+          await client.from('course_feedback').update({'user_active_border': borderId}).eq('user_id', targetUid);
+        } catch (_) {}
+      }
+
+      if (currentAuthUser != null) {
+        try {
+          final meta = currentAuthUser.userMetadata ?? {};
+          await client.auth.updateUser(
+            UserAttributes(
+              data: {
+                ...meta,
+                'foodie_active_border_id': borderId,
+                'foodie_owned_borders': ownedList,
+              },
+            ),
+          );
+        } catch (_) {}
+      }
     }
 
     SupabaseService.instance.notifyProfileChanged();
@@ -448,29 +470,49 @@ class RewardBorderService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('foodie_active_border_$uid');
     await prefs.remove('foodie_active_border_global');
+    await prefs.remove('foodie_active_border_guest');
+    await prefs.remove('foodie_active_border_guest_mhs');
+    final supaId = SupabaseService.instance.userId;
+    if (supaId != null && supaId.isNotEmpty) {
+      await prefs.remove('foodie_active_border_$supaId');
+    }
     await HiveService.instance.saveActiveBorderId(null, uid);
 
-    if (client != null && client.auth.currentUser != null) {
-      try {
-        await client.rpc('equip_user_border', params: {'p_border_id': null});
-      } catch (_) {
+    if (client != null) {
+      final currentAuthUser = client.auth.currentUser;
+      final targetUid = currentAuthUser?.id ?? supaId ?? uid;
+
+      if (currentAuthUser != null) {
         try {
-          await client.from('profiles').update({'active_border_id': null}).eq('id', uid);
-          await client.from('user_rewards').update({'is_active': false}).eq('user_id', uid);
+          await client.rpc('equip_user_border', params: {'p_border_id': null});
         } catch (_) {}
       }
 
-      try {
-        final meta = client.auth.currentUser!.userMetadata ?? {};
-        await client.auth.updateUser(
-          UserAttributes(
-            data: {
-              ...meta,
-              'foodie_active_border_id': null,
-            },
-          ),
-        );
-      } catch (_) {}
+      if (targetUid.isNotEmpty && targetUid != 'guest' && !targetUid.startsWith('guest')) {
+        try {
+          await client.from('profiles').update({'active_border_id': null}).eq('id', targetUid);
+        } catch (_) {}
+        try {
+          await client.from('user_rewards').update({'is_active': false}).eq('user_id', targetUid);
+        } catch (_) {}
+        try {
+          await client.from('course_feedback').update({'user_active_border': null}).eq('user_id', targetUid);
+        } catch (_) {}
+      }
+
+      if (currentAuthUser != null) {
+        try {
+          final meta = currentAuthUser.userMetadata ?? {};
+          await client.auth.updateUser(
+            UserAttributes(
+              data: {
+                ...meta,
+                'foodie_active_border_id': null,
+              },
+            ),
+          );
+        } catch (_) {}
+      }
     }
 
     SupabaseService.instance.notifyProfileChanged();
