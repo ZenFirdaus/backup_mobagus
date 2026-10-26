@@ -64,7 +64,7 @@ class _ProfileTabState extends State<ProfileTab>
   String _mealLabel = 'Makan Siang';
   Profile? _profile;
   UserAiProfile? _aiProfile;
-  Map<String, int> _stats = {'favorites': 0, 'checkins': 0, 'reviews': 0};
+  Map<String, int> _stats = {'favorites': 0, 'reviews': 0};
   bool _loading = true;
 
   // Tab controller untuk JEJAK KULINER (Ulasan, Favorit, Pencarian)

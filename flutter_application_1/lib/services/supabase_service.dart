@@ -9,7 +9,6 @@ import '../models/restaurant.dart';
 import '../models/food.dart';
 import '../models/profile.dart';
 import '../models/review.dart';
-import '../models/checkin.dart';
 import '../models/seed_data.dart';
 import '../models/course_feedback.dart';
 import 'hive_service.dart';
@@ -47,7 +46,6 @@ class SupabaseService {
   set guestName(String val) => curatorName = val;
 
   final Set<String> _localFavorites = {};
-  final List<Checkin> _localCheckins = [];
   final List<Review> _localReviews = [];
   final List<Map<String, dynamic>> _localSearchHistory = [];
   int _localBonusPoints = 0;
@@ -105,7 +103,6 @@ class SupabaseService {
           _profileChangedController.add(null);
         } else if (event == AuthChangeEvent.signedOut) {
           _localFavorites.clear();
-          _localCheckins.clear();
           _localReviews.clear();
           _localSearchHistory.clear();
           _localBonusPoints = 0;
@@ -199,7 +196,6 @@ class SupabaseService {
 
       _localFavorites.clear();
       _localSearchHistory.clear();
-      _localCheckins.clear();
       _localReviews.clear();
 
       // Load favorites
@@ -217,16 +213,6 @@ class SupabaseService {
         for (final item in historyRaw) {
           try {
             _localSearchHistory.add(jsonDecode(item) as Map<String, dynamic>);
-          } catch (_) {}
-        }
-      }
-
-      // Load checkins
-      final checkinsRaw = prefs.getStringList('foodie_chk_$uid');
-      if (checkinsRaw != null) {
-        for (final item in checkinsRaw) {
-          try {
-            _localCheckins.add(Checkin.fromJson(jsonDecode(item) as Map<String, dynamic>));
           } catch (_) {}
         }
       }
@@ -290,15 +276,6 @@ class SupabaseService {
     } catch (_) {}
   }
 
-  Future<void> _persistCheckins() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final uid = userId ?? 'guest';
-      final list = _localCheckins.map((c) => jsonEncode(c.toJson())).toList();
-      await prefs.setStringList('foodie_chk_$uid', list);
-    } catch (_) {}
-  }
-
   Future<void> _persistReviews() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -319,7 +296,6 @@ class SupabaseService {
     _favoritesChannel = null;
     _courseFeedbackChannel = null;
     _localFavorites.clear();
-    _localCheckins.clear();
     _localReviews.clear();
     _localSearchHistory.clear();
     _localBonusPoints = 0;
@@ -557,7 +533,7 @@ class SupabaseService {
       displayName: effectiveName,
       avatarUrl: effectiveAvatar,
       activeBorderId: localActiveBorder,
-      points: localSavedPoints ?? (100 + _localBonusPoints + (_localCheckins.length * 50)),
+      points: localSavedPoints ?? (100 + _localBonusPoints),
       createdAt: DateTime.now(),
     );
   }
@@ -2130,74 +2106,6 @@ class SupabaseService {
         '${hex(bytes[10])}${hex(bytes[11])}${hex(bytes[12])}${hex(bytes[13])}${hex(bytes[14])}${hex(bytes[15])}';
   }
 
-  Future<List<Checkin>> getCheckins() async {
-    if (!_initialized) await initStorage();
-    List<Checkin> remote = [];
-    final uid = userId;
-    if (uid != null && uid != 'guest') {
-      try {
-        dynamic res;
-        try {
-          res = await _client
-              .from('checkins')
-              .select('*, restaurants(name)')
-              .eq('user_id', uid)
-              .order('created_at', ascending: false);
-        } catch (_) {
-          res = await _client
-              .from('checkins')
-              .select('*')
-              .eq('user_id', uid)
-              .order('created_at', ascending: false);
-        }
-        remote = (res as List).map((e) => Checkin.fromJson(e)).toList();
-      } catch (_) {}
-    }
-
-    final all = [..._localCheckins, ...remote];
-    final seen = <String>{};
-    return all.where((c) => seen.add(c.id)).toList();
-  }
-
-  Future<Checkin?> performCheckin({
-    required String restaurantId,
-    required double lat,
-    required double lng,
-    required bool verified,
-  }) async {
-    final resto = await getRestaurant(restaurantId);
-    final checkin = Checkin(
-      id: 'chk_${DateTime.now().millisecondsSinceEpoch}',
-      userId: userId ?? 'guest',
-      restaurantId: restaurantId,
-      lat: lat,
-      lng: lng,
-      verified: verified,
-      createdAt: DateTime.now(),
-      restaurantName: resto?.name ?? 'Restoran Kuliner',
-    );
-
-    _localCheckins.insert(0, checkin);
-    _localBonusPoints += 50;
-    _persistCheckins();
-    _persistPoints();
-
-    final uid = userId;
-    if (uid != null && uid != 'guest') {
-      try {
-        await _client.from('checkins').insert({
-          'user_id': uid,
-          'restaurant_id': restaurantId,
-          'lat': lat,
-          'lng': lng,
-          'verified': verified,
-        });
-      } catch (_) {}
-    }
-
-    return checkin;
-  }
-
   // ─── SEARCH HISTORY ───
 
   Future<List<Map<String, dynamic>>> getSearchHistory() async {
@@ -2794,23 +2702,12 @@ class SupabaseService {
     if (!_initialized) await initStorage();
     final favList = await getFavoriteRestaurants();
     int favCount = favList.length;
-    int checkinCount = _localCheckins.length;
 
     final userRevs = await getUserReviews();
     int reviewCount = userRevs.length;
 
-    final uid = userId;
-    if (uid != null && uid != 'guest') {
-      try {
-        final checks =
-            await _client.from('checkins').select('id').eq('user_id', uid);
-        checkinCount = math.max(checkinCount, (checks as List).length);
-      } catch (_) {}
-    }
-
     return {
       'favorites': favCount,
-      'checkins': checkinCount,
       'reviews': reviewCount,
     };
   }
