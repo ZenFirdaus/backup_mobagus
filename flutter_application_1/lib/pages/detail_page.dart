@@ -1768,47 +1768,30 @@ class _DetailPageState extends State<DetailPage> {
 
   // ── Menu & Foto di Google Maps ──
   Widget _menuSection() {
-    final label = dishLabel(_r.dishType);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (label != null) ...[
-          Text(
-            'Jenis sajian: $label',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () async {
-              final ok = await openInGoogleMaps(_r.name, _r.kabupatenKota);
-              if (!ok && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tidak dapat membuka Google Maps'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            icon: const Icon(Icons.map_outlined, size: 20),
-            label: const Text('Lihat menu & foto di Google Maps'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              side: const BorderSide(color: AppColors.line),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final ok = await openInGoogleMaps(_r.name, _r.kabupatenKota);
+          if (!ok && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Tidak dapat membuka Google Maps'),
+                behavior: SnackBarBehavior.floating,
               ),
-            ),
+            );
+          }
+        },
+        icon: const Icon(Icons.map_outlined, size: 20),
+        label: const Text('Lihat menu & foto di Google Maps'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: const BorderSide(color: AppColors.line),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
-      ],
+      ),
     );
   }
 
