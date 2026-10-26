@@ -146,16 +146,7 @@ class _HomePageState extends State<HomePage> {
               onNameChanged: (newName) {
                 setState(() {
                   _currentName = newName;
-                  if (_profile != null) {
-                    _profile = Profile(
-                      id: _profile!.id,
-                      displayName: newName,
-                      avatarUrl: _profile!.avatarUrl,
-                      activeBorderId: _profile!.activeBorderId,
-                      points: _profile!.points,
-                      createdAt: _profile!.createdAt,
-                    );
-                  }
+                  _profile = _profile?.copyWith(displayName: newName);
                 });
               },
               onAvatarChanged: (url) {
@@ -164,16 +155,7 @@ class _HomePageState extends State<HomePage> {
                     : null;
                 setState(() {
                   _customAvatarUrl = clean;
-                  if (_profile != null) {
-                    _profile = Profile(
-                      id: _profile!.id,
-                      displayName: _profile!.displayName,
-                      avatarUrl: clean,
-                      activeBorderId: _profile!.activeBorderId,
-                      points: _profile!.points,
-                      createdAt: _profile!.createdAt,
-                    );
-                  }
+                  _profile = _profile?.copyWith(avatarUrl: clean);
                 });
               },
             ),

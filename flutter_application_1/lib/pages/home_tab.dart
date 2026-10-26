@@ -9,6 +9,7 @@ import '../models/restaurant.dart';
 import '../models/user_ai_profile.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../utils/format.dart';
 import '../services/ai_recommendation_service.dart';
 import '../services/reward_border_service.dart';
 import '../services/supabase_service.dart';
@@ -261,26 +262,7 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   /// Format label kategori agar rapi (misal fast_food -> Fast Food)
-  String _formatCategoryLabel(String c) {
-    final lower = c.trim().toLowerCase();
-    if (lower == 'fast_food' || lower == 'fast food') return 'Fast Food';
-    if (lower == 'food_court' || lower == 'food court') return 'Food Court';
-    if (lower == 'cafe' || lower == 'kafe') return 'Cafe';
-    if (lower == 'restoran' || lower == 'restaurant') return 'Restoran';
-    if (lower == 'warung_tradisional' ||
-        lower == 'warung tradisional' ||
-        lower == 'warung')
-      return 'Warung Tradisional';
-    if (lower == 'angkringan') return 'Angkringan';
-    return c
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map((w) {
-          if (w.isEmpty) return '';
-          return w[0].toUpperCase() + w.substring(1);
-        })
-        .join(' ');
-  }
+  String _formatCategoryLabel(String c) => formatCategoryLabel(c);
 
   @override
   Widget build(BuildContext context) {
@@ -593,366 +575,11 @@ class _HomeTabState extends State<HomeTab> {
 
   // ---------- GPS & Location Widget ----------
   void _showLocationPickerSheet() {
-    final locSvc = LocationService.instance;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) {
-          final isGpsLoading = locSvc.isLoading.value;
-          final currentLoc = locSvc.currentLocation.value;
-
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 18),
-                    decoration: BoxDecoration(
-                      color: AppColors.line,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.tint(AppColors.orange, 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.location_on_rounded,
-                        color: AppColors.orange,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Pilih Titik Lokasi Kamu',
-                            style: AppText.display(18),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Rekomendasi terdekat dihitung dari titik ini',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Tutup',
-                      onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-
-                // ── Tombol GPS Otomatis ──
-                InkWell(
-                  onTap: isGpsLoading
-                      ? null
-                      : () async {
-                          setModal(() {});
-                          final ok = await locSvc.fetchGpsLocation();
-                          if (!ctx.mounted) return;
-                          setModal(() {});
-                          if (ok) {
-                            Navigator.pop(ctx);
-                            _load();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Lokasi GPS berhasil diperbarui: ${locSvc.currentLocation.value?.address ?? ''} 📍',
-                                  ),
-                                  backgroundColor: AppColors.greenDark,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          } else {
-                            final msg =
-                                locSvc.statusMessage.value ??
-                                'Gagal mengakses GPS';
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(msg),
-                                  backgroundColor: AppColors.charcoal,
-                                  behavior: SnackBarBehavior.floating,
-                                  action: SnackBarAction(
-                                    label: 'Pengaturan',
-                                    textColor: AppColors.yellow,
-                                    onPressed: () =>
-                                        Geolocator.openAppSettings(),
-                                  ),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: (currentLoc?.isGps ?? false)
-                          ? AppColors.tint(AppColors.greenDark, 0.08)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: isGpsLoading
-                                ? AppColors.tint(AppColors.orange, 0.15)
-                                : ((currentLoc?.isGps ?? false)
-                                      ? AppColors.greenDark
-                                      : Colors.white),
-                            shape: BoxShape.circle,
-                          ),
-                          child: isGpsLoading
-                              ? const Padding(
-                                  padding: EdgeInsets.all(10),
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.orange,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.my_location_rounded,
-                                  size: 20,
-                                  color: (currentLoc?.isGps ?? false)
-                                      ? Colors.white
-                                      : AppColors.charcoal,
-                                ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Text(
-                                    'Gunakan Lokasi GPS Saya',
-                                    style: TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
-                                  if (currentLoc?.isGps ?? false) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.greenDark,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Text(
-                                        'AKTIF',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isGpsLoading
-                                    ? (locSvc.statusMessage.value ??
-                                          'Mencari koordinat GPS...')
-                                    : ((currentLoc?.isGps ?? false)
-                                          ? currentLoc!.address
-                                          : 'Deteksi koordinat posisi ponsel saat ini'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 13,
-                          color: AppColors.textMuted,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-                const Row(
-                  children: [
-                    Expanded(child: Divider(color: AppColors.line)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        'ATAU PILIH WILAYAH KULINER',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textMuted,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: AppColors.line)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // ── Daftar Preset Wilayah ──
-                ...LocationService.presetRegions.map((reg) {
-                  final name = reg['name'] as String;
-                  final desc = reg['desc'] as String;
-                  final city = reg['city'] as String;
-                  final lat = reg['lat'] as double;
-                  final lng = reg['lng'] as double;
-
-                  final isSelected =
-                      !(currentLoc?.isGps ?? true) &&
-                      (currentLoc?.city == city ||
-                          currentLoc?.address.contains(name) == true);
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () async {
-                        await locSvc.setManualLocation(
-                          name: name,
-                          address: '$name, $desc',
-                          city: city,
-                          lat: lat,
-                          lng: lng,
-                        );
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        _load();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Lokasi aktif diatur ke $name'),
-                              backgroundColor: AppColors.greenDark,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.tint(AppColors.orange, 0.08)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isSelected
-                                  ? Icons.check_circle_rounded
-                                  : Icons.place_rounded,
-                              size: 20,
-                              color: isSelected
-                                  ? AppColors.orange
-                                  : AppColors.textMuted,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    name,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w800
-                                          : FontWeight.w600,
-                                      color: isSelected
-                                          ? AppColors.orange
-                                          : AppColors.textDark,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    desc,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          );
-        },
-      ),
+      builder: (ctx) => _LocationPickerSheet(onLocationChanged: _load),
     );
   }
 
@@ -1905,3 +1532,355 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 }
+
+class _LocationPickerSheet extends StatefulWidget {
+  final VoidCallback onLocationChanged;
+
+  const _LocationPickerSheet({required this.onLocationChanged});
+
+  @override
+  State<_LocationPickerSheet> createState() => _LocationPickerSheetState();
+}
+
+class _LocationPickerSheetState extends State<_LocationPickerSheet> {
+  final _locSvc = LocationService.instance;
+
+  @override
+  Widget build(BuildContext context) {
+    final isGpsLoading = _locSvc.isLoading.value;
+    final currentLoc = _locSvc.currentLocation.value;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.tint(AppColors.orange, 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.location_on_rounded,
+                  color: AppColors.orange,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pilih Titik Lokasi Kamu',
+                      style: AppText.display(18),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Rekomendasi terdekat dihitung dari titik ini',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tutup',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Tombol GPS Otomatis
+          InkWell(
+            onTap: isGpsLoading
+                ? null
+                : () async {
+                    setState(() {});
+                    final scaffold = ScaffoldMessenger.of(context);
+                    final nav = Navigator.of(context);
+                    final ok = await _locSvc.fetchGpsLocation();
+                    if (!mounted) return;
+                    setState(() {});
+                    if (ok) {
+                      nav.pop();
+                      widget.onLocationChanged();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Lokasi GPS berhasil diperbarui: ${_locSvc.currentLocation.value?.address ?? ''} 📍',
+                          ),
+                          backgroundColor: AppColors.greenDark,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } else {
+                      final msg = _locSvc.statusMessage.value ?? 'Gagal mengakses GPS';
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content: Text(msg),
+                          backgroundColor: AppColors.charcoal,
+                          behavior: SnackBarBehavior.floating,
+                          action: SnackBarAction(
+                            label: 'Pengaturan',
+                            textColor: AppColors.yellow,
+                            onPressed: () => Geolocator.openAppSettings(),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: (currentLoc?.isGps ?? false)
+                    ? AppColors.tint(AppColors.greenDark, 0.08)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isGpsLoading
+                          ? AppColors.tint(AppColors.orange, 0.15)
+                          : ((currentLoc?.isGps ?? false)
+                              ? AppColors.greenDark
+                              : Colors.white),
+                      shape: BoxShape.circle,
+                    ),
+                    child: isGpsLoading
+                        ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.orange,
+                            ),
+                          )
+                        : Icon(
+                            Icons.my_location_rounded,
+                            size: 20,
+                            color: (currentLoc?.isGps ?? false)
+                                ? Colors.white
+                                : AppColors.charcoal,
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Gunakan Lokasi GPS Saya',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            if (currentLoc?.isGps ?? false) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.greenDark,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'AKTIF',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isGpsLoading
+                              ? (_locSvc.statusMessage.value ?? 'Mencari koordinat GPS...')
+                              : ((currentLoc?.isGps ?? false)
+                                  ? currentLoc!.address
+                                  : 'Deteksi koordinat posisi ponsel saat ini'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 13,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+          const Row(
+            children: [
+              Expanded(child: Divider(color: AppColors.line)),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  'ATAU PILIH WILAYAH KULINER',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              Expanded(child: Divider(color: AppColors.line)),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Daftar Preset Wilayah
+          ...LocationService.presetRegions.map((reg) {
+            final name = reg['name'] as String;
+            final desc = reg['desc'] as String;
+            final city = reg['city'] as String;
+            final lat = reg['lat'] as double;
+            final lng = reg['lng'] as double;
+
+            final isSelected = !(currentLoc?.isGps ?? true) &&
+                (currentLoc?.city == city || currentLoc?.address.contains(name) == true);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () async {
+                  final scaffold = ScaffoldMessenger.of(context);
+                  final nav = Navigator.of(context);
+                  await _locSvc.setManualLocation(
+                    name: name,
+                    address: '$name, $desc',
+                    city: city,
+                    lat: lat,
+                    lng: lng,
+                  );
+                  if (!mounted) return;
+                  nav.pop();
+                  widget.onLocationChanged();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text('Lokasi aktif diatur ke $name'),
+                      backgroundColor: AppColors.greenDark,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.tint(AppColors.orange, 0.08)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isSelected ? Icons.check_circle_rounded : Icons.place_rounded,
+                        size: 20,
+                        color: isSelected ? AppColors.orange : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                color: isSelected ? AppColors.orange : AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              desc,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+

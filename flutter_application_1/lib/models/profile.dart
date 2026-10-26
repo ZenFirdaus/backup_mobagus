@@ -45,48 +45,36 @@ class Profile {
     );
   }
 
-  int get curatorLevel {
-    if (points >= 2500) return 5;
-    if (points >= 1500) return 4;
-    if (points >= 800) return 3;
-    if (points >= 300) return 2;
-    return 1;
-  }
+  int get curatorLevel => switch (points) {
+        >= 2500 => 5,
+        >= 1500 => 4,
+        >= 800 => 3,
+        >= 300 => 2,
+        _ => 1,
+      };
 
-  String get levelTitle {
-    switch (curatorLevel) {
-      case 1:
-        return 'Pemula Rasa';
-      case 2:
-        return 'Penjelajah Kuliner';
-      case 3:
-        return 'Kurator Kuliner';
-      case 4:
-        return 'Penjelajah Kuliner Sejati';
-      case 5:
-        return 'Kurator Utama';
-      default:
-        return 'Pemula Rasa';
-    }
-  }
+  String get levelTitle => switch (curatorLevel) {
+        2 => 'Penjelajah Kuliner',
+        3 => 'Kurator Kuliner',
+        4 => 'Penjelajah Kuliner Sejati',
+        5 => 'Kurator Utama',
+        _ => 'Pemula Rasa',
+      };
 
-  /// Target poin untuk mencapai tingkatan level berikutnya
-  int get nextLevelPoints {
-    if (curatorLevel == 1) return 300;
-    if (curatorLevel == 2) return 800;
-    if (curatorLevel == 3) return 1500;
-    if (curatorLevel == 4) return 2500;
-    return 2500; // Level 5 (Maksimal)
-  }
+  int get nextLevelPoints => switch (curatorLevel) {
+        1 => 300,
+        2 => 800,
+        3 => 1500,
+        _ => 2500,
+      };
 
-  /// Batas minimal poin tingkatan level saat ini
-  int get currentLevelBasePoints {
-    if (curatorLevel == 1) return 0;
-    if (curatorLevel == 2) return 300;
-    if (curatorLevel == 3) return 800;
-    if (curatorLevel == 4) return 1500;
-    return 2500;
-  }
+  int get currentLevelBasePoints => switch (curatorLevel) {
+        2 => 300,
+        3 => 800,
+        4 => 1500,
+        >= 5 => 2500,
+        _ => 0,
+      };
 
   /// Sisa poin yang dibutuhkan untuk naik level
   int get pointsToNextLevel {

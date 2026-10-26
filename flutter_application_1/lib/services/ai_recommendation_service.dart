@@ -205,62 +205,20 @@ class AiRecommendationService {
     final text = '${r.name} ${r.category} ${r.description ?? ''}'.toLowerCase();
     int matchCount = 0;
 
+    const tasteKeywords = {
+      'pedas': ['pedas', 'pedes', 'sambal', 'rawit', 'geprek', 'lele', 'mercon', 'seblak'],
+      'manis': ['manis', 'gudeg', 'areh', 'bakpia', 'roti', 'kue', 'dessert', 'es '],
+      'gurih': ['gurih', 'asin', 'soto', 'bakso', 'bakmi', 'sate', 'ayam', 'bebek', 'kuah'],
+      'asin': ['gurih', 'asin', 'soto', 'bakso', 'bakmi', 'sate', 'ayam', 'bebek', 'kuah'],
+      'rempah': ['rempah', 'tradisional', 'khas', 'pawon', 'klampok', 'bakar', 'gule', 'tongseng'],
+      'asam': ['asam', 'segar', 'jus', 'rujak', 'es'],
+    };
+
     for (final taste in p.favoriteTastes) {
       final t = taste.toLowerCase();
-      if (t.contains('pedas')) {
-        if (text.contains('pedas') ||
-            text.contains('pedes') ||
-            text.contains('sambal') ||
-            text.contains('rawit') ||
-            text.contains('geprek') ||
-            text.contains('lele') ||
-            text.contains('mercon') ||
-            text.contains('seblak')) {
-          matchCount++;
-        }
-      } else if (t.contains('manis')) {
-        if (text.contains('manis') ||
-            text.contains('gudeg') ||
-            text.contains('areh') ||
-            text.contains('bakpia') ||
-            text.contains('roti') ||
-            text.contains('kue') ||
-            text.contains('dessert') ||
-            text.contains('es ')) {
-          matchCount++;
-        }
-      } else if (t.contains('gurih') || t.contains('asin')) {
-        if (text.contains('gurih') ||
-            text.contains('asin') ||
-            text.contains('soto') ||
-            text.contains('bakso') ||
-            text.contains('bakmi') ||
-            text.contains('sate') ||
-            text.contains('ayam') ||
-            text.contains('bebek') ||
-            text.contains('kuah')) {
-          matchCount++;
-        }
-      } else if (t.contains('rempah')) {
-        if (text.contains('rempah') ||
-            text.contains('tradisional') ||
-            text.contains('khas') ||
-            text.contains('pawon') ||
-            text.contains('klampok') ||
-            text.contains('bakar') ||
-            text.contains('gule') ||
-            text.contains('tongseng')) {
-          matchCount++;
-        }
-      } else if (t.contains('asam')) {
-        if (text.contains('asam') ||
-            text.contains('segar') ||
-            text.contains('jus') ||
-            text.contains('rujak') ||
-            text.contains('es')) {
-          matchCount++;
-        }
-      }
+      final hasMatch = tasteKeywords.entries.any((entry) =>
+          t.contains(entry.key) && entry.value.any((kw) => text.contains(kw)));
+      if (hasMatch) matchCount++;
     }
 
     if (matchCount >= 2) return 98.0;
@@ -276,39 +234,24 @@ class AiRecommendationService {
 
     double score = 80.0;
 
-    // Anak Kos & Mahasiswa: Cocok untuk tempat santai, warung, soto, makanan kenyang, kafe nugas
+    // Anak Kos & Mahasiswa
     if (house.contains('kos') || occ.contains('mahasiswa')) {
-      if (text.contains('soto') ||
-          text.contains('warung') ||
-          text.contains('gudeg') ||
-          text.contains('lele') ||
-          text.contains('kafe') ||
-          text.contains('cafe') ||
-          text.contains('santai')) {
-        score += 15.0;
-      }
+      const kosKeywords = ['soto', 'warung', 'gudeg', 'lele', 'kafe', 'cafe', 'santai'];
+      if (kosKeywords.any((kw) => text.contains(kw))) score += 15.0;
     }
 
     // Suasana WFC / Nugas
     if (vibe.contains('wfc') || vibe.contains('nugas')) {
-      if (text.contains('cafe') ||
-          text.contains('kafe') ||
-          text.contains('coffee') ||
-          text.contains('kopi') ||
-          (r.website != null && r.website!.isNotEmpty)) {
+      const wfcKeywords = ['cafe', 'kafe', 'coffee', 'kopi'];
+      if (wfcKeywords.any((kw) => text.contains(kw)) || (r.website?.isNotEmpty ?? false)) {
         score += 18.0;
       }
     }
 
     // Suasana Warung Tradisional / Legendaris
     if (vibe.contains('tradisional') || vibe.contains('warung')) {
-      if (text.contains('tradisional') ||
-          text.contains('legendaris') ||
-          text.contains('mbah') ||
-          text.contains('pawon') ||
-          text.contains('wijilan')) {
-        score += 18.0;
-      }
+      const tradKeywords = ['tradisional', 'legendaris', 'mbah', 'pawon', 'wijilan'];
+      if (tradKeywords.any((kw) => text.contains(kw))) score += 18.0;
     }
 
     // Pekerja Kantoran / Apartemen / Keluarga
@@ -318,29 +261,20 @@ class AiRecommendationService {
       }
     }
 
-    // Preferensi Tipe Tempat Pilihan (Rumah Makan, Cafe, Fast Food, Warung, Gudeg, Soto, Bakmi Jawa)
+    // Preferensi Tipe Tempat Pilihan
     if (p.preferredPlaces.isNotEmpty) {
+      final cat = r.category.toLowerCase();
       for (final place in p.preferredPlaces) {
         final pl = place.toLowerCase();
-        if (pl.contains('cafe') && (text.contains('cafe') || text.contains('kafe') || text.contains('kopi') || r.category.toLowerCase().contains('cafe'))) {
-          score += 15.0;
-        } else if ((pl.contains('warung') || pl.contains('angkringan')) && (text.contains('warung') || text.contains('angkringan') || text.contains('lesehan') || r.category.toLowerCase().contains('warung'))) {
-          score += 15.0;
-        } else if (pl.contains('gudeg') && (text.contains('gudeg') || r.category.toLowerCase().contains('gudeg'))) {
-          score += 15.0;
-        } else if (pl.contains('soto') && (text.contains('soto') || r.category.toLowerCase().contains('soto'))) {
-          score += 15.0;
-        } else if (pl.contains('bakmi') && (text.contains('bakmi') || r.category.toLowerCase().contains('bakmi'))) {
-          score += 15.0;
-        } else if (pl.contains('rumah makan') || pl.contains('restoran')) {
-          if (r.category.toLowerCase().contains('restoran') || text.contains('resto') || text.contains('rumah makan')) {
-            score += 15.0;
-          }
-        } else if (pl.contains('fast food') && (text.contains('fast food') || text.contains('burger') || text.contains('fried chicken'))) {
-          score += 15.0;
-        } else if (pl.contains('food court') && text.contains('food court')) {
-          score += 15.0;
-        }
+        final matches = (pl.contains('cafe') && (text.contains('cafe') || text.contains('kafe') || text.contains('kopi') || cat.contains('cafe'))) ||
+            ((pl.contains('warung') || pl.contains('angkringan')) && (text.contains('warung') || text.contains('angkringan') || text.contains('lesehan') || cat.contains('warung'))) ||
+            (pl.contains('gudeg') && (text.contains('gudeg') || cat.contains('gudeg'))) ||
+            (pl.contains('soto') && (text.contains('soto') || cat.contains('soto'))) ||
+            (pl.contains('bakmi') && (text.contains('bakmi') || cat.contains('bakmi'))) ||
+            ((pl.contains('rumah makan') || pl.contains('restoran')) && (cat.contains('restoran') || text.contains('resto') || text.contains('rumah makan'))) ||
+            (pl.contains('fast food') && (text.contains('fast food') || text.contains('burger') || text.contains('fried chicken'))) ||
+            (pl.contains('food court') && text.contains('food court'));
+        if (matches) score += 15.0;
       }
     }
 

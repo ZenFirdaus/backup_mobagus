@@ -16,18 +16,15 @@ import '../widgets/text_field.dart';
 import 'login.dart';
 
 /// Halaman Pemulihan / Lupa Kata Sandi
-/// Alur terpisah dan terstruktur rapi:
+/// Alur 4 langkah terstruktur:
 /// 1. Masukkan Email -> Kirim Kode ke Email
-/// 2. Masukkan 6-Digit Kode Verifikasi OTP -> Verifikasi Kode
+/// 2. Masukkan Kode Verifikasi OTP -> Verifikasi Kode
 /// 3. Masukkan & Konfirmasi Kata Sandi Baru -> Simpan Kata Sandi
 /// 4. Konfirmasi Sukses -> Kembali ke Login
 class ForgotPasswordPage extends StatefulWidget {
   final String? initialEmail;
 
-  const ForgotPasswordPage({
-    super.key,
-    this.initialEmail,
-  });
+  const ForgotPasswordPage({super.key, this.initialEmail});
 
   @override
   State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
@@ -37,7 +34,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   static const int _codeLength = 8;
   static const int _resendSeconds = 60;
 
-  // Form Controllers
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
@@ -47,19 +43,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKeyPassword = GlobalKey<FormState>();
   final _focusNodeOtp = FocusNode();
 
-  // State Management
-  // 0: Input Email, 1: Verifikasi Kode OTP, 2: Buat Kata Sandi Baru, 3: Sukses
   int _currentStep = 0;
   bool _isLoading = false;
   bool _isFaceIdVerified = false;
   bool _hasFaceIdEnrolled = false;
   String? _errorMessage;
 
-  // Timer Kirim Ulang
   Timer? _resendTimer;
   int _secondsLeft = 0;
-
-  // Auth Listener untuk mendeteksi link pemulihan email
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
@@ -68,35 +59,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     if (widget.initialEmail != null && widget.initialEmail!.trim().isNotEmpty) {
       _emailController.text = widget.initialEmail!.trim();
     }
-
     _checkFaceIdStatus();
     _listenToAuthRecovery();
-  }
-
-  Future<void> _checkFaceIdStatus() async {
-    try {
-      final inputEmail = _emailController.text.trim();
-      final enrolled = inputEmail.isNotEmpty
-          ? await FaceBiometricService.instance.isFaceEnrolled(email: inputEmail)
-          : await FaceBiometricService.instance.isFaceEnrolled();
-      if (mounted) {
-        setState(() => _hasFaceIdEnrolled = enrolled);
-      }
-    } catch (_) {}
-  }
-
-  void _listenToAuthRecovery() {
-    _authSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        if (!mounted) return;
-        // Jika user klik tautan dari email, langsung arahkan ke Step 2 (Buat Sandi Baru)
-        setState(() {
-          _currentStep = 2;
-          _errorMessage = null;
-        });
-      }
-    });
   }
 
   @override
@@ -109,6 +73,27 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     _confirmPasswordController.dispose();
     _focusNodeOtp.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkFaceIdStatus() async {
+    try {
+      final inputEmail = _emailController.text.trim();
+      final enrolled = inputEmail.isNotEmpty
+          ? await FaceBiometricService.instance.isFaceEnrolled(email: inputEmail)
+          : await FaceBiometricService.instance.isFaceEnrolled();
+      if (mounted) setState(() => _hasFaceIdEnrolled = enrolled);
+    } catch (_) {}
+  }
+
+  void _listenToAuthRecovery() {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery && mounted) {
+        setState(() {
+          _currentStep = 2;
+          _errorMessage = null;
+        });
+      }
+    });
   }
 
   void _startResendTimer() {
@@ -131,10 +116,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return '$m:$s';
   }
 
+  void _showSnackBar(String text, {Color bg = AppColors.greenDark}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text), backgroundColor: bg, behavior: SnackBarBehavior.floating),
+    );
+  }
+
   String _parseAuthError(String msg) {
     final lower = msg.toLowerCase();
-    if (lower.contains('error sending recovery email') ||
-        lower.contains('unexpected_failure')) {
+    if (lower.contains('error sending recovery email') || lower.contains('unexpected_failure')) {
       return 'Gagal mengirim email dari server Supabase. Pastikan pengaturan SMTP / email pada Dashboard Supabase sudah aktif dan kuota belum habis.';
     }
     if (lower.contains('rate limit') || lower.contains('too many')) {
@@ -143,9 +134,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     if (lower.contains('token has expired') || lower.contains('expired')) {
       return 'Kode verifikasi telah kedaluwarsa. Silakan kirim ulang kode baru.';
     }
-    if (lower.contains('invalid') ||
-        lower.contains('not match') ||
-        lower.contains('token')) {
+    if (lower.contains('invalid') || lower.contains('not match') || lower.contains('token')) {
       return 'Kode verifikasi yang Anda masukkan tidak sesuai. Periksa kembali email Anda.';
     }
     if (lower.contains('user not found')) {
@@ -157,7 +146,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return msg;
   }
 
-  /// Opsi Tambahan: Pulihkan Langsung via Face ID (jika terdaftar untuk akun)
   Future<void> _verifyWithFaceId() async {
     FocusManager.instance.primaryFocus?.unfocus();
     final inputEmail = _emailController.text.trim();
@@ -165,19 +153,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     String targetName;
 
     if (inputEmail.isNotEmpty) {
-      final isUserEnrolled =
-          await FaceBiometricService.instance.isFaceEnrolled(email: inputEmail);
+      final isUserEnrolled = await FaceBiometricService.instance.isFaceEnrolled(email: inputEmail);
       if (!isUserEnrolled) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Face ID belum didaftarkan untuk akun $inputEmail.',
-            ),
-            backgroundColor: AppColors.charcoal,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showSnackBar('Face ID belum didaftarkan untuk akun $inputEmail.', bg: AppColors.charcoal);
         return;
       }
       targetEmail = inputEmail;
@@ -187,19 +165,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           prefs.getString('foodie_last_user_name') ??
           inputEmail.split('@').first;
     } else {
-      final account =
-          await FaceBiometricService.instance.getActiveBiometricAccount();
+      final account = await FaceBiometricService.instance.getActiveBiometricAccount();
       if (account == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Belum ada akun terdaftar untuk Face ID di perangkat ini.',
-            ),
-            backgroundColor: AppColors.charcoal,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showSnackBar('Belum ada akun terdaftar untuk Face ID di perangkat ini.', bg: AppColors.charcoal);
         return;
       }
       targetEmail = account['email']!;
@@ -222,24 +190,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           if (!mounted) return;
           setState(() {
             _isFaceIdVerified = true;
-            _currentStep = 2; // Langsung ke halaman buat kata sandi baru
+            _currentStep = 2;
             _errorMessage = null;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Identitas Terverifikasi via Face ID untuk $targetName! Silakan buat kata sandi baru.',
-              ),
-              backgroundColor: AppColors.greenDark,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          _showSnackBar('Identitas Terverifikasi via Face ID untuk $targetName! Silakan buat kata sandi baru.');
         },
       ),
     );
   }
 
-  /// LANGKAH 1: Kirim Kode Pemulihan ke Email
   Future<void> _sendRecoveryEmail() async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!(_formKeyEmail.currentState?.validate() ?? false)) return;
@@ -252,31 +211,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     try {
       await Supabase.instance.client.auth.resetPasswordForEmail(email);
-
       _startResendTimer();
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _currentStep = 1; // Pindah ke Halaman Masukkan Kode OTP
+        _currentStep = 1;
         _errorMessage = null;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Kode verifikasi telah dikirimkan ke email $email'),
-          backgroundColor: AppColors.greenDark,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showSnackBar('Kode verifikasi telah dikirimkan ke email $email');
     } on AuthException catch (e) {
-      debugPrint('AUTH EXCEPTION RAW: ${e.message} | code: ${e.statusCode}');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error Server: "${e.message}" (Kode: ${e.statusCode})';
       });
     } catch (e) {
-      debugPrint('GENERAL EXCEPTION RAW: $e');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -285,7 +234,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
-  /// Kirim Ulang Kode ke Email
   Future<void> _resendCode() async {
     if (_secondsLeft > 0 || _isLoading) return;
     final email = _emailController.text.trim();
@@ -300,19 +248,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       await Supabase.instance.client.auth.resetPasswordForEmail(email);
       _otpController.clear();
       _startResendTimer();
-
       if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Kode baru berhasil dikirim ulang ke email $email'),
-          backgroundColor: AppColors.greenDark,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      setState(() => _isLoading = false);
+      _showSnackBar('Kode baru berhasil dikirim ulang ke email $email');
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -328,15 +266,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
-  /// LANGKAH 2: Verifikasi Kode OTP (Halaman Terpisah)
   Future<void> _verifyOtpCode() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
     final token = _otpController.text.trim().replaceAll(' ', '');
     if (token.length != _codeLength && token.length != 6) {
-      setState(() {
-        _errorMessage = 'Harap masukkan 8-digit kode verifikasi dari email.';
-      });
+      setState(() => _errorMessage = 'Harap masukkan 8-digit kode verifikasi dari email.');
       return;
     }
 
@@ -350,51 +285,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       bool verified = false;
       String? lastError;
 
-      // 1. Coba verifikasi dengan OtpType.recovery
-      try {
-        final res = await Supabase.instance.client.auth.verifyOTP(
-          email: email,
-          token: token,
-          type: OtpType.recovery,
-        );
-        if (res.user != null || res.session != null) {
-          verified = true;
-        }
-      } catch (e) {
-        lastError = e is AuthException ? e.message : e.toString();
-        debugPrint('VERIFY OTP RECOVERY ERROR: $e');
-      }
-
-      // 2. Coba verifikasi dengan OtpType.email jika template project menggunakan email OTP
-      if (!verified) {
+      // Coba berurutan: recovery, email, magiclink
+      for (final type in [OtpType.recovery, OtpType.email, OtpType.magiclink]) {
         try {
           final res = await Supabase.instance.client.auth.verifyOTP(
             email: email,
             token: token,
-            type: OtpType.email,
+            type: type,
           );
           if (res.user != null || res.session != null) {
             verified = true;
+            break;
           }
         } catch (e) {
           lastError = e is AuthException ? e.message : e.toString();
-          debugPrint('VERIFY OTP EMAIL ERROR: $e');
-        }
-      }
-
-      // 3. Coba verifikasi dengan OtpType.magiclink
-      if (!verified) {
-        try {
-          final res = await Supabase.instance.client.auth.verifyOTP(
-            email: email,
-            token: token,
-            type: OtpType.magiclink,
-          );
-          if (res.user != null || res.session != null) {
-            verified = true;
-          }
-        } catch (e) {
-          debugPrint('VERIFY OTP MAGICLINK ERROR: $e');
         }
       }
 
@@ -409,23 +313,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         return;
       }
 
-      // Verifikasi Berhasil -> Pindah ke Halaman Buat Kata Sandi Baru!
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _currentStep = 2; // Pindah ke Langkah Buat Kata Sandi Baru
+        _currentStep = 2;
         _errorMessage = null;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Kode verifikasi berhasil dikonfirmasi! Silakan buat kata sandi baru.',
-          ),
-          backgroundColor: AppColors.greenDark,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showSnackBar('Kode verifikasi berhasil dikonfirmasi! Silakan buat kata sandi baru.');
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -436,13 +330,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage =
-            'Gagal memverifikasi kode. Pastikan koneksi internet stabil.';
+        _errorMessage = 'Gagal memverifikasi kode. Pastikan koneksi internet stabil.';
       });
     }
   }
 
-  /// LANGKAH 3: Simpan Kata Sandi Baru (Halaman Terpisah)
   Future<void> _saveNewPassword() async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!(_formKeyPassword.currentState?.validate() ?? false)) return;
@@ -456,12 +348,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     });
 
     try {
-      // 1. Simpan kata sandi baru ke Supabase Auth
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
+      await Supabase.instance.client.auth.updateUser(UserAttributes(password: newPassword));
 
-      // 2. Simpan dan perbarui kredensial lokal agar Face ID & login langsung sinkron
       try {
         final prefs = await SharedPreferences.getInstance();
         final key = email.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
@@ -473,7 +361,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _currentStep = 3; // Pindah ke Halaman Sukses
+        _currentStep = 3;
         _errorMessage = null;
       });
     } on AuthException catch (e) {
@@ -493,13 +381,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   void _handleBack() {
     if (_currentStep == 1) {
-      // Dari Halaman Kode OTP kembali ke Halaman Input Email
       setState(() {
         _currentStep = 0;
         _errorMessage = null;
       });
     } else if (_currentStep == 2 && !_isFaceIdVerified) {
-      // Dari Halaman Buat Sandi Baru kembali ke Halaman Kode OTP
       setState(() {
         _currentStep = 1;
         _errorMessage = null;
@@ -508,9 +394,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginPage()),
-        );
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
       }
     }
   }
@@ -529,7 +413,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Navigation Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
@@ -540,23 +423,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     borderRadius: BorderRadius.circular(8),
                     child: const Padding(
                       padding: EdgeInsets.all(6.0),
-                      child: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 20,
-                        color: AppColors.charcoal,
-                      ),
+                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.charcoal),
                     ),
                   ),
                   const FoodieHeaderLogo(),
                 ],
               ),
             ),
-
-            // Content Area
             Expanded(
               child: SingleChildScrollView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
                 child: Center(
                   child: ConstrainedBox(
@@ -565,28 +441,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: 12),
-
-                        // Error Banner Reusable
                         if (_errorMessage != null) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                             decoration: BoxDecoration(
                               color: AppColors.tint(AppColors.red, 0.08),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppColors.tint(AppColors.red, 0.25),
-                              ),
+                              border: Border.all(color: AppColors.tint(AppColors.red, 0.25)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 18,
-                                  color: AppColors.red,
-                                ),
+                                const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.red),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
@@ -604,8 +469,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           ),
                           const SizedBox(height: 18),
                         ],
-
-                        // Render Step Terkait Sesuai Alur Terpisah
                         if (_currentStep == 0)
                           _buildStep1Email()
                         else if (_currentStep == 1)
@@ -626,53 +489,27 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 
-  /// ──────────────────────────────────────────────────────────
-  /// HALAMAN 1: Masukkan Alamat Email Akun
-  /// ──────────────────────────────────────────────────────────
   Widget _buildStep1Email() {
     return Form(
       key: _formKeyEmail,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Icon Avatar Minimalis
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.orange, 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.tint(AppColors.orange, 0.25),
-                width: 1.2,
-              ),
-            ),
-            child: const Icon(
-              Icons.lock_reset_rounded,
-              size: 28,
-              color: AppColors.orange,
-            ),
+          _StepIconBadge(
+            icon: Icons.lock_reset_rounded,
+            color: AppColors.orange,
+            bgColor: AppColors.tint(AppColors.orange, 0.12),
+            borderColor: AppColors.tint(AppColors.orange, 0.25),
           ),
           const SizedBox(height: 20),
-
-          Text(
-            'Lupa Kata Sandi',
-            textAlign: TextAlign.center,
-            style: AppText.display(24),
-          ),
+          Text('Lupa Kata Sandi', textAlign: TextAlign.center, style: AppText.display(24)),
           const SizedBox(height: 8),
-
           const Text(
             'Masukkan email yang terdaftar pada akun Anda. Kami akan mengirimkan kode verifikasi untuk mengatur ulang kata sandi.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textMuted,
-              height: 1.45,
-            ),
+            style: TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.45),
           ),
           const SizedBox(height: 26),
-
           AppTextField(
             label: 'Alamat Email',
             hint: 'nama@gmail.com',
@@ -684,14 +521,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             onFieldSubmitted: (_) => _sendRecoveryEmail(),
           ),
           const SizedBox(height: 22),
-
           PrimaryButton(
             label: 'Kirim Kode Verifikasi',
             loading: _isLoading,
             onPressed: _sendRecoveryEmail,
           ),
-
-          // Opsi Face ID jika perangkat sudah terdaftar
           if (_hasFaceIdEnrolled) ...[
             const SizedBox(height: 14),
             SoftButton(
@@ -700,17 +534,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               onPressed: _verifyWithFaceId,
             ),
           ],
-
           const SizedBox(height: 16),
           TextButton(
             onPressed: _handleBack,
             child: const Text(
               'Kembali ke Halaman Masuk',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-              ),
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMuted),
             ),
           ),
         ],
@@ -718,36 +547,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 
-  /// ──────────────────────────────────────────────────────────
-  /// HALAMAN 2: Masukkan Kode Verifikasi OTP (Terpisah Sendiri)
-  /// ──────────────────────────────────────────────────────────
   Widget _buildStep2OtpVerification() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Icon Avatar Minimalis
-        Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.orange, 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.mark_email_read_rounded,
-              size: 28,
-              color: AppColors.orange,
-            ),
+        _StepIconBadge(
+          icon: Icons.mark_email_read_rounded,
+          color: AppColors.orange,
+          bgColor: AppColors.tint(AppColors.orange, 0.12),
         ),
         const SizedBox(height: 20),
-
-        Text(
-          'Verifikasi Kode',
-          textAlign: TextAlign.center,
-          style: AppText.display(24),
-        ),
+        Text('Verifikasi Kode', textAlign: TextAlign.center, style: AppText.display(24)),
         const SizedBox(height: 8),
-
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
@@ -758,40 +569,24 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               fontFamily: AppFonts.body,
             ),
             children: [
-              const TextSpan(
-                text: 'Kode verifikasi telah dikirimkan ke email ',
-              ),
+              const TextSpan(text: 'Kode verifikasi telah dikirimkan ke email '),
               TextSpan(
                 text: _emailController.text.trim(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textDark),
               ),
-              const TextSpan(
-                text:
-                    '. Silakan periksa folder Kotak Masuk atau Spam email Anda.',
-              ),
+              const TextSpan(text: '. Silakan periksa folder Kotak Masuk atau Spam email Anda.'),
             ],
           ),
         ),
         const SizedBox(height: 28),
-
-        Align(
+        const Align(
           alignment: Alignment.centerLeft,
           child: Text(
             'KODE VERIFIKASI',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: AppColors.textMuted,
-            ),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: AppColors.textMuted),
           ),
         ),
         const SizedBox(height: 10),
-
-        // OTP Input Box
         SizedBox(
           height: 52,
           child: Stack(
@@ -804,12 +599,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: List.generate(_codeLength, (i) {
                       final char = i < text.length ? text[i] : '';
-                      final isActive =
-                          i == text.length.clamp(0, _codeLength - 1);
-                      return _OtpDigitBox(
-                        char: char,
-                        active: isActive,
-                      );
+                      final isActive = i == text.length.clamp(0, _codeLength - 1);
+                      return _OtpDigitBox(char: char, active: isActive);
                     }),
                   );
                 },
@@ -825,19 +616,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     maxLength: _codeLength,
                     enableSuggestions: false,
                     autocorrect: false,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (val) {
                       setState(() {});
-                      if (val.trim().length == _codeLength) {
-                        _verifyOtpCode();
-                      }
+                      if (val.trim().length == _codeLength) _verifyOtpCode();
                     },
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      border: InputBorder.none,
-                    ),
+                    decoration: const InputDecoration(counterText: '', border: InputBorder.none),
                   ),
                 ),
               ),
@@ -845,107 +629,56 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
         ),
         const SizedBox(height: 18),
-
-        // Kirim Ulang Timer Row
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Tidak menerima email? ',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textMuted,
-              ),
-            ),
+            const Text('Tidak menerima email? ', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
             GestureDetector(
               onTap: _secondsLeft == 0 ? _resendCode : null,
               child: Text(
-                _secondsLeft == 0
-                    ? 'Kirim Ulang'
-                    : 'Kirim Ulang ($_timerLabel)',
+                _secondsLeft == 0 ? 'Kirim Ulang' : 'Kirim Ulang ($_timerLabel)',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
-                  color:
-                      _secondsLeft == 0 ? AppColors.red : AppColors.textMuted,
+                  color: _secondsLeft == 0 ? AppColors.red : AppColors.textMuted,
                 ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 28),
-
-        // Tombol Verifikasi Kode
-        PrimaryButton(
-          label: 'Verifikasi Kode',
-          loading: _isLoading,
-          onPressed: _verifyOtpCode,
-        ),
+        PrimaryButton(label: 'Verifikasi Kode', loading: _isLoading, onPressed: _verifyOtpCode),
         const SizedBox(height: 14),
-
         TextButton(
           onPressed: _handleBack,
-          child: const Text(
-            'Ganti Alamat Email',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textMuted,
-            ),
-          ),
+          child: const Text('Ganti Alamat Email',
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
         ),
       ],
     );
   }
 
-  /// ──────────────────────────────────────────────────────────
-  /// HALAMAN 3: Buat Kata Sandi Baru (Hanya Terbuka Setelah Kode Diverifikasi)
-  /// ──────────────────────────────────────────────────────────
   Widget _buildStep3NewPassword() {
     return Form(
       key: _formKeyPassword,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Icon Avatar Minimalis
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.tint(AppColors.green, 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.tint(AppColors.green, 0.25),
-                width: 1.2,
-              ),
-            ),
-            child: const Icon(
-              Icons.lock_outline_rounded,
-              size: 28,
-              color: AppColors.green,
-            ),
+          _StepIconBadge(
+            icon: Icons.lock_outline_rounded,
+            color: AppColors.green,
+            bgColor: AppColors.tint(AppColors.green, 0.12),
+            borderColor: AppColors.tint(AppColors.green, 0.25),
           ),
           const SizedBox(height: 20),
-
-          Text(
-            'Buat Kata Sandi Baru',
-            textAlign: TextAlign.center,
-            style: AppText.display(24),
-          ),
+          Text('Buat Kata Sandi Baru', textAlign: TextAlign.center, style: AppText.display(24)),
           const SizedBox(height: 8),
-
           const Text(
             'Kode verifikasi berhasil dikonfirmasi. Silakan buat kata sandi baru untuk mengamankan akun Anda.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textMuted,
-              height: 1.45,
-            ),
+            style: TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.45),
           ),
           const SizedBox(height: 26),
-
-          // Input Kata Sandi Baru
           AppTextField(
             label: 'Kata Sandi Baru',
             hint: 'Minimal 8 karakter',
@@ -957,8 +690,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             helper: 'Gunakan minimal 8 karakter dengan kombinasi angka & huruf.',
           ),
           const SizedBox(height: 14),
-
-          // Konfirmasi Kata Sandi Baru
           AppTextField(
             label: 'Konfirmasi Kata Sandi Baru',
             hint: 'Ulangi kata sandi baru',
@@ -966,98 +697,87 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             controller: _confirmPasswordController,
             isPassword: true,
             textInputAction: TextInputAction.done,
-            validator: (v) =>
-                Validators.confirm(v, _newPasswordController.text),
+            validator: (v) => Validators.confirm(v, _newPasswordController.text),
             onFieldSubmitted: (_) => _saveNewPassword(),
           ),
           const SizedBox(height: 24),
-
-          PrimaryButton(
-            label: 'Simpan Kata Sandi',
-            loading: _isLoading,
-            onPressed: _saveNewPassword,
-          ),
+          PrimaryButton(label: 'Simpan Kata Sandi', loading: _isLoading, onPressed: _saveNewPassword),
           const SizedBox(height: 14),
-
           TextButton(
             onPressed: _handleBack,
-            child: const Text(
-              'Batal & Kembali',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-              ),
-            ),
+            child: const Text('Batal & Kembali',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
           ),
         ],
       ),
     );
   }
 
-  /// ──────────────────────────────────────────────────────────
-  /// HALAMAN 4: Konfirmasi Sukses
-  /// ──────────────────────────────────────────────────────────
   Widget _buildStep4Success() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 12),
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: AppColors.tint(AppColors.green, 0.12),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.tint(AppColors.green, 0.3),
-              width: 1.5,
-            ),
-          ),
-          child: const Icon(
-            Icons.check_rounded,
-            size: 38,
-            color: AppColors.green,
-          ),
+        _StepIconBadge(
+          icon: Icons.check_rounded,
+          color: AppColors.green,
+          bgColor: AppColors.tint(AppColors.green, 0.12),
+          borderColor: AppColors.tint(AppColors.green, 0.3),
+          size: 72,
+          iconSize: 38,
         ),
         const SizedBox(height: 22),
-
-        Text(
-          'Kata Sandi Berhasil Diperbarui',
-          textAlign: TextAlign.center,
-          style: AppText.display(22),
-        ),
+        Text('Kata Sandi Berhasil Diperbarui', textAlign: TextAlign.center, style: AppText.display(22)),
         const SizedBox(height: 10),
-
-        Text(
+        const Text(
           'Kata sandi akun Anda telah berhasil diubah. Silakan masuk kembali dengan menggunakan kata sandi yang baru.',
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.textMuted,
-            height: 1.5,
-          ),
+          style: TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.5),
         ),
         const SizedBox(height: 32),
-
-        PrimaryButton(
-          label: 'Masuk Sekarang',
-          onPressed: _navigateToLogin,
-        ),
+        PrimaryButton(label: 'Masuk Sekarang', onPressed: _navigateToLogin),
       ],
     );
   }
 }
 
-/// Kotak Digit OTP Clean & Modern
+class _StepIconBadge extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final Color? borderColor;
+  final double size;
+  final double iconSize;
+
+  const _StepIconBadge({
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    this.borderColor,
+    this.size = 60,
+    this.iconSize = 28,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: bgColor,
+        shape: BoxShape.circle,
+        border: borderColor != null ? Border.all(color: borderColor!, width: 1.2) : null,
+      ),
+      child: Icon(icon, size: iconSize, color: color),
+    );
+  }
+}
+
 class _OtpDigitBox extends StatelessWidget {
   final String char;
   final bool active;
 
-  const _OtpDigitBox({
-    required this.char,
-    required this.active,
-  });
+  const _OtpDigitBox({required this.char, required this.active});
 
   @override
   Widget build(BuildContext context) {

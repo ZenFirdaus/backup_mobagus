@@ -31,84 +31,74 @@ class CourseFeedback {
     String? saran,
     int? rating,
     DateTime? createdAt,
-  }) {
-    return CourseFeedback(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      userName: userName ?? this.userName,
-      userAvatar: userAvatar ?? this.userAvatar,
-      userActiveBorder: userActiveBorder ?? this.userActiveBorder,
-      kesan: kesan ?? this.kesan,
-      saran: saran ?? this.saran,
-      rating: rating ?? this.rating,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
+  }) =>
+      CourseFeedback(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        userName: userName ?? this.userName,
+        userAvatar: userAvatar ?? this.userAvatar,
+        userActiveBorder: userActiveBorder ?? this.userActiveBorder,
+        kesan: kesan ?? this.kesan,
+        saran: saran ?? this.saran,
+        rating: rating ?? this.rating,
+        createdAt: createdAt ?? this.createdAt,
+      );
 
   factory CourseFeedback.fromJson(Map<String, dynamic> json) {
-    final rawAvatar = json['user_avatar'] as String? ??
-        (json['profiles'] != null && json['profiles'] is Map
-            ? (json['profiles'] as Map)['avatar_url'] as String?
-            : null);
+    final profile = json['profiles'] is Map ? json['profiles'] as Map : null;
+    final rawAvatar = json['user_avatar'] as String? ?? profile?['avatar_url'] as String?;
 
-    String? extractedBorder = json['user_active_border'] as String? ??
+    // Resolusi border (prioritas: kolom database -> tag border di avatar)
+    String? border = json['user_active_border'] as String? ??
         json['active_border_id'] as String? ??
-        (json['profiles'] != null && json['profiles'] is Map
-            ? (json['profiles'] as Map)['active_border_id'] as String?
-            : null);
+        profile?['active_border_id'] as String?;
+    String? avatar = rawAvatar;
 
-    String? cleanAvatar = rawAvatar;
-
-    if (rawAvatar != null && rawAvatar.isNotEmpty) {
-      final borderRegex = RegExp(r'[#|]border[:=]([a-zA-Z0-9_]+)');
-      final match = borderRegex.firstMatch(rawAvatar);
+    if (rawAvatar != null && rawAvatar.contains('border')) {
+      final match = RegExp(r'[#|]border[:=](\w+)').firstMatch(rawAvatar);
       if (match != null) {
-        extractedBorder ??= match.group(1);
-        cleanAvatar = rawAvatar.replaceAll(match.group(0)!, '').trim();
-        if (cleanAvatar.isEmpty) cleanAvatar = null;
+        border ??= match.group(1);
+        final clean = rawAvatar.replaceAll(match.group(0)!, '').trim();
+        avatar = clean.isNotEmpty ? clean : null;
       }
     }
 
     return CourseFeedback(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
-      userName: json['user_name'] as String? ??
-          (json['profiles'] != null && json['profiles'] is Map
-              ? (json['profiles'] as Map)['display_name'] as String?
-              : null) ??
-          'Mahasiswa',
-      userAvatar: cleanAvatar,
-      userActiveBorder: extractedBorder,
-      kesan: json['kesan'] as String? ??
-          json['comment'] as String? ??
-          json['message'] as String? ??
-          '',
+      userName: json['user_name'] as String? ?? profile?['display_name'] as String? ?? 'Mahasiswa',
+      userAvatar: avatar,
+      userActiveBorder: border,
+      kesan: json['kesan'] as String? ?? json['comment'] as String? ?? json['message'] as String? ?? '',
       saran: json['saran'] as String? ?? '',
       rating: (json['rating'] as num?)?.toInt() ?? 5,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '')
-              ?.toLocal() ??
-          DateTime.now(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '')?.toLocal() ?? DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    final avatarToSave = (userActiveBorder != null && userActiveBorder!.isNotEmpty)
-        ? ((userAvatar != null && userAvatar!.isNotEmpty)
-            ? '$userAvatar#border=$userActiveBorder'
-            : '#border=$userActiveBorder')
-        : userAvatar;
-
-    return {
-      'id': id,
-      'user_id': userId,
-      'user_name': userName,
-      'user_avatar': avatarToSave,
-      'user_active_border': userActiveBorder,
-      'kesan': kesan,
-      'saran': saran,
-      'rating': rating,
-      'created_at': createdAt.toIso8601String(),
-    };
+  /// Encode tag border ke dalam string avatar agar persist secara publik
+  static String? encodeAvatar(String? avatar, String? borderId) {
+    if (borderId == null || borderId.isEmpty) {
+      if (avatar == null) return null;
+      final clean = avatar.replaceAll(RegExp(r'[#|]border[:=]\w+'), '').trim();
+      return clean.isNotEmpty ? clean : null;
+    }
+    final clean = (avatar != null && avatar.isNotEmpty)
+        ? avatar.replaceAll(RegExp(r'[#|]border[:=]\w+'), '').trim()
+        : '';
+    return clean.isNotEmpty ? '$clean#border=$borderId' : '#border=$borderId';
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'user_id': userId,
+        'user_name': userName,
+        'user_avatar': encodeAvatar(userAvatar, userActiveBorder),
+        'user_active_border': userActiveBorder,
+        'kesan': kesan,
+        'saran': saran,
+        'rating': rating,
+        'created_at': createdAt.toIso8601String(),
+      };
 }
 

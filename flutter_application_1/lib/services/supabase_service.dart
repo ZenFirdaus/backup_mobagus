@@ -2548,12 +2548,10 @@ class SupabaseService {
         try {
           final myRows = rawList.where((e) => e['user_id']?.toString() == currentUid).toList();
           for (final row in myRows) {
-            final rowId = row['id'];
             final rawAv = row['user_avatar']?.toString() ?? '';
             if (!rawAv.contains('#border=$myActiveBorder')) {
-              final clean = rawAv.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim();
-              final newAv = clean.isNotEmpty ? '$clean#border=$myActiveBorder' : '#border=$myActiveBorder';
-              await _client.from('course_feedback').update({'user_avatar': newAv}).eq('id', rowId);
+              final newAv = CourseFeedback.encodeAvatar(rawAv, myActiveBorder);
+              await _client.from('course_feedback').update({'user_avatar': newAv}).eq('id', row['id']);
             }
           }
         } catch (_) {}
@@ -2601,21 +2599,10 @@ class SupabaseService {
         profile?.activeBorderId ??
         await RewardBorderService.instance.getActiveBorderId();
 
-    // Encode #border ke dalam user_avatar agar selalu terlihat oleh user lain di database
-    String? encodedAvatar = avatar;
-    if (activeBorder != null && activeBorder.isNotEmpty) {
-      final clean = (avatar != null && avatar.isNotEmpty)
-          ? avatar.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim()
-          : '';
-      encodedAvatar = clean.isNotEmpty
-          ? '$clean#border=$activeBorder'
-          : '#border=$activeBorder';
-    }
-
-    final Map<String, dynamic> payload = {
+    final payload = <String, dynamic>{
       'user_id': uid,
       'user_name': name,
-      'user_avatar': encodedAvatar,
+      'user_avatar': CourseFeedback.encodeAvatar(avatar, activeBorder),
       'kesan': kesan,
       'saran': saran,
       'rating': rating,
@@ -2696,24 +2683,12 @@ class SupabaseService {
     final profile = await getProfile();
     final avatar = profile?.avatarUrl ?? currentUser?.userMetadata?['avatar_url'] as String?;
 
-    String? encodedAvatar = avatar;
-    if (activeBorder != null && activeBorder.isNotEmpty) {
-      final clean = (avatar != null && avatar.isNotEmpty)
-          ? avatar.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim()
-          : '';
-      encodedAvatar = clean.isNotEmpty
-          ? '$clean#border=$activeBorder'
-          : '#border=$activeBorder';
-    }
-
-    final Map<String, dynamic> payload = {
+    final payload = <String, dynamic>{
       'kesan': kesan,
       'saran': saran,
       'rating': rating,
+      'user_avatar': CourseFeedback.encodeAvatar(avatar, activeBorder),
     };
-    if (encodedAvatar != null) {
-      payload['user_avatar'] = encodedAvatar;
-    }
     if (activeBorder != null && activeBorder.isNotEmpty) {
       payload['user_active_border'] = activeBorder;
     }

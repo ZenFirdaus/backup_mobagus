@@ -29,8 +29,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
     _loadFeedbacks();
     _subscribeRealtime();
     _borderSubscription = RewardBorderService.instance.onChange.listen((_) {
-      if (!mounted) return;
-      setState(() {});
+      if (mounted) setState(() {});
     });
   }
 
@@ -42,8 +41,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
   }
 
   void _subscribeRealtime() {
-    _subscription =
-        SupabaseService.instance.onCourseFeedbackAdded.listen((newFb) {
+    _subscription = SupabaseService.instance.onCourseFeedbackAdded.listen((newFb) {
       if (!mounted) return;
       final currentUserId = SupabaseService.instance.userId ?? 'guest_mhs';
       final isMyFb = newFb.userId == currentUserId ||
@@ -56,15 +54,12 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
       }
 
       setState(() {
-        final existingIndex =
-            _feedbacks.indexWhere((f) => f.id == resolvedFb.id);
-        if (existingIndex >= 0) {
-          if (resolvedFb.userActiveBorder == null &&
-              _feedbacks[existingIndex].userActiveBorder != null) {
-            resolvedFb = resolvedFb.copyWith(
-                userActiveBorder: _feedbacks[existingIndex].userActiveBorder);
+        final idx = _feedbacks.indexWhere((f) => f.id == resolvedFb.id);
+        if (idx >= 0) {
+          if (resolvedFb.userActiveBorder == null && _feedbacks[idx].userActiveBorder != null) {
+            resolvedFb = resolvedFb.copyWith(userActiveBorder: _feedbacks[idx].userActiveBorder);
           }
-          _feedbacks[existingIndex] = resolvedFb;
+          _feedbacks[idx] = resolvedFb;
         } else {
           _feedbacks.insert(0, resolvedFb);
         }
@@ -77,23 +72,17 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
     try {
       final list = await SupabaseService.instance.getCourseFeedbacks();
       list.removeWhere((f) => f.id.startsWith('sample_'));
-      if (!mounted) return;
-      setState(() {
-        _feedbacks = list;
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _feedbacks = list);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   double get _avgRating {
     if (_feedbacks.isEmpty) return 0.0;
-    final total = _feedbacks.fold<int>(0, (sum, item) => sum + item.rating);
-    return total / _feedbacks.length;
+    return _feedbacks.fold<int>(0, (sum, item) => sum + item.rating) / _feedbacks.length;
   }
-
 
   void _openFeedbackBottomSheet({CourseFeedback? existing}) {
     showModalBottomSheet(
@@ -104,8 +93,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
         existing: existing,
         onSubmit: (kesan, saran, rating) async {
           if (existing != null) {
-            final updated =
-                await SupabaseService.instance.updateCourseFeedback(
+            final updated = await SupabaseService.instance.updateCourseFeedback(
               id: existing.id,
               kesan: kesan,
               saran: saran,
@@ -113,30 +101,13 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
             );
             if (mounted) {
               setState(() {
-                final idx =
-                    _feedbacks.indexWhere((f) => f.id == existing.id);
+                final idx = _feedbacks.indexWhere((f) => f.id == existing.id);
                 if (idx != -1) {
                   _feedbacks[idx] = updated ??
-                      CourseFeedback(
-                        id: existing.id,
-                        userId: existing.userId,
-                        userName: existing.userName,
-                        userAvatar: existing.userAvatar,
-                        userActiveBorder: existing.userActiveBorder,
-                        kesan: kesan,
-                        saran: saran,
-                        rating: rating,
-                        createdAt: existing.createdAt,
-                      );
+                      existing.copyWith(kesan: kesan, saran: saran, rating: rating);
                 }
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Saran & kesan berhasil diperbarui.'),
-                  backgroundColor: AppColors.charcoal,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              _showSnackBar('Saran & kesan berhasil diperbarui.');
             }
           } else {
             final res = await SupabaseService.instance.submitCourseFeedback(
@@ -146,27 +117,18 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
             );
             if (res != null && mounted) {
               final myBorder = RewardBorderService.instance.activeBorderId;
-              final resolved =
-                  (res.userActiveBorder == null && myBorder != null)
-                      ? res.copyWith(userActiveBorder: myBorder)
-                      : res;
+              final resolved = (res.userActiveBorder == null && myBorder != null)
+                  ? res.copyWith(userActiveBorder: myBorder)
+                  : res;
               setState(() {
-                final idx =
-                    _feedbacks.indexWhere((f) => f.id == resolved.id);
+                final idx = _feedbacks.indexWhere((f) => f.id == resolved.id);
                 if (idx >= 0) {
                   _feedbacks[idx] = resolved;
                 } else {
                   _feedbacks.insert(0, resolved);
                 }
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:
-                      Text('Saran & kesan berhasil dibagikan.'),
-                  backgroundColor: AppColors.charcoal,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              _showSnackBar('Saran & kesan berhasil dibagikan.');
             }
           }
         },
@@ -184,14 +146,8 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
           children: [
             Icon(Icons.delete_outline_rounded, color: AppColors.red, size: 22),
             SizedBox(width: 8),
-            Text(
-              'Hapus Ulasan?',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.charcoal,
-              ),
-            ),
+            Text('Hapus Ulasan?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.charcoal)),
           ],
         ),
         content: const Text(
@@ -201,20 +157,17 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Batal',
-                style: TextStyle(color: AppColors.slateBlue)),
+            child: const Text('Batal', style: TextStyle(color: AppColors.slateBlue)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.red,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Hapus',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -222,19 +175,19 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
 
     if (ok == true && mounted) {
       await SupabaseService.instance.deleteCourseFeedback(fb.id);
-      setState(() {
-        _feedbacks.removeWhere((item) => item.id == fb.id);
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Saran & kesan berhasil dihapus.'),
-            backgroundColor: AppColors.charcoal,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      setState(() => _feedbacks.removeWhere((item) => item.id == fb.id));
+      if (mounted) _showSnackBar('Saran & kesan berhasil dihapus.');
     }
+  }
+
+  void _showSnackBar(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        backgroundColor: AppColors.charcoal,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -250,25 +203,13 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.charcoal),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Column(
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Saran & Kesan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.charcoal,
-              ),
-            ),
-            Text(
-              'Pemrograman Aplikasi Mobile',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.slateBlue,
-              ),
-            ),
+            Text('Saran & Kesan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.charcoal)),
+            Text('Pemrograman Aplikasi Mobile',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slateBlue)),
           ],
         ),
         actions: [
@@ -288,48 +229,34 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
         onRefresh: _loadFeedbacks,
         color: AppColors.orange,
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.orange),
-              )
+            ? const Center(child: CircularProgressIndicator(color: AppColors.orange))
             : ListView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                 children: [
-                  _buildHeaderBanner(),
+                  const _CourseHeaderBanner(),
                   const SizedBox(height: 14),
-                  _buildStatsCard(),
+                  _CourseStatsCard(total: _feedbacks.length, avgRating: _avgRating),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Pesan Pengguna (${_feedbacks.length})',
-                        style: AppText.display(16),
-                      ),
+                      Text('Pesan Pengguna (${_feedbacks.length})', style: AppText.display(16)),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.cream,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: AppColors.paprika.withValues(alpha: 0.3)),
+                          border: Border.all(color: AppColors.paprika.withValues(alpha: 0.3)),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.public_rounded,
-                                size: 12, color: AppColors.paprika),
+                            Icon(Icons.public_rounded, size: 12, color: AppColors.paprika),
                             SizedBox(width: 4),
                             Text(
                               'Global Feed',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.paprika,
-                              ),
+                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.paprika),
                             ),
                           ],
                         ),
@@ -338,9 +265,15 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                   ),
                   const SizedBox(height: 12),
                   if (_feedbacks.isEmpty)
-                    _buildEmptyState()
+                    const _EmptyFeedbackView()
                   else
-                    ..._feedbacks.map((fb) => _buildFeedbackCard(fb)),
+                    ..._feedbacks.map(
+                      (fb) => _FeedbackCardItem(
+                        feedback: fb,
+                        onEdit: () => _openFeedbackBottomSheet(existing: fb),
+                        onDelete: () => _confirmDeleteFeedback(fb),
+                      ),
+                    ),
                 ],
               ),
       ),
@@ -350,26 +283,24 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
         elevation: 4,
         onPressed: _openFeedbackBottomSheet,
         icon: const Icon(Icons.rate_review_rounded, size: 20),
-        label: const Text(
-          'Tulis Kesan & Saran',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-        ),
+        label: const Text('Tulis Kesan & Saran', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
       ),
     );
   }
+}
 
-  Widget _buildHeaderBanner() {
+class _CourseHeaderBanner extends StatelessWidget {
+  const _CourseHeaderBanner();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.charcoal,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
+          BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -383,8 +314,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                   color: Colors.white.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.school_rounded,
-                    color: AppColors.saffron, size: 20),
+                child: const Icon(Icons.school_rounded, color: AppColors.saffron, size: 20),
               ),
               const SizedBox(width: 10),
               const Expanded(
@@ -393,18 +323,11 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                   children: [
                     Text(
                       'Mata Kuliah Pemrograman Mobile',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
                     ),
                     Text(
                       'Program Studi Sistem Informasi',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFC7CED1),
-                      ),
+                      style: TextStyle(fontSize: 11, color: Color(0xFFC7CED1)),
                     ),
                   ],
                 ),
@@ -414,29 +337,29 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
           const SizedBox(height: 12),
           Text(
             'Ruang berbagi kesan proses belajar dan saran konstruktif untuk pengembangan perkuliahan.',
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              color: Colors.white.withValues(alpha: 0.85),
-            ),
+            style: TextStyle(fontSize: 12, height: 1.5, color: Colors.white.withValues(alpha: 0.85)),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatsCard() {
+class _CourseStatsCard extends StatelessWidget {
+  final int total;
+  final double avgRating;
+
+  const _CourseStatsCard({required this.total, required this.avgRating});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -447,39 +370,22 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                 Container(
                   width: 38,
                   height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.cream,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.forum_rounded,
-                      color: AppColors.orange, size: 20),
+                  decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.forum_rounded, color: AppColors.orange, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${_feedbacks.length}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.charcoal,
-                      ),
-                    ),
-                    const Text(
-                      'Total Ulasan',
-                      style: TextStyle(fontSize: 10.5, color: AppColors.slateBlue),
-                    ),
+                    Text('$total',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.charcoal)),
+                    const Text('Total Ulasan', style: TextStyle(fontSize: 10.5, color: AppColors.slateBlue)),
                   ],
                 ),
               ],
             ),
           ),
-          Container(
-            height: 30,
-            width: 1,
-            color: AppColors.line,
-          ),
+          Container(height: 30, width: 1, color: AppColors.line),
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -488,18 +394,12 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: _feedbacks.isEmpty
-                        ? AppColors.cream
-                        : AppColors.saffron.withValues(alpha: 0.15),
+                    color: total == 0 ? AppColors.cream : AppColors.saffron.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    _feedbacks.isEmpty
-                        ? Icons.star_outline_rounded
-                        : Icons.star_rounded,
-                    color: _feedbacks.isEmpty
-                        ? AppColors.slateBlue
-                        : AppColors.paprika,
+                    total == 0 ? Icons.star_outline_rounded : Icons.star_rounded,
+                    color: total == 0 ? AppColors.slateBlue : AppColors.paprika,
                     size: 20,
                   ),
                 ),
@@ -507,21 +407,10 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _feedbacks.isEmpty ? '0.0' : _avgRating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.charcoal,
-                      ),
-                    ),
-                    Text(
-                      _feedbacks.isEmpty
-                          ? 'Belum ada ulasan'
-                          : 'Rata-rata Rating',
-                      style: const TextStyle(
-                          fontSize: 10.5, color: AppColors.slateBlue),
-                    ),
+                    Text(total == 0 ? '0.0' : avgRating.toStringAsFixed(1),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.charcoal)),
+                    Text(total == 0 ? 'Belum ada ulasan' : 'Rata-rata Rating',
+                        style: const TextStyle(fontSize: 10.5, color: AppColors.slateBlue)),
                   ],
                 ),
               ],
@@ -531,21 +420,32 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
       ),
     );
   }
+}
 
-  Widget _buildFeedbackCard(CourseFeedback fb) {
+class _FeedbackCardItem extends StatelessWidget {
+  final CourseFeedback feedback;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _FeedbackCardItem({
+    required this.feedback,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final currentUserId = SupabaseService.instance.userId ?? 'guest_mhs';
-    final isMyFeedback = fb.userId == currentUserId ||
-        (currentUserId == 'guest_mhs' && fb.userId.startsWith('guest'));
+    final isMyFeedback = feedback.userId == currentUserId ||
+        (currentUserId == 'guest_mhs' && feedback.userId.startsWith('guest'));
 
     final myBorder = RewardBorderService.instance.activeBorderId;
     final effectiveBorderId = (isMyFeedback && myBorder != null && myBorder.isNotEmpty)
         ? myBorder
-        : fb.userActiveBorder;
+        : feedback.userActiveBorder;
 
     final border = (effectiveBorderId != null && effectiveBorderId.isNotEmpty)
-        ? RewardBorder.defaultBorders
-            .where((b) => b.id == effectiveBorderId)
-            .firstOrNull
+        ? RewardBorder.defaultBorders.where((b) => b.id == effectiveBorderId).firstOrNull
         : null;
 
     final avatarBgColor = border != null
@@ -559,11 +459,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Color(0x05000000), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -572,12 +468,12 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
           Row(
             children: [
               ProfileBorderAvatar(
-                avatarUrl: fb.userAvatar,
+                avatarUrl: feedback.userAvatar,
                 borderId: effectiveBorderId,
                 border: border,
                 size: 38,
                 backgroundColor: avatarBgColor,
-                fallbackText: fb.userName.isNotEmpty ? fb.userName : 'M',
+                fallbackText: feedback.userName.isNotEmpty ? feedback.userName : 'M',
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -586,12 +482,8 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      fb.userName,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.charcoal,
-                      ),
+                      feedback.userName,
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.charcoal),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -602,33 +494,21 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                       children: [
                         if (isMyFeedback)
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
                               color: AppColors.paprika.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text(
-                              'Ulasan Anda',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.paprika,
-                              ),
-                            ),
+                            child: const Text('Ulasan Anda',
+                                style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.paprika)),
                           ),
                         if (border != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
                               color: border.rarity.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color:
-                                    border.rarity.color.withValues(alpha: 0.4),
-                                width: 0.8,
-                              ),
+                              border: Border.all(color: border.rarity.color.withValues(alpha: 0.4), width: 0.8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -643,14 +523,9 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                                   color: border.rarity.color,
                                 ),
                                 const SizedBox(width: 3),
-                                Text(
-                                  border.name,
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: border.rarity.color,
-                                  ),
-                                ),
+                                Text(border.name,
+                                    style: TextStyle(
+                                        fontSize: 9.5, fontWeight: FontWeight.w700, color: border.rarity.color)),
                               ],
                             ),
                           ),
@@ -666,9 +541,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: List.generate(5, (i) {
                       return Icon(
-                        i < fb.rating
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
+                        i < feedback.rating ? Icons.star_rounded : Icons.star_outline_rounded,
                         size: 14,
                         color: AppColors.saffron,
                       );
@@ -676,23 +549,14 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                   ),
                   if (isMyFeedback)
                     PopupMenuButton<String>(
-                      icon: const Icon(
-                        Icons.more_vert_rounded,
-                        size: 20,
-                        color: AppColors.slateBlue,
-                      ),
+                      icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.slateBlue),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       splashRadius: 18,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       onSelected: (val) {
-                        if (val == 'edit') {
-                          _openFeedbackBottomSheet(existing: fb);
-                        } else if (val == 'delete') {
-                          _confirmDeleteFeedback(fb);
-                        }
+                        if (val == 'edit') onEdit();
+                        if (val == 'delete') onDelete();
                       },
                       itemBuilder: (ctx) => [
                         const PopupMenuItem(
@@ -700,17 +564,10 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                           height: 38,
                           child: Row(
                             children: [
-                              Icon(Icons.edit_rounded,
-                                  size: 16, color: AppColors.charcoal),
+                              Icon(Icons.edit_rounded, size: 16, color: AppColors.charcoal),
                               SizedBox(width: 8),
-                              Text(
-                                'Edit Ulasan',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.charcoal,
-                                ),
-                              ),
+                              Text('Edit Ulasan',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.charcoal)),
                             ],
                           ),
                         ),
@@ -719,17 +576,10 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
                           height: 38,
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline_rounded,
-                                  size: 16, color: AppColors.red),
+                              Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.red),
                               SizedBox(width: 8),
-                              Text(
-                                'Hapus Ulasan',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.red,
-                                ),
-                              ),
+                              Text('Hapus Ulasan',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.red)),
                             ],
                           ),
                         ),
@@ -740,111 +590,94 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
             ],
           ),
           const SizedBox(height: 14),
-
-          // KESAN SECTION
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.cream,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.saffron.withValues(alpha: 0.4),
-                width: 0.8,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.favorite_rounded,
-                        size: 14, color: AppColors.paprika),
-                    SizedBox(width: 6),
-                    Text(
-                      'Kesan Mata Kuliah',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.paprika,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  fb.kesan.isNotEmpty ? fb.kesan : '-',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    height: 1.45,
-                    color: AppColors.charcoal,
-                  ),
-                ),
-              ],
-            ),
+          _ContentBox(
+            title: 'Kesan Mata Kuliah',
+            content: feedback.kesan.isNotEmpty ? feedback.kesan : '-',
+            icon: Icons.favorite_rounded,
+            iconColor: AppColors.paprika,
+            backgroundColor: AppColors.cream,
+            borderColor: AppColors.saffron.withValues(alpha: 0.4),
           ),
-          const SizedBox(height: 10),
-
-          // SARAN SECTION
-          if (fb.saran.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F6F8),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.slateBlue.withValues(alpha: 0.25),
-                  width: 0.8,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.lightbulb_outline_rounded,
-                          size: 14, color: AppColors.slateBlue),
-                      SizedBox(width: 6),
-                      Text(
-                        'Saran',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.slateBlue,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    fb.saran,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      height: 1.45,
-                      color: AppColors.charcoal,
-                    ),
-                  ),
-                ],
-              ),
+          if (feedback.saran.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _ContentBox(
+              title: 'Saran',
+              content: feedback.saran,
+              icon: Icons.lightbulb_outline_rounded,
+              iconColor: AppColors.slateBlue,
+              backgroundColor: const Color(0xFFF3F6F8),
+              borderColor: AppColors.slateBlue.withValues(alpha: 0.25),
             ),
+          ],
         ],
       ),
     );
   }
+}
 
-  Widget _buildEmptyState() {
+class _ContentBox extends StatelessWidget {
+  final String title;
+  final String content;
+  final IconData icon;
+  final Color iconColor;
+  final Color backgroundColor;
+  final Color borderColor;
+
+  const _ContentBox({
+    required this.title,
+    required this.content,
+    required this.icon,
+    required this.iconColor,
+    required this.backgroundColor,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 0.8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: iconColor),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: iconColor, letterSpacing: 0.3),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            content,
+            style: const TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.charcoal),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyFeedbackView extends StatelessWidget {
+  const _EmptyFeedbackView();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -853,31 +686,17 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
           Container(
             width: 56,
             height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.cream,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.rate_review_rounded,
-                size: 28, color: AppColors.paprika),
+            decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(16)),
+            child: const Icon(Icons.rate_review_rounded, size: 28, color: AppColors.paprika),
           ),
           const SizedBox(height: 14),
-          const Text(
-            'Belum ada ulasan',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.charcoal,
-            ),
-          ),
+          const Text('Belum ada ulasan',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.charcoal)),
           const SizedBox(height: 6),
           const Text(
             'Jadilah mahasiswa pertama yang membagikan kesan dan saran untuk mata kuliah ini!',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.slateBlue,
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 12, color: AppColors.slateBlue, height: 1.4),
           ),
         ],
       ),
@@ -889,10 +708,7 @@ class _FeedbackFormSheet extends StatefulWidget {
   final CourseFeedback? existing;
   final Future<void> Function(String kesan, String saran, int rating) onSubmit;
 
-  const _FeedbackFormSheet({
-    this.existing,
-    required this.onSubmit,
-  });
+  const _FeedbackFormSheet({this.existing, required this.onSubmit});
 
   @override
   State<_FeedbackFormSheet> createState() => _FeedbackFormSheetState();
@@ -968,10 +784,7 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
       if (mounted) {
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengirim: $e'),
-            behavior: SnackBarBehavior.floating,
-          ),
+          SnackBar(content: Text('Gagal mengirim: $e'), behavior: SnackBarBehavior.floating),
         );
       }
     }
@@ -996,32 +809,21 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
               child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Icon(
-                  widget.existing != null
-                      ? Icons.edit_note_rounded
-                      : Icons.rate_review_rounded,
+                  widget.existing != null ? Icons.edit_note_rounded : Icons.rate_review_rounded,
                   color: AppColors.paprika,
                   size: 24,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  widget.existing != null
-                      ? 'Edit Saran & Kesan'
-                      : 'Tulis Saran & Kesan',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.charcoal,
-                  ),
+                  widget.existing != null ? 'Edit Saran & Kesan' : 'Tulis Saran & Kesan',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.charcoal),
                 ),
               ],
             ),
@@ -1032,66 +834,11 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
             ),
             if (_profile != null) ...[
               const SizedBox(height: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.cream.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.line),
-                ),
-                child: Row(
-                  children: [
-                    ProfileBorderAvatar(
-                      avatarUrl: _profile?.avatarUrl,
-                      borderId: RewardBorderService.instance.activeBorderId ??
-                          _profile?.activeBorderId,
-                      size: 28,
-                      backgroundColor: AppColors.paprika,
-                      fallbackText: _profile?.displayName.isNotEmpty == true
-                          ? _profile!.displayName
-                          : 'M',
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _profile?.displayName ?? 'Mahasiswa',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.charcoal,
-                            ),
-                          ),
-                          Text(
-                            _profile?.activeBorderId != null
-                                ? 'Border aktif: ${RewardBorder.defaultBorders.where((b) => b.id == _profile!.activeBorderId).firstOrNull?.name ?? "Koleksi"}'
-                                : 'Border: Standar (Tanpa Border)',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.slateBlue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _buildProfilePreview(),
             ],
             const SizedBox(height: 18),
-
-            // Rating Stars
-            const Text(
-              'Penilaian Mata Kuliah',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.charcoal,
-              ),
-            ),
+            const Text('Penilaian Mata Kuliah',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.charcoal)),
             const SizedBox(height: 6),
             Row(
               children: List.generate(5, (index) {
@@ -1101,9 +848,7 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
                   child: Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: Icon(
-                      starValue <= _rating
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
+                      starValue <= _rating ? Icons.star_rounded : Icons.star_outline_rounded,
                       size: 32,
                       color: AppColors.saffron,
                     ),
@@ -1112,95 +857,28 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
               }),
             ),
             const SizedBox(height: 16),
-
-            // KESAN INPUT
-            const Text(
-              'Kesan Mata Kuliah *',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.charcoal,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
+            _buildInputField(
+              title: 'Kesan Mata Kuliah *',
               controller: _kesanController,
-              maxLines: 3,
+              hint: 'Contoh: mata kuliah mobile asik',
+              errorText: _kesanError,
+              fillColor: AppColors.cream,
               onChanged: (val) {
-                if (_kesanError != null && val.trim().isNotEmpty) {
-                  setState(() => _kesanError = null);
-                }
+                if (_kesanError != null && val.trim().isNotEmpty) setState(() => _kesanError = null);
               },
-              style: const TextStyle(fontSize: 13, color: AppColors.charcoal),
-              decoration: InputDecoration(
-                hintText: 'Contoh: mata kuliah mobile asik',
-                hintStyle: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.slateBlue.withValues(alpha: 0.7)),
-                errorText: _kesanError,
-                filled: true,
-                fillColor: AppColors.cream,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.line),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.line),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.paprika),
-                ),
-              ),
             ),
             const SizedBox(height: 16),
-
-            // SARAN INPUT
-            const Text(
-              'Saran *',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.charcoal,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
+            _buildInputField(
+              title: 'Saran *',
               controller: _saranController,
-              maxLines: 3,
+              hint: 'Contoh: untuk tenggat tugas mungkin bisa di perpanjang sedikit',
+              errorText: _saranError,
+              fillColor: const Color(0xFFF7F8F9),
               onChanged: (val) {
-                if (_saranError != null && val.trim().isNotEmpty) {
-                  setState(() => _saranError = null);
-                }
+                if (_saranError != null && val.trim().isNotEmpty) setState(() => _saranError = null);
               },
-              style: const TextStyle(fontSize: 13, color: AppColors.charcoal),
-              decoration: InputDecoration(
-                hintText:
-                    'Contoh: untuk tenggat tugas mungkin bisa di perpanjang sedikit',
-                hintStyle: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.slateBlue.withValues(alpha: 0.7)),
-                errorText: _saranError,
-                filled: true,
-                fillColor: const Color(0xFFF7F8F9),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.line),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.line),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.paprika),
-                ),
-              ),
             ),
             const SizedBox(height: 20),
-
-            // BUTTONS
             Row(
               children: [
                 Expanded(
@@ -1209,13 +887,9 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
                       foregroundColor: AppColors.slateBlue,
                       side: const BorderSide(color: AppColors.line),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: _submitting
-                        ? null
-                        : () => Navigator.of(context).pop(),
+                    onPressed: _submitting ? null : () => Navigator.of(context).pop(),
                     child: const Text('Batal'),
                   ),
                 ),
@@ -1228,28 +902,18 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: _submitting ? null : _handleSave,
                     child: _submitting
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : Text(
-                            widget.existing != null
-                                ? 'Simpan Perubahan'
-                                : 'Kirimkan ke Publik',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            widget.existing != null ? 'Simpan Perubahan' : 'Kirimkan ke Publik',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                           ),
                   ),
                 ),
@@ -1258,6 +922,79 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfilePreview() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.cream.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          ProfileBorderAvatar(
+            avatarUrl: _profile?.avatarUrl,
+            borderId: RewardBorderService.instance.activeBorderId ?? _profile?.activeBorderId,
+            size: 28,
+            backgroundColor: AppColors.paprika,
+            fallbackText: _profile?.displayName.isNotEmpty == true ? _profile!.displayName : 'M',
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _profile?.displayName ?? 'Mahasiswa',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.charcoal),
+                ),
+                Text(
+                  _profile?.activeBorderId != null
+                      ? 'Border aktif: ${RewardBorder.defaultBorders.where((b) => b.id == _profile!.activeBorderId).firstOrNull?.name ?? "Koleksi"}'
+                      : 'Border: Standar (Tanpa Border)',
+                  style: const TextStyle(fontSize: 10, color: AppColors.slateBlue),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required String title,
+    required TextEditingController controller,
+    required String hint,
+    required String? errorText,
+    required Color fillColor,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.charcoal)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          maxLines: 3,
+          onChanged: onChanged,
+          style: const TextStyle(fontSize: 13, color: AppColors.charcoal),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(fontSize: 12, color: AppColors.slateBlue.withValues(alpha: 0.7)),
+            errorText: errorText,
+            filled: true,
+            fillColor: fillColor,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.paprika)),
+          ),
+        ),
+      ],
     );
   }
 }

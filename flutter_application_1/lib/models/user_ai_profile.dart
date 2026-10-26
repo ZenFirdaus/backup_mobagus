@@ -30,30 +30,30 @@ class UserAiProfile {
   });
 
   /// Cek apakah profil sudah cukup lengkap untuk menghasilkan rekomendasi AI
-  bool get isCompleted {
-    return (gender != null && gender!.isNotEmpty) &&
-        (age != null && age! > 0) &&
-        (occupation != null && occupation!.isNotEmpty) &&
-        (monthlyIncome != null && monthlyIncome!.isNotEmpty) &&
-        (housingType != null && housingType!.isNotEmpty) &&
-        favoriteTastes.isNotEmpty &&
-        (mealBudget != null && mealBudget!.isNotEmpty);
-  }
+  bool get isCompleted =>
+      (gender?.isNotEmpty ?? false) &&
+      (age ?? 0) > 0 &&
+      (occupation?.isNotEmpty ?? false) &&
+      (monthlyIncome?.isNotEmpty ?? false) &&
+      (housingType?.isNotEmpty ?? false) &&
+      favoriteTastes.isNotEmpty &&
+      (mealBudget?.isNotEmpty ?? false);
 
   /// Menghitung persentase kelengkapan profil (0 - 100%)
   int get completionPercentage {
-    int total = 9;
-    int filled = 0;
-    if (gender != null && gender!.isNotEmpty) filled++;
-    if (age != null && age! > 0) filled++;
-    if (occupation != null && occupation!.isNotEmpty) filled++;
-    if (monthlyIncome != null && monthlyIncome!.isNotEmpty) filled++;
-    if (housingType != null && housingType!.isNotEmpty) filled++;
-    if (address != null && address!.trim().isNotEmpty) filled++;
-    if (favoriteTastes.isNotEmpty) filled++;
-    if (preferredPlaces.isNotEmpty) filled++;
-    if (mealBudget != null && mealBudget!.isNotEmpty) filled++;
-    return ((filled / total) * 100).round();
+    final fields = [
+      gender?.isNotEmpty == true,
+      (age ?? 0) > 0,
+      occupation?.isNotEmpty == true,
+      monthlyIncome?.isNotEmpty == true,
+      housingType?.isNotEmpty == true,
+      address?.trim().isNotEmpty == true,
+      favoriteTastes.isNotEmpty,
+      preferredPlaces.isNotEmpty,
+      mealBudget?.isNotEmpty == true,
+    ];
+    final filled = fields.where((b) => b).length;
+    return ((filled / fields.length) * 100).round();
   }
 
   /// Ringkasan persona singkat untuk badge UI (misal: "Mahasiswa • Kos • Suka Pedas")

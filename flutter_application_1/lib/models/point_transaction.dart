@@ -46,22 +46,13 @@ class PointTransaction {
         'created_at': createdAt.toIso8601String(),
       };
 
-  String get readableTitle {
-    switch (transactionType) {
-      case 'border_purchase':
-        final borderName = metadata['border_name'] ?? 'Border Profil';
-        return 'Pembelian $borderName';
-      case 'game_reward':
-        final game = metadata['game_name'] ?? 'Mini Game';
-        return 'Hadiah $game';
-      case 'checkin':
-        return 'Bonus Check-in Kuliner';
-      case 'refund':
-        return 'Pengembalian Poin Rasa';
-      default:
-        return 'Aktivitas Poin Rasa';
-    }
-  }
+  String get readableTitle => switch (transactionType) {
+        'border_purchase' => 'Pembelian ${metadata['border_name'] ?? 'Border Profil'}',
+        'game_reward' => 'Hadiah ${metadata['game_name'] ?? 'Mini Game'}',
+        'checkin' => 'Bonus Check-in Kuliner',
+        'refund' => 'Pengembalian Poin Rasa',
+        _ => 'Aktivitas Poin Rasa',
+      };
 
   bool get isCredit => amount > 0;
 }

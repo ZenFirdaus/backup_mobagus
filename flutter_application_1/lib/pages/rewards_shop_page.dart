@@ -370,222 +370,16 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
   /// Kartu Produk Border Profil
   Widget _buildBorderCard(RewardBorder border) {
-    final isOwned = _ownedBorderIds.contains(border.id);
-    final isActive = _activeBorderId == border.id;
-    final canAfford = _userPoints >= border.pricePoints;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isActive
-              ? AppColors.greenDark
-              : (isOwned ? const Color(0xFFA5D6A7) : AppColors.line),
-          width: isActive ? 2.2 : (isOwned ? 1.4 : 1.0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isActive
-                ? AppColors.greenDark.withValues(alpha: 0.12)
-                : const Color(0x06000000),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _showBorderDetailSheet(border),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Badge Rarity / Koleksi & Animasi
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isOwned
-                          ? const Color(0xFFE8F5E9)
-                          : border.rarity.color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      isOwned ? '✓ KOLEKSI' : border.rarity.label.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        color: isOwned
-                            ? AppColors.greenDark
-                            : border.rarity.color,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ),
-                  if (border.isAnimated)
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: AppColors.orange.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.auto_awesome_rounded,
-                        size: 11,
-                        color: AppColors.orange,
-                      ),
-                    ),
-                ],
-              ),
-              const Spacer(),
-
-              // Live Preview Avatar dengan Border
-              ProfileBorderAvatar(
-                avatarUrl: Supabase
-                    .instance
-                    .client
-                    .auth
-                    .currentUser
-                    ?.userMetadata?['avatar_url'],
-                border: border,
-                size: 46,
-                fallbackText: SupabaseService.instance.guestName,
-              ),
-              const Spacer(),
-
-              // Nama Border
-              Text(
-                border.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 2),
-
-              // Kategori / Info Gratis
-              Text(
-                isOwned ? 'Milik Anda (Gratis)' : border.category,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: isOwned ? AppColors.greenDark : AppColors.textMuted,
-                  fontWeight: isOwned ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Action Button (Pakai Gratis / Dipasang / Tukar Poin)
-              SizedBox(
-                width: double.infinity,
-                height: 32,
-                child: isOwned
-                    ? (isActive
-                          ? Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.greenDark,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.white,
-                                    size: 13,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Dipasang',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ElevatedButton(
-                              onPressed: () => _equipBorder(border.id),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D32),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.check_circle_outline_rounded,
-                                    size: 12,
-                                    color: Colors.white,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Pakai (Gratis)',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ))
-                    : ElevatedButton(
-                        onPressed: canAfford
-                            ? () => _confirmPurchase(border)
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.orange,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: const Color(0xFFE0E0E0),
-                          disabledForegroundColor: AppColors.textMuted,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.stars_rounded,
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${border.pricePoints} Poin',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return _BorderProductCard(
+      border: border,
+      isOwned: _ownedBorderIds.contains(border.id),
+      isActive: _activeBorderId == border.id,
+      canAfford: _userPoints >= border.pricePoints,
+      avatarUrl: Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'],
+      fallbackText: SupabaseService.instance.guestName,
+      onTap: () => _showBorderDetailSheet(border),
+      onEquip: () => _equipBorder(border.id),
+      onPurchase: () => _confirmPurchase(border),
     );
   }
 
@@ -964,227 +758,13 @@ class _RewardsShopPageState extends State<RewardsShopPage>
 
   /// Dialog Sertifikat Digital Kepemilikan On-Chain (Proof of Ownership)
   void _showBlockchainCertificate(BlockchainTransaction bTx) {
-    final borderObj = _allBorders
-        .where((b) => b.id == bTx.borderId)
-        .firstOrNull;
-    final borderName =
-        borderObj?.name ??
-        bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
-    final blockNum = bTx.blockNumber ?? 7054231;
-    final blockUrl = 'https://sepolia.etherscan.io/block/$blockNum';
-
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.all(20),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Badge Ikon Sertifikat
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF627EEA), Color(0xFF3B5998)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF627EEA).withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.verified_user_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Sertifikat Kepemilikan Digital',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 3),
-              const Text(
-                'Bukti Sah Kepemilikan Digital • Jaringan Blockchain',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-              ),
-              const SizedBox(height: 14),
-
-              // Tabel Rincian Sertifikat
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FD),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  children: [
-                    _buildCertRow('Item Border', borderName, isBold: true),
-                    const Divider(height: 14, thickness: 0.7),
-                    _buildCertRow('Jaringan', 'Ethereum Sepolia Testnet'),
-                    const Divider(height: 14, thickness: 0.7),
-                    _buildCertRow(
-                      'Nomor Blok',
-                      '#$blockNum (On-Chain)',
-                      isBold: true,
-                    ),
-                    const Divider(height: 14, thickness: 0.7),
-                    _buildCertRow(
-                      'Status Verifikasi',
-                      'TERVERIFIKASI SAH',
-                      valueColor: AppColors.greenDark,
-                    ),
-                    const Divider(height: 14, thickness: 0.7),
-                    _buildCertRow(
-                      'Smart Contract',
-                      '${bTx.contractAddress.substring(0, 8)}...${bTx.contractAddress.substring(bTx.contractAddress.length - 6)}',
-                    ),
-                    const Divider(height: 14, thickness: 0.7),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Hash Kriptografis (SHA-256)',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textMuted,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                Clipboard.setData(
-                                  ClipboardData(text: bTx.txHash),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Hash bukti berhasil disalin!',
-                                    ),
-                                    duration: Duration(seconds: 2),
-                                    backgroundColor: AppColors.greenDark,
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                children: [
-                                  Icon(
-                                    Icons.copy_rounded,
-                                    size: 11,
-                                    color: AppColors.orange,
-                                  ),
-                                  SizedBox(width: 3),
-                                  Text(
-                                    'Salin',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.orange,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        SelectableText(
-                          bTx.txHash,
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontFamily: 'Courier',
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Tombol Verifikasi Etherscan
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _openUrl(blockUrl);
-                  },
-                  icon: const Icon(Icons.open_in_new_rounded, size: 15),
-                  label: Text('Verifikasi Blok #$blockNum di Etherscan'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF627EEA),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 11),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'Tutup',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => _BlockchainCertificateDialog(
+        bTx: bTx,
+        allBorders: _allBorders,
+        onOpenUrl: _openUrl,
       ),
-    );
-  }
-
-  Widget _buildCertRow(
-    String label,
-    String value, {
-    bool isBold = false,
-    Color? valueColor,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-            color: valueColor ?? AppColors.textDark,
-          ),
-        ),
-      ],
     );
   }
 
@@ -1671,5 +1251,362 @@ class _RewardsShopPageState extends State<RewardsShopPage>
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (_) {}
+  }
+}
+
+class _BorderProductCard extends StatelessWidget {
+  final RewardBorder border;
+  final bool isOwned;
+  final bool isActive;
+  final bool canAfford;
+  final String? avatarUrl;
+  final String fallbackText;
+  final VoidCallback onTap;
+  final VoidCallback onEquip;
+  final VoidCallback onPurchase;
+
+  const _BorderProductCard({
+    required this.border,
+    required this.isOwned,
+    required this.isActive,
+    required this.canAfford,
+    required this.avatarUrl,
+    required this.fallbackText,
+    required this.onTap,
+    required this.onEquip,
+    required this.onPurchase,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isActive
+              ? AppColors.greenDark
+              : (isOwned ? const Color(0xFFA5D6A7) : AppColors.line),
+          width: isActive ? 2.2 : (isOwned ? 1.4 : 1.0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isActive
+                ? AppColors.greenDark.withValues(alpha: 0.12)
+                : const Color(0x06000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isOwned
+                          ? const Color(0xFFE8F5E9)
+                          : border.rarity.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isOwned ? '✓ KOLEKSI' : border.rarity.label.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: isOwned ? AppColors.greenDark : border.rarity.color,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  if (border.isAnimated)
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.auto_awesome_rounded, size: 11, color: AppColors.orange),
+                    ),
+                ],
+              ),
+              const Spacer(),
+              ProfileBorderAvatar(
+                avatarUrl: avatarUrl,
+                border: border,
+                size: 46,
+                fallbackText: fallbackText,
+              ),
+              const Spacer(),
+              Text(
+                border.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                isOwned ? 'Milik Anda (Gratis)' : border.category,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: isOwned ? AppColors.greenDark : AppColors.textMuted,
+                  fontWeight: isOwned ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 32,
+                child: isOwned
+                    ? (isActive
+                        ? Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.greenDark,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_rounded, color: Colors.white, size: 13),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Dipasang',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: onEquip,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle_outline_rounded, size: 12, color: Colors.white),
+                                SizedBox(width: 4),
+                                Text('Pakai (Gratis)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ))
+                    : ElevatedButton(
+                        onPressed: canAfford ? onPurchase : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.orange,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFFE0E0E0),
+                          disabledForegroundColor: AppColors.textMuted,
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.stars_rounded, size: 12, color: Colors.white),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${border.pricePoints} Poin',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BlockchainCertificateDialog extends StatelessWidget {
+  final BlockchainTransaction bTx;
+  final List<RewardBorder> allBorders;
+  final void Function(String) onOpenUrl;
+
+  const _BlockchainCertificateDialog({
+    required this.bTx,
+    required this.allBorders,
+    required this.onOpenUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderObj = allBorders.where((b) => b.id == bTx.borderId).firstOrNull;
+    final borderName = borderObj?.name ?? bTx.borderId.replaceAll('border_', '').replaceAll('_', ' ');
+    final blockNum = bTx.blockNumber ?? 7054231;
+    final blockUrl = 'https://sepolia.etherscan.io/block/$blockNum';
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: const EdgeInsets.all(20),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF627EEA), Color(0xFF3B5998)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF627EEA).withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 28),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Sertifikat Kepemilikan Digital',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 3),
+            const Text(
+              'Bukti Sah Kepemilikan Digital • Jaringan Blockchain',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FD),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  _certRow('Item Border', borderName, isBold: true),
+                  const Divider(height: 14, thickness: 0.7),
+                  _certRow('Jaringan', 'Ethereum Sepolia Testnet'),
+                  const Divider(height: 14, thickness: 0.7),
+                  _certRow('Nomor Blok', '#$blockNum (On-Chain)', isBold: true),
+                  const Divider(height: 14, thickness: 0.7),
+                  _certRow('Status Verifikasi', 'TERVERIFIKASI SAH', valueColor: AppColors.greenDark),
+                  const Divider(height: 14, thickness: 0.7),
+                  _certRow(
+                    'Smart Contract',
+                    '${bTx.contractAddress.substring(0, 8)}...${bTx.contractAddress.substring(bTx.contractAddress.length - 6)}',
+                  ),
+                  const Divider(height: 14, thickness: 0.7),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Hash Kriptografis (SHA-256)',
+                            style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: bTx.txHash));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Hash bukti berhasil disalin!'),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: AppColors.greenDark,
+                                ),
+                              );
+                            },
+                            child: const Row(
+                              children: [
+                                Icon(Icons.copy_rounded, size: 11, color: AppColors.orange),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Salin',
+                                  style: TextStyle(fontSize: 10, color: AppColors.orange, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      SelectableText(
+                        bTx.txHash,
+                        style: const TextStyle(fontSize: 9.5, fontFamily: 'Courier', color: AppColors.textDark),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  onOpenUrl(blockUrl);
+                },
+                icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                label: Text('Verifikasi Blok #$blockNum di Etherscan'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF627EEA),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup', style: TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _certRow(String label, String value, {bool isBold = false, Color? valueColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+            color: valueColor ?? AppColors.textDark,
+          ),
+        ),
+      ],
+    );
   }
 }

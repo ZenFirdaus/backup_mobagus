@@ -104,16 +104,11 @@ class _BiometricPageState extends State<BiometricPage>
     }
   }
 
-  String get _pillText {
-    switch (_state) {
-      case _ScanState.idle:
-        return 'Posisikan wajah Anda pada lingkaran sensor';
-      case _ScanState.scanning:
-        return 'Memindai kontur wajah... harap tatap sensor';
-      case _ScanState.success:
-        return 'Autentikasi wajah berhasil didaftarkan';
-    }
-  }
+  String get _pillText => switch (_state) {
+        _ScanState.idle => 'Posisikan wajah Anda pada lingkaran sensor',
+        _ScanState.scanning => 'Memindai kontur wajah... harap tatap sensor',
+        _ScanState.success => 'Autentikasi wajah berhasil didaftarkan',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -209,23 +204,25 @@ class _BiometricPageState extends State<BiometricPage>
                 ),
               ),
               const SizedBox(height: 18),
-              const _BenefitCard(
-                icon: Icons.bolt,
-                title: 'Akses 1-Ketukan',
-                text: 'Masuk aplikasi seketika tanpa perlu input password berulang saat mengeksplor rasa.',
-              ),
-              const SizedBox(height: 8),
-              const _BenefitCard(
-                icon: Icons.location_on_rounded,
-                title: 'Validasi Check-in Cepat',
-                text: 'Konfirmasi kehadiran GPS di warung mitra & klaim voucher santap dalam hitungan detik.',
-              ),
-              const SizedBox(height: 8),
-              const _BenefitCard(
-                icon: Icons.lock_rounded,
-                title: 'Privasi Terisolasi',
-                text: 'Kunci biometrik disimpan aman di hardware Secure Enclave perangkat Anda.',
-              ),
+              ...const [
+                _BenefitCard(
+                  icon: Icons.bolt,
+                  title: 'Akses 1-Ketukan',
+                  text: 'Masuk aplikasi seketika tanpa perlu input password berulang saat mengeksplor rasa.',
+                ),
+                SizedBox(height: 8),
+                _BenefitCard(
+                  icon: Icons.location_on_rounded,
+                  title: 'Validasi Check-in Cepat',
+                  text: 'Konfirmasi kehadiran GPS di warung mitra & klaim voucher santap dalam hitungan detik.',
+                ),
+                SizedBox(height: 8),
+                _BenefitCard(
+                  icon: Icons.lock_rounded,
+                  title: 'Privasi Terisolasi',
+                  text: 'Kunci biometrik disimpan aman di hardware Secure Enclave perangkat Anda.',
+                ),
+              ],
               const SizedBox(height: 18),
               PrimaryButton(
                 label: 'Pindai Wajah dengan Kamera Sekarang',

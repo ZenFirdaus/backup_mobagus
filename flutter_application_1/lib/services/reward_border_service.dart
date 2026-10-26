@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/reward_border.dart';
 import '../models/point_transaction.dart';
+import '../models/course_feedback.dart';
 import 'blockchain_service.dart';
 import 'hive_service.dart';
 import 'supabase_service.dart';
@@ -441,11 +442,8 @@ class RewardBorderService {
           // Sinkronkan user_avatar di tabel course_feedback agar border langsung terlihat oleh user lain
           final cfRows = await client.from('course_feedback').select('id, user_avatar').eq('user_id', targetUid);
           for (final row in (cfRows as List)) {
-            final rowId = row['id'];
-            final raw = row['user_avatar']?.toString() ?? '';
-            final clean = raw.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim();
-            final updatedAvatar = clean.isNotEmpty ? '$clean#border=$borderId' : '#border=$borderId';
-            await client.from('course_feedback').update({'user_avatar': updatedAvatar}).eq('id', rowId);
+            final newAv = CourseFeedback.encodeAvatar(row['user_avatar']?.toString(), borderId);
+            await client.from('course_feedback').update({'user_avatar': newAv}).eq('id', row['id']);
           }
         } catch (_) {}
       }
@@ -513,10 +511,8 @@ class RewardBorderService {
           // Bersihkan penanda #border dari user_avatar di course_feedback
           final cfRows = await client.from('course_feedback').select('id, user_avatar').eq('user_id', targetUid);
           for (final row in (cfRows as List)) {
-            final rowId = row['id'];
-            final raw = row['user_avatar']?.toString() ?? '';
-            final clean = raw.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim();
-            await client.from('course_feedback').update({'user_avatar': clean.isNotEmpty ? clean : null}).eq('id', rowId);
+            final cleanAv = CourseFeedback.encodeAvatar(row['user_avatar']?.toString(), null);
+            await client.from('course_feedback').update({'user_avatar': cleanAv}).eq('id', row['id']);
           }
         } catch (_) {}
       }
@@ -553,15 +549,13 @@ class RewardBorderService {
     final uid = client?.auth.currentUser?.id;
     final idempotencyKey = 'game_${gameType}_${DateTime.now().millisecondsSinceEpoch}';
 
-    int awarded = score;
     // Validasi batas wajar server
-    if (gameType == 'kulinerdle') {
-      awarded = score.clamp(0, 160);
-    } else if (gameType == 'detective') {
-      awarded = score.clamp(0, 350);
-    } else {
-      awarded = score.clamp(0, 200);
-    }
+    final maxScore = switch (gameType) {
+      'kulinerdle' => 160,
+      'detective' => 350,
+      _ => 200,
+    };
+    final awarded = score.clamp(0, maxScore);
 
     if (awarded <= 0) return 0;
 

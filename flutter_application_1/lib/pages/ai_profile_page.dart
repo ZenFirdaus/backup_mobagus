@@ -822,22 +822,25 @@ class _AiProfilePageState extends State<AiProfilePage> {
     );
   }
 
-  Widget _tasteChips() {
+  Widget _buildMultiSelectChips({
+    required List<String> options,
+    required List<String> selectedValues,
+  }) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: _tasteOptions.map((taste) {
-        final isSelected = _favoriteTastes.contains(taste);
+      children: options.map((item) {
+        final isSelected = selectedValues.contains(item);
         return FilterChip(
-          label: Text(taste),
+          label: Text(item),
           selected: isSelected,
           showCheckmark: false,
           onSelected: (selected) {
             setState(() {
               if (selected) {
-                _favoriteTastes.add(taste);
+                selectedValues.add(item);
               } else {
-                _favoriteTastes.remove(taste);
+                selectedValues.remove(item);
               }
             });
           },
@@ -858,41 +861,15 @@ class _AiProfilePageState extends State<AiProfilePage> {
     );
   }
 
-  Widget _placeTypeChips() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: _placeTypeOptions.map((place) {
-        final isSelected = _preferredPlaces.contains(place);
-        return FilterChip(
-          label: Text(place),
-          selected: isSelected,
-          showCheckmark: false,
-          onSelected: (selected) {
-            setState(() {
-              if (selected) {
-                _preferredPlaces.add(place);
-              } else {
-                _preferredPlaces.remove(place);
-              }
-            });
-          },
-          labelStyle: TextStyle(
-            fontSize: 12.5,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            color: isSelected ? Colors.white : AppColors.charcoal,
-          ),
-          backgroundColor: const Color(0xFFF4F5F7),
-          selectedColor: AppColors.orange,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide.none,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        );
-      }).toList(),
-    );
-  }
+  Widget _tasteChips() => _buildMultiSelectChips(
+        options: _tasteOptions,
+        selectedValues: _favoriteTastes,
+      );
+
+  Widget _placeTypeChips() => _buildMultiSelectChips(
+        options: _placeTypeOptions,
+        selectedValues: _preferredPlaces,
+      );
 
   Widget _saveButton() {
     return SizedBox(

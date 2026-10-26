@@ -4,8 +4,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
+import '../utils/format.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/modern_time_picker.dart';
+
+class _CurrencyInfo {
+  final String label;
+  final String code;
+  final String symbol;
+  final double rate;
+  final IconData icon;
+
+  const _CurrencyInfo({
+    required this.label,
+    required this.code,
+    required this.symbol,
+    required this.rate,
+    required this.icon,
+  });
+}
+
+class _TzInfo {
+  final String label;
+  final int utcOffset;
+  const _TzInfo(this.label, this.utcOffset);
+}
 
 class ConverterPage extends StatefulWidget {
   const ConverterPage({super.key});
@@ -22,12 +45,13 @@ class _ConverterPageState extends State<ConverterPage>
   Timer? _clock;
   DateTime _now = DateTime.now().toUtc();
 
-  // Kurs Mata Uang Terkini (IDR)
-  static const double _usdRate = 18107; // 1 USD = Rp 18.107
-  static const double _myrRate = 4432;  // 1 MYR = Rp 4.432
-  static const double _sgdRate = 14162; // 1 SGD = Rp 14.162
-  static const double _jpyRate = 115;   // 1 JPY = Rp 115
-  static const double _cnyRate = 2711;  // 1 CNY = Rp 2.711
+  static const List<_CurrencyInfo> _currencies = [
+    _CurrencyInfo(label: 'USD - Dollar Amerika Serikat', code: 'USD', symbol: '\$', rate: 18107, icon: Icons.attach_money_rounded),
+    _CurrencyInfo(label: 'MYR - Ringgit Malaysia', code: 'MYR', symbol: 'RM', rate: 4432, icon: Icons.currency_exchange_rounded),
+    _CurrencyInfo(label: 'SGD - Dollar Singapura', code: 'SGD', symbol: 'S\$', rate: 14162, icon: Icons.monetization_on_outlined),
+    _CurrencyInfo(label: 'JPY - Yen Jepang', code: 'JPY', symbol: '¥', rate: 115, icon: Icons.currency_yen_rounded),
+    _CurrencyInfo(label: 'CNY - Yuan China', code: 'CNY', symbol: 'CN¥', rate: 2711, icon: Icons.currency_yuan_rounded),
+  ];
 
   static const List<_TzInfo> _zones = [
     _TzInfo('WIB', 7),
@@ -57,28 +81,13 @@ class _ConverterPageState extends State<ConverterPage>
     super.dispose();
   }
 
-  String _formatRp(double v) {
-    final s = v.toStringAsFixed(0);
-    final buf = StringBuffer();
-    for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return 'Rp$buf';
-  }
-
-  String _formatCurrency(double value, String symbol) {
-    return '$symbol ${value.toStringAsFixed(2)}';
-  }
-
   String _formatTime(DateTime utc, int offsetHours) {
     final local = utc.add(Duration(hours: offsetHours));
-    return '${local.hour.toString().padLeft(2, '0')}:'
-        '${local.minute.toString().padLeft(2, '0')}:'
-        '${local.second.toString().padLeft(2, '0')}';
+    final h = local.hour.toString().padLeft(2, '0');
+    final m = local.minute.toString().padLeft(2, '0');
+    final s = local.second.toString().padLeft(2, '0');
+    return '$h:$m:$s';
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -97,21 +106,21 @@ class _ConverterPageState extends State<ConverterPage>
           centerTitle: true,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(52),
-            child: _tabBar(),
+            child: _buildTabBar(),
           ),
         ),
         body: TabBarView(
           controller: _tab,
           children: [
-            _currencyTab(),
-            _timezoneTab(),
+            _buildCurrencyTab(),
+            _buildTimezoneTab(),
           ],
         ),
       ),
     );
   }
 
-  Widget _tabBar() {
+  Widget _buildTabBar() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(4),
@@ -129,10 +138,8 @@ class _ConverterPageState extends State<ConverterPage>
         dividerHeight: 0,
         labelColor: Colors.white,
         unselectedLabelColor: AppColors.textMuted,
-        labelStyle:
-            const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
-        unselectedLabelStyle:
-            const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+        labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+        unselectedLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
         tabs: const [
           Tab(text: 'Konverter Kurs'),
           Tab(text: 'Zona Waktu'),
@@ -141,140 +148,103 @@ class _ConverterPageState extends State<ConverterPage>
     );
   }
 
-  Widget _currencyTab() {
-    final usd = _idr / _usdRate;
-    final myr = _idr / _myrRate;
-    final sgd = _idr / _sgdRate;
-    final jpy = _idr / _jpyRate;
-    final cny = _idr / _cnyRate;
-
+  Widget _buildCurrencyTab() {
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
         Text('Masukkan Jumlah (IDR)', style: AppText.display(16)),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: AppColors.tint(AppColors.greenDark, 0.15)),
-          ),
-          child: Row(
-            children: [
-              const Text(
-                'Rp',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.greenDark,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _idrController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) =>
-                      FocusManager.instance.primaryFocus?.unfocus(),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: '0',
-                    hintStyle: TextStyle(color: AppColors.textMuted),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (v) {
-                    setState(() => _idr = double.tryParse(v) ?? 0);
-                  },
-                ),
-              ),
-              if (_idrController.text.isNotEmpty)
-                IconButton(
-                  tooltip: 'Hapus input',
-                  icon: const Icon(Icons.clear_rounded,
-                      size: 18, color: AppColors.textMuted),
-                  onPressed: () {
-                    _idrController.clear();
-                    setState(() => _idr = 0);
-                    FocusManager.instance.primaryFocus?.unfocus();
-                  },
-                ),
-              IconButton(
-                tooltip: 'Selesai / Sembunyikan Keyboard',
-                icon: const Icon(
-                  Icons.keyboard_hide_rounded,
-                  color: AppColors.greenDark,
-                  size: 20,
-                ),
-                onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
-              ),
-            ],
-          ),
-        ),
+        _buildIdrInputField(),
         const SizedBox(height: 16),
-        _conversionResult(
-          'USD - Dollar Amerika Serikat',
-          Icons.attach_money_rounded,
-          _formatCurrency(usd, '\$'),
-          '1 USD = ${_formatRp(_usdRate)}',
-        ),
-        const SizedBox(height: 10),
-        _conversionResult(
-          'MYR - Ringgit Malaysia',
-          Icons.currency_exchange_rounded,
-          _formatCurrency(myr, 'RM'),
-          '1 MYR = ${_formatRp(_myrRate)}',
-        ),
-        const SizedBox(height: 10),
-        _conversionResult(
-          'SGD - Dollar Singapura',
-          Icons.monetization_on_outlined,
-          _formatCurrency(sgd, 'S\$'),
-          '1 SGD = ${_formatRp(_sgdRate)}',
-        ),
-        const SizedBox(height: 10),
-        _conversionResult(
-          'JPY - Yen Jepang',
-          Icons.currency_yen_rounded,
-          _formatCurrency(jpy, '¥'),
-          '1 JPY = ${_formatRp(_jpyRate)}',
-        ),
-        const SizedBox(height: 10),
-        _conversionResult(
-          'CNY - Yuan China',
-          Icons.currency_yuan_rounded,
-          _formatCurrency(cny, 'CN¥'),
-          '1 CNY = ${_formatRp(_cnyRate)}',
-        ),
+        ..._currencies.map((c) {
+          final converted = _idr / c.rate;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildCurrencyCard(
+              label: c.label,
+              icon: c.icon,
+              value: '${c.symbol} ${converted.toStringAsFixed(2)}',
+              rate: '1 ${c.code} = ${formatRp(c.rate)}',
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _conversionResult(
-    String label,
-    IconData icon,
-    String value,
-    String rate,
-  ) {
+  Widget _buildIdrInputField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.tint(AppColors.greenDark, 0.15)),
+      ),
+      child: Row(
+        children: [
+          const Text(
+            'Rp',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.greenDark,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _idrController,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+              decoration: const InputDecoration(
+                hintText: '0',
+                hintStyle: TextStyle(color: AppColors.textMuted),
+                border: InputBorder.none,
+              ),
+              onChanged: (v) => setState(() => _idr = double.tryParse(v) ?? 0),
+            ),
+          ),
+          if (_idrController.text.isNotEmpty)
+            IconButton(
+              tooltip: 'Hapus input',
+              icon: const Icon(Icons.clear_rounded, size: 18, color: AppColors.textMuted),
+              onPressed: () {
+                _idrController.clear();
+                setState(() => _idr = 0);
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+            ),
+          IconButton(
+            tooltip: 'Selesai / Sembunyikan Keyboard',
+            icon: const Icon(Icons.keyboard_hide_rounded, color: AppColors.greenDark, size: 20),
+            onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrencyCard({
+    required String label,
+    required IconData icon,
+    required String value,
+    required String rate,
+  }) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -303,27 +273,17 @@ class _ConverterPageState extends State<ConverterPage>
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: AppText.display(18),
-                ),
+                Text(value, style: AppText.display(18)),
               ],
             ),
           ),
-          Text(
-            rate,
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.textMuted,
-            ),
-          ),
+          Text(rate, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
         ],
       ),
     );
   }
 
-
-  Widget _timezoneTab() {
+  Widget _buildTimezoneTab() {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
@@ -331,17 +291,17 @@ class _ConverterPageState extends State<ConverterPage>
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _clockCard(_zones[0])),
+            Expanded(child: _buildClockCard(_zones[0])),
             const SizedBox(width: 10),
-            Expanded(child: _clockCard(_zones[1])),
+            Expanded(child: _buildClockCard(_zones[1])),
           ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _clockCard(_zones[2])),
+            Expanded(child: _buildClockCard(_zones[2])),
             const SizedBox(width: 10),
-            Expanded(child: _clockCard(_zones[3])),
+            Expanded(child: _buildClockCard(_zones[3])),
           ],
         ),
         const SizedBox(height: 24),
@@ -352,16 +312,16 @@ class _ConverterPageState extends State<ConverterPage>
           style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
         ),
         const SizedBox(height: 14),
-        _customTimeInputCard(),
+        _buildCustomTimeInputCard(),
         const SizedBox(height: 20),
         Text('Hasil Konversi (4 Zona)', style: AppText.display(15)),
         const SizedBox(height: 10),
-        ..._zones.map(_customConvertedCard),
+        ..._zones.map(_buildCustomConvertedCard),
       ],
     );
   }
 
-  Widget _clockCard(_TzInfo tz) {
+  Widget _buildClockCard(_TzInfo tz) {
     final time = _formatTime(_now, tz.utcOffset);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -369,11 +329,7 @@ class _ConverterPageState extends State<ConverterPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -384,19 +340,12 @@ class _ConverterPageState extends State<ConverterPage>
               Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.green,
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(color: AppColors.green, shape: BoxShape.circle),
               ),
               const SizedBox(width: 6),
               Text(
                 tz.label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted),
               ),
             ],
           ),
@@ -404,25 +353,19 @@ class _ConverterPageState extends State<ConverterPage>
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              time,
-              style: AppText.display(20),
-            ),
+            child: Text(time, style: AppText.display(20)),
           ),
           const SizedBox(height: 2),
           Text(
             'UTC${tz.utcOffset >= 0 ? '+' : ''}${tz.utcOffset}',
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.textMuted,
-            ),
+            style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
           ),
         ],
       ),
     );
   }
 
-  Widget _customTimeInputCard() {
+  Widget _buildCustomTimeInputCard() {
     final hourStr = _customTime.hour.toString().padLeft(2, '0');
     final minuteStr = _customTime.minute.toString().padLeft(2, '0');
 
@@ -432,11 +375,7 @@ class _ConverterPageState extends State<ConverterPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
+          BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 3)),
         ],
       ),
       child: Column(
@@ -532,11 +471,7 @@ class _ConverterPageState extends State<ConverterPage>
                         ),
                         child: Text(
                           _selectedSourceTz.label,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white),
                         ),
                       ),
                     ],
@@ -554,11 +489,7 @@ class _ConverterPageState extends State<ConverterPage>
                         SizedBox(width: 4),
                         Text(
                           'Pilih Jam',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
                         ),
                       ],
                     ),
@@ -570,11 +501,7 @@ class _ConverterPageState extends State<ConverterPage>
           const SizedBox(height: 16),
           const Text(
             'Zona Waktu Asal (Input):',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
+            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
           ),
           const SizedBox(height: 8),
           SingleChildScrollView(
@@ -594,9 +521,7 @@ class _ConverterPageState extends State<ConverterPage>
                             ? AppColors.greenDark
                             : AppColors.tint(AppColors.greenDark, 0.06),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isSelected ? AppColors.greenDark : Colors.transparent,
-                        ),
+                        border: Border.all(color: isSelected ? AppColors.greenDark : Colors.transparent),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -626,7 +551,7 @@ class _ConverterPageState extends State<ConverterPage>
     );
   }
 
-  Widget _customConvertedCard(_TzInfo tz) {
+  Widget _buildCustomConvertedCard(_TzInfo tz) {
     final result = _calculateConvertedTime(tz.utcOffset);
     final isSource = tz.label == _selectedSourceTz.label;
     final hour = result['hour'] as int;
@@ -643,11 +568,7 @@ class _ConverterPageState extends State<ConverterPage>
             ? Border.all(color: AppColors.greenDark.withValues(alpha: 0.35), width: 1.5)
             : null,
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -705,10 +626,7 @@ class _ConverterPageState extends State<ConverterPage>
                 const SizedBox(height: 2),
                 Text(
                   'UTC${tz.utcOffset >= 0 ? '+' : ''}${tz.utcOffset} · Waktu ${_getTimePeriod(hour)}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -790,10 +708,4 @@ class _ConverterPageState extends State<ConverterPage>
     if (hour >= 16 && hour < 18) return Icons.wb_twilight_rounded;
     return Icons.nightlight_round;
   }
-}
-
-class _TzInfo {
-  final String label;
-  final int utcOffset;
-  const _TzInfo(this.label, this.utcOffset);
 }

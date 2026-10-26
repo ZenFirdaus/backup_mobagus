@@ -35,26 +35,13 @@ class RewardBorder {
   });
 
   factory RewardBorder.fromJson(Map<String, dynamic> json) {
-    BorderRarity parseRarity(String? r) {
-      switch (r?.toLowerCase()) {
-        case 'uncommon':
-        case 'khusus':
-          return BorderRarity.uncommon;
-        case 'rare':
-        case 'langka':
-          return BorderRarity.rare;
-        case 'epic':
-        case 'epik':
-          return BorderRarity.epic;
-        case 'legendary':
-        case 'legendaris':
-          return BorderRarity.legendary;
-        case 'common':
-        case 'umum':
-        default:
-          return BorderRarity.common;
-      }
-    }
+    BorderRarity parseRarity(String? r) => switch (r?.toLowerCase()) {
+      'uncommon' || 'khusus' => BorderRarity.uncommon,
+      'rare' || 'langka' => BorderRarity.rare,
+      'epic' || 'epik' => BorderRarity.epic,
+      'legendary' || 'legendaris' => BorderRarity.legendary,
+      _ => BorderRarity.common,
+    };
 
     return RewardBorder(
       id: json['id']?.toString() ?? '',

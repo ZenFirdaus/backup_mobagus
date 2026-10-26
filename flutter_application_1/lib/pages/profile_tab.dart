@@ -127,14 +127,7 @@ class _ProfileTabState extends State<ProfileTab>
         }
         _stats['reviews'] = (_stats['reviews'] ?? 0) + 1;
         if (_profile != null) {
-          _profile = Profile(
-            id: _profile!.id,
-            displayName: _profile!.displayName,
-            avatarUrl: _profile!.avatarUrl,
-            activeBorderId: _profile!.activeBorderId,
-            points: _profile!.points + 20,
-            createdAt: _profile!.createdAt,
-          );
+          _profile = _profile!.copyWith(points: _profile!.points + 20);
         }
       });
       _load();
@@ -155,20 +148,9 @@ class _ProfileTabState extends State<ProfileTab>
   void didUpdateWidget(covariant ProfileTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.name != widget.name && widget.name.trim().isNotEmpty) {
-      if (_profile != null) {
-        setState(() {
-          _profile = Profile(
-            id: _profile!.id,
-            displayName: widget.name,
-            avatarUrl: _profile!.avatarUrl,
-            activeBorderId: _profile!.activeBorderId,
-            points: _profile!.points,
-            createdAt: _profile!.createdAt,
-          );
-        });
-      } else {
-        setState(() {});
-      }
+      setState(() {
+        _profile = _profile?.copyWith(displayName: widget.name);
+      });
     }
   }
 
@@ -404,16 +386,12 @@ class _ProfileTabState extends State<ProfileTab>
 
     if (pickedTime == null) return;
 
-    String newLabel = 'Makan Siang';
-    if (pickedTime.hour >= 5 && pickedTime.hour < 11) {
-      newLabel = 'Sarapan Pagi';
-    } else if (pickedTime.hour >= 11 && pickedTime.hour < 16) {
-      newLabel = 'Makan Siang';
-    } else if (pickedTime.hour >= 16 && pickedTime.hour < 21) {
-      newLabel = 'Santap Malam Gudeg';
-    } else {
-      newLabel = 'Kuliner Dini Hari Jogja';
-    }
+    final newLabel = switch (pickedTime.hour) {
+      >= 5 && < 11 => 'Sarapan Pagi',
+      >= 11 && < 16 => 'Makan Siang',
+      >= 16 && < 21 => 'Santap Malam Gudeg',
+      _ => 'Kuliner Dini Hari Jogja',
+    };
 
     setState(() {
       _notif = true;
@@ -1279,19 +1257,21 @@ class _ProfileTabState extends State<ProfileTab>
 
                       final activeBorder = _profile?.activeBorderId;
 
-                      // 1. Update UI langsung tanpa delay
                       setState(() {
-                        _profile = Profile(
-                          id:
-                              _profile?.id ??
-                              SupabaseService.instance.userId ??
-                              'curator_user',
-                          displayName: newName,
-                          avatarUrl: cleanAvatar,
-                          activeBorderId: activeBorder,
-                          points: _profile?.points ?? 100,
-                          createdAt: _profile?.createdAt ?? DateTime.now(),
-                        );
+                        _profile = _profile != null
+                            ? _profile!.copyWith(
+                                displayName: newName,
+                                avatarUrl: cleanAvatar,
+                                activeBorderId: activeBorder,
+                              )
+                            : Profile(
+                                id: SupabaseService.instance.userId ?? 'curator_user',
+                                displayName: newName,
+                                avatarUrl: cleanAvatar,
+                                activeBorderId: activeBorder,
+                                points: 100,
+                                createdAt: DateTime.now(),
+                              );
                       });
                       widget.onNameChanged?.call(newName);
                       widget.onAvatarChanged?.call(cleanAvatar);
@@ -1393,11 +1373,11 @@ class _ProfileTabState extends State<ProfileTab>
       if (picked.name.contains('.')) {
         ext = picked.name.split('.').last.toLowerCase();
       }
-      final mimeType = (ext == 'png')
-          ? 'image/png'
-          : (ext == 'webp')
-          ? 'image/webp'
-          : 'image/jpeg';
+      final mimeType = switch (ext) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
       final filePath = '$uid/profile.$ext';
       final supabase = Supabase.instance.client;
 

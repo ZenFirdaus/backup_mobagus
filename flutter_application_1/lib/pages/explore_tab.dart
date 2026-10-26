@@ -18,26 +18,7 @@ import 'notifications_page.dart';
 enum _Sort { terdekat, nama, rating, termurah }
 
 /// Format label kategori agar rapi (misal fast_food -> Fast Food)
-String _formatCategoryLabel(String c) {
-  final lower = c.trim().toLowerCase();
-  if (lower == 'fast_food' || lower == 'fast food') return 'Fast Food';
-  if (lower == 'food_court' || lower == 'food court') return 'Food Court';
-  if (lower == 'cafe' || lower == 'kafe') return 'Cafe';
-  if (lower == 'restoran' || lower == 'restaurant') return 'Restoran';
-  if (lower == 'warung_tradisional' ||
-      lower == 'warung tradisional' ||
-      lower == 'warung')
-    return 'Warung Tradisional';
-  if (lower == 'angkringan') return 'Angkringan';
-  return c
-      .replaceAll('_', ' ')
-      .split(' ')
-      .map((w) {
-        if (w.isEmpty) return '';
-        return w[0].toUpperCase() + w.substring(1);
-      })
-      .join(' ');
-}
+String _formatCategoryLabel(String c) => formatCategoryLabel(c);
 
 /// Tab "Explore": data dari Supabase (fallback seed jika kosong/offline).
 class ExploreTab extends StatefulWidget {

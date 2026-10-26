@@ -1,3 +1,5 @@
+import '../utils/format.dart';
+
 class Food {
   final String id;
   final String restaurantId;
@@ -33,13 +35,5 @@ class Food {
     );
   }
 
-  String get priceLabel {
-    final s = price.toString();
-    final buf = StringBuffer();
-    for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return 'Rp$buf';
-  }
+  String get priceLabel => formatRp(price);
 }

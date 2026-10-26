@@ -133,16 +133,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  List<_NotifItem> get _filteredItems {
-    switch (_selectedFilter) {
-      case 1:
-        return _items.where((i) => i.type == _NotifType.visitReminder).toList();
-      case 2:
-        return _items.where((i) => i.type == _NotifType.meal).toList();
-      default:
-        return _items;
-    }
-  }
+  List<_NotifItem> get _filteredItems => switch (_selectedFilter) {
+    1 => _items.where((i) => i.type == _NotifType.visitReminder).toList(),
+    2 => _items.where((i) => i.type == _NotifType.meal).toList(),
+    _ => _items,
+  };
 
   int get _unreadCount => _items.where((i) => !i.isRead).length;
 
