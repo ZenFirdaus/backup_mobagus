@@ -2486,26 +2486,37 @@ class SupabaseService {
       try {
         final profileRes = await _client
             .from('profiles')
-            .select('id, display_name, avatar_url, active_border_id')
+            .select('id, display_name, avatar_url')
             .inFilter('id', userIds);
         for (final p in profileRes as List) {
           final uid = p['id']?.toString() ?? '';
           final name = p['display_name']?.toString();
           final av = p['avatar_url']?.toString();
-          final border = p['active_border_id']?.toString();
           if (uid.isNotEmpty && name != null && name.isNotEmpty) {
             userNames[uid] = name;
           }
           if (uid.isNotEmpty && av != null && av.isNotEmpty) {
             userAvatars[uid] = av;
           }
+        }
+      } catch (err) {
+        debugPrint('getCourseFeedbacks fetch profiles basic error: $err');
+      }
+
+      // Coba ambil active_border_id jika kolom ada di tabel profiles
+      try {
+        final borderRes = await _client
+            .from('profiles')
+            .select('id, active_border_id')
+            .inFilter('id', userIds);
+        for (final p in borderRes as List) {
+          final uid = p['id']?.toString() ?? '';
+          final border = p['active_border_id']?.toString();
           if (uid.isNotEmpty && border != null && border.isNotEmpty) {
             userBorders[uid] = border;
           }
         }
-      } catch (err) {
-        debugPrint('getCourseFeedbacks fetch profiles error: $err');
-      }
+      } catch (_) {}
     }
 
     // Periksa preferensi lokal pengguna saat ini jika ada
@@ -2529,6 +2540,24 @@ class SupabaseService {
     if (myActiveBorder != null && myActiveBorder.isNotEmpty) {
       userBorders['guest'] = myActiveBorder;
       userBorders['guest_mhs'] = myActiveBorder;
+    }
+
+    // Sinkronkan ulasan lama milik pengguna saat ini jika belum menyematkan border di Supabase
+    if (currentUid != null && myActiveBorder != null && myActiveBorder.isNotEmpty) {
+      () async {
+        try {
+          final myRows = rawList.where((e) => e['user_id']?.toString() == currentUid).toList();
+          for (final row in myRows) {
+            final rowId = row['id'];
+            final rawAv = row['user_avatar']?.toString() ?? '';
+            if (!rawAv.contains('#border=$myActiveBorder')) {
+              final clean = rawAv.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim();
+              final newAv = clean.isNotEmpty ? '$clean#border=$myActiveBorder' : '#border=$myActiveBorder';
+              await _client.from('course_feedback').update({'user_avatar': newAv}).eq('id', rowId);
+            }
+          }
+        } catch (_) {}
+      }();
     }
 
     // Gabungkan data profil dan border aktif ke setiap item CourseFeedback
@@ -2572,10 +2601,21 @@ class SupabaseService {
         profile?.activeBorderId ??
         await RewardBorderService.instance.getActiveBorderId();
 
+    // Encode #border ke dalam user_avatar agar selalu terlihat oleh user lain di database
+    String? encodedAvatar = avatar;
+    if (activeBorder != null && activeBorder.isNotEmpty) {
+      final clean = (avatar != null && avatar.isNotEmpty)
+          ? avatar.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim()
+          : '';
+      encodedAvatar = clean.isNotEmpty
+          ? '$clean#border=$activeBorder'
+          : '#border=$activeBorder';
+    }
+
     final Map<String, dynamic> payload = {
       'user_id': uid,
       'user_name': name,
-      'user_avatar': avatar,
+      'user_avatar': encodedAvatar,
       'kesan': kesan,
       'saran': saran,
       'rating': rating,
@@ -2595,7 +2635,6 @@ class SupabaseService {
       final data = Map<String, dynamic>.from(res);
       data['user_active_border'] ??= activeBorder;
       created = CourseFeedback.fromJson(data);
-      _courseFeedbackAddedController.add(created);
     } catch (e) {
       debugPrint('submitCourseFeedback primary insert error: $e');
       try {
@@ -2610,7 +2649,6 @@ class SupabaseService {
         final data = Map<String, dynamic>.from(res);
         data['user_active_border'] = activeBorder;
         created = CourseFeedback.fromJson(data);
-        _courseFeedbackAddedController.add(created);
       } catch (err) {
         debugPrint('submitCourseFeedback error in supabase: $err');
         created = CourseFeedback(
@@ -2654,11 +2692,31 @@ class SupabaseService {
     required String saran,
     required int rating,
   }) async {
+    final activeBorder = RewardBorderService.instance.activeBorderId;
+    final profile = await getProfile();
+    final avatar = profile?.avatarUrl ?? currentUser?.userMetadata?['avatar_url'] as String?;
+
+    String? encodedAvatar = avatar;
+    if (activeBorder != null && activeBorder.isNotEmpty) {
+      final clean = (avatar != null && avatar.isNotEmpty)
+          ? avatar.replaceAll(RegExp(r'[#|]border[:=][a-zA-Z0-9_]+'), '').trim()
+          : '';
+      encodedAvatar = clean.isNotEmpty
+          ? '$clean#border=$activeBorder'
+          : '#border=$activeBorder';
+    }
+
     final Map<String, dynamic> payload = {
       'kesan': kesan,
       'saran': saran,
       'rating': rating,
     };
+    if (encodedAvatar != null) {
+      payload['user_avatar'] = encodedAvatar;
+    }
+    if (activeBorder != null && activeBorder.isNotEmpty) {
+      payload['user_active_border'] = activeBorder;
+    }
 
     CourseFeedback? updated;
     try {
@@ -2669,9 +2727,29 @@ class SupabaseService {
           .select()
           .single();
       updated = CourseFeedback.fromJson(res);
-      _courseFeedbackAddedController.add(updated);
     } catch (e) {
-      debugPrint('updateCourseFeedback error in supabase: $e');
+      debugPrint('updateCourseFeedback primary error: $e');
+      try {
+        final fallback = Map<String, dynamic>.from(payload)..remove('user_active_border');
+        final res = await _client
+            .from('course_feedback')
+            .update(fallback)
+            .eq('id', id)
+            .select()
+            .single();
+        final data = Map<String, dynamic>.from(res);
+        data['user_active_border'] ??= activeBorder;
+        updated = CourseFeedback.fromJson(data);
+      } catch (err) {
+        debugPrint('updateCourseFeedback error in supabase: $err');
+      }
+    }
+
+    if (updated != null) {
+      if (updated.userActiveBorder == null && activeBorder != null) {
+        updated = updated.copyWith(userActiveBorder: activeBorder);
+      }
+      _courseFeedbackAddedController.add(updated);
     }
 
     await _updateLocalCachedFeedback(id, kesan, saran, rating);

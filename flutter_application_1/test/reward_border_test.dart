@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_application_1/services/reward_border_service.dart';
+import 'package:flutter_application_1/models/course_feedback.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -110,6 +111,54 @@ void main() {
       final purchase = await service.purchaseBorder('border_batik_parang');
       expect(purchase['success'], isFalse);
       expect(purchase['message'], contains('Poin Rasa'));
+    });
+
+    test('CourseFeedback mengurai border aktif dari user_avatar dengan benar agar terlihat oleh user lain', () {
+      // 1. Kasus dengan foto profil internet + tag border
+      final jsonWithUrl = {
+        'id': '101',
+        'user_id': 'user_abc',
+        'user_name': 'Budi',
+        'user_avatar': 'https://pasbipbzosiifdkqlxtl.supabase.co/storage/v1/object/public/avatars/user_abc/profile.jpg#border=border_keraton_gold',
+        'kesan': 'Mantap sekali',
+        'saran': 'Lanjutkan',
+        'rating': 5,
+        'created_at': '2026-10-26T10:00:00Z',
+      };
+      final fb1 = CourseFeedback.fromJson(jsonWithUrl);
+      expect(fb1.userActiveBorder, equals('border_keraton_gold'));
+      expect(fb1.userAvatar, equals('https://pasbipbzosiifdkqlxtl.supabase.co/storage/v1/object/public/avatars/user_abc/profile.jpg'));
+
+      // 2. Kasus tanpa foto profil (hanya inisial) + tag border
+      final jsonWithoutUrl = {
+        'id': '102',
+        'user_id': 'user_xyz',
+        'user_name': 'Siti',
+        'user_avatar': '#border=border_wayang_kulit',
+        'kesan': 'Bagus',
+        'saran': 'Oke',
+        'rating': 4,
+        'created_at': '2026-10-26T10:05:00Z',
+      };
+      final fb2 = CourseFeedback.fromJson(jsonWithoutUrl);
+      expect(fb2.userActiveBorder, equals('border_wayang_kulit'));
+      expect(fb2.userAvatar, isNull);
+
+      // 3. Kasus kolom native user_active_border tetap diprioritaskan jika ada
+      final jsonNative = {
+        'id': '103',
+        'user_id': 'user_123',
+        'user_name': 'Agus',
+        'user_avatar': 'https://example.com/avatar.jpg',
+        'user_active_border': 'border_garuda_bronze',
+        'kesan': 'Keren',
+        'saran': 'Mantul',
+        'rating': 5,
+        'created_at': '2026-10-26T10:10:00Z',
+      };
+      final fb3 = CourseFeedback.fromJson(jsonNative);
+      expect(fb3.userActiveBorder, equals('border_garuda_bronze'));
+      expect(fb3.userAvatar, equals('https://example.com/avatar.jpg'));
     });
   });
 }

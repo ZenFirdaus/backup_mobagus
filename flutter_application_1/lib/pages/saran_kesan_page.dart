@@ -573,7 +573,7 @@ class _SaranKesanPageState extends State<SaranKesanPage> {
             children: [
               ProfileBorderAvatar(
                 avatarUrl: fb.userAvatar,
-                borderId: fb.userActiveBorder,
+                borderId: effectiveBorderId,
                 border: border,
                 size: 38,
                 backgroundColor: avatarBgColor,
@@ -1044,7 +1044,8 @@ class _FeedbackFormSheetState extends State<_FeedbackFormSheet> {
                   children: [
                     ProfileBorderAvatar(
                       avatarUrl: _profile?.avatarUrl,
-                      borderId: _profile?.activeBorderId,
+                      borderId: RewardBorderService.instance.activeBorderId ??
+                          _profile?.activeBorderId,
                       size: 28,
                       backgroundColor: AppColors.paprika,
                       fallbackText: _profile?.displayName.isNotEmpty == true
