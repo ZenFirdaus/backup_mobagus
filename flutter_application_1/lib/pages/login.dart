@@ -18,7 +18,8 @@ import 'forgot_password_page.dart';
 import '../services/supabase_service.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String? initialEmail;
+  const LoginPage({super.key, this.initialEmail});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -26,10 +27,16 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  late final TextEditingController _email;
   final _password = TextEditingController();
   bool _remember = true;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _email = TextEditingController(text: widget.initialEmail ?? '');
+  }
 
   @override
   void dispose() {

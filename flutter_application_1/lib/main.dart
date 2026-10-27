@@ -10,13 +10,12 @@ import 'services/notification_service.dart';
 
 /// ALUR APLIKASI FOODIE
 ///
-///  IntroPage ──► OnboardingPage ─┬─► RegisterPage ─► VerifyEmailPage ─► BiometricPage ─► HomePage
-///                                │     (langkah 1)     (langkah 2)        (langkah 3)
+///  IntroPage ──► OnboardingPage ─┬─► RegisterPage ─► VerifyEmailPage (OTP) ─► LoginPage ─► HomePage
 ///                                │
 ///                                └─► LoginPage ───────────────────────────────────────► HomePage
 ///
-///  - Login & Register bisa saling pindah lewat tab "Masuk Akun / Daftar Akun".
-///  - "Nanti Saja" di BiometricPage langsung ke HomePage.
+///  - Login & Register bisa saling berpindah secara mulus.
+///  - Setelah registrasi, user verifikasi kode OTP email, lalu masuk lewat LoginPage.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

@@ -56,6 +56,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final emailVal = _email.text.trim();
 
     try {
+      // 1. Daftarkan akun baru di Supabase Auth
       await Supabase.instance.client.auth.signUp(
         email: emailVal,
         password: _password.text,
@@ -64,6 +65,20 @@ class _RegisterPageState extends State<RegisterPage> {
           'phone': _phone.text.trim(),
         },
       );
+
+      // 2. Kirim email verifikasi registrasi resmi (Confirm Signup) ke Gmail pengguna
+      try {
+        await Supabase.instance.client.auth.resend(
+          type: OtpType.signup,
+          email: emailVal,
+        );
+      } catch (_) {}
+
+      // 3. Pastikan sesi lokal tetap anonim/bersih agar user harus memverifikasi OTP terlebih dahulu
+      try {
+        await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+      } catch (_) {}
+
       if (!mounted) return;
       setState(() => _loading = false);
 
@@ -81,8 +96,41 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => _loading = false);
 
       String msg = e.message;
-      if (msg.toLowerCase().contains('already registered')) {
-        msg = 'Email sudah terdaftar. Silakan masuk.';
+      final lower = msg.toLowerCase();
+      if (lower.contains('already registered') || lower.contains('already exists')) {
+        // Jika akun email sudah pernah didaftarkan sebelumnya, kirim kode OTP registrasi dan arahkan ke verifikasi
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Email ini sudah terdaftar. Lanjut ke verifikasi OTP?'),
+            backgroundColor: AppColors.charcoal,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Verifikasi',
+              textColor: AppColors.orange,
+              onPressed: () async {
+                try {
+                  await Supabase.instance.client.auth.resend(
+                    type: OtpType.signup,
+                    email: emailVal,
+                  );
+                } catch (_) {}
+                if (!mounted) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => VerifyEmailPage(
+                      name: nameVal,
+                      email: emailVal,
+                      password: _password.text,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        return;
+      } else if (lower.contains('password')) {
+        msg = 'Kata sandi tidak memenuhi kriteria keamanan.';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -92,17 +140,15 @@ class _RegisterPageState extends State<RegisterPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
 
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => VerifyEmailPage(
-            name: nameVal,
-            email: emailVal,
-            password: _password.text,
-          ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: ${e.toString().replaceAll('Exception:', '').trim()}'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -161,13 +207,13 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 12),
                   AppTextField(
-                    label: 'Email',
+                    label: 'Alamat Gmail',
                     hint: 'nama@gmail.com',
                     icon: Icons.mail_rounded,
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    validator: Validators.email,
+                    validator: Validators.gmail,
                   ),
                   const SizedBox(height: 12),
                   AppTextField(

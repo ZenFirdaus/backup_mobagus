@@ -13,6 +13,44 @@ class Validators {
     return ok ? null : 'Format email belum benar';
   }
 
+  /// Validasi khusus akun Gmail asli (@gmail.com) sesuai standar Google
+  static String? gmail(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Email wajib diisi';
+    final trimmed = v.trim().toLowerCase();
+
+    // Wajib domain @gmail.com
+    if (!trimmed.endsWith('@gmail.com')) {
+      return 'Wajib menggunakan alamat Gmail asli (@gmail.com)';
+    }
+
+    final username = trimmed.substring(0, trimmed.length - '@gmail.com'.length);
+
+    // Panjang username Gmail Google minimal 6 dan maksimal 30 karakter
+    if (username.length < 6) {
+      return 'Alamat Gmail minimal 6 karakter sebelum @gmail.com';
+    }
+    if (username.length > 30) {
+      return 'Alamat Gmail maksimal 30 karakter';
+    }
+
+    // Gmail username hanya boleh karakter a-z, 0-9, dan titik (.)
+    if (!RegExp(r'^[a-z0-9.]+$').hasMatch(username)) {
+      return 'Gmail hanya boleh berisi huruf (a-z), angka (0-9), dan titik (.)';
+    }
+
+    // Titik tidak boleh berada di awal atau di akhir username
+    if (username.startsWith('.') || username.endsWith('.')) {
+      return 'Titik (.) tidak boleh di awal atau akhir nama akun Gmail';
+    }
+
+    // Tidak boleh titik berurutan (..)
+    if (username.contains('..')) {
+      return 'Tidak boleh terdapat titik berurutan (..)';
+    }
+
+    return null;
+  }
+
   static String? password(String? v) {
     if (v == null || v.isEmpty) return 'Kata sandi wajib diisi';
     if (v.length < 8) return 'Minimal 8 karakter';
