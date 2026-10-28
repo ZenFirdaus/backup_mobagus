@@ -27,8 +27,8 @@ class VerifyEmailPage extends StatefulWidget {
 }
 
 class _VerifyEmailPageState extends State<VerifyEmailPage> with WidgetsBindingObserver {
-  // Kode OTP pendaftaran berstandar 6 digit angka
-  static const int _codeLength = 6;
+  // Kode OTP pendaftaran berstandar 8 digit angka
+  static const int _codeLength = 8;
   static const int _resendSeconds = 60;
   static const int _maxAttempts = 5;
 
@@ -105,7 +105,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> with WidgetsBindingOb
         if (lower.contains('email not confirmed')) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Tautan email belum diklik atau belum terkonfirmasi di server. Silakan klik tombol di email Anda atau masukkan kode OTP 6-digit.'),
+              content: Text('Tautan email belum diklik atau belum terkonfirmasi di server. Silakan klik tombol di email Anda atau masukkan kode OTP 8-digit.'),
               backgroundColor: AppColors.charcoal,
               behavior: SnackBarBehavior.floating,
             ),
@@ -240,7 +240,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> with WidgetsBindingOb
 
     if (token.isEmpty) {
       setState(() {
-        _errorMessage = 'Harap masukkan 6 digit kode OTP dari email Anda.';
+        _errorMessage = 'Harap masukkan 8 digit kode OTP dari email Anda.';
       });
       return;
     }
@@ -533,7 +533,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> with WidgetsBindingOb
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Masukkan 6 digit kode OTP atau klik tombol pada email yang dikirimkan ke:',
+                    'Masukkan 8 digit kode OTP atau klik tombol pada email yang dikirimkan ke:',
                     textAlign: TextAlign.center,
                     style: AppText.body(13, color: AppColors.textMuted),
                   ),
@@ -574,7 +574,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> with WidgetsBindingOb
 
                   const SizedBox(height: 28),
 
-                  // Input OTP Box (6 digit responsif dan nyaman)
+                  // Input OTP Box (8 digit responsif dan nyaman)
                   SizedBox(
                     height: 54,
                     child: Stack(
@@ -756,8 +756,8 @@ class _OtpBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filled = char.isNotEmpty;
-    const width = 48.0;
-    const height = 54.0;
+    const width = 36.0;
+    const height = 48.0;
 
     Color borderColor = AppColors.line;
     if (hasError) {
@@ -798,7 +798,7 @@ class _OtpBox extends StatelessWidget {
       child: Text(
         char.isEmpty ? '•' : char,
         style: TextStyle(
-          fontSize: char.isEmpty ? 16 : 22,
+          fontSize: char.isEmpty ? 16 : 20,
           fontWeight: FontWeight.w800,
           color: char.isEmpty ? AppColors.line : AppColors.textDark,
         ),
