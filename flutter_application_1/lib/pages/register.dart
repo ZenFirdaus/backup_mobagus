@@ -57,7 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       // 1. Daftarkan akun baru di Supabase Auth
-      await Supabase.instance.client.auth.signUp(
+      final res = await Supabase.instance.client.auth.signUp(
         email: emailVal,
         password: _password.text,
         data: {
@@ -66,15 +66,21 @@ class _RegisterPageState extends State<RegisterPage> {
         },
       );
 
-      // 2. Kirim email verifikasi registrasi resmi (Confirm Signup) ke Gmail pengguna
-      try {
-        await Supabase.instance.client.auth.resend(
-          type: OtpType.signup,
-          email: emailVal,
+      // Jika email sudah pernah terdaftar di Supabase (identities kosong)
+      if (res.user != null && res.user!.identities != null && res.user!.identities!.isEmpty) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Alamat Gmail ini sudah terdaftar. Silakan langsung masuk ke akun Anda.'),
+            backgroundColor: AppColors.charcoal,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-      } catch (_) {}
+        return;
+      }
 
-      // 3. Pastikan sesi lokal tetap anonim/bersih agar user harus memverifikasi OTP terlebih dahulu
+      // 2. Pastikan sesi lokal tetap bersih agar user harus memasukkan kode OTP email terlebih dahulu
       try {
         await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
       } catch (_) {}
@@ -98,30 +104,18 @@ class _RegisterPageState extends State<RegisterPage> {
       String msg = e.message;
       final lower = msg.toLowerCase();
       if (lower.contains('already registered') || lower.contains('already exists')) {
-        // Jika akun email sudah pernah didaftarkan sebelumnya, kirim kode OTP registrasi dan arahkan ke verifikasi
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Email ini sudah terdaftar. Lanjut ke verifikasi OTP?'),
+            content: const Text('Email ini sudah terdaftar. Silakan langsung masuk ke akun Anda.'),
             backgroundColor: AppColors.charcoal,
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
-              label: 'Verifikasi',
+              label: 'Masuk',
               textColor: AppColors.orange,
-              onPressed: () async {
-                try {
-                  await Supabase.instance.client.auth.resend(
-                    type: OtpType.signup,
-                    email: emailVal,
-                  );
-                } catch (_) {}
-                if (!mounted) return;
+              onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => VerifyEmailPage(
-                      name: nameVal,
-                      email: emailVal,
-                      password: _password.text,
-                    ),
+                    builder: (_) => LoginPage(initialEmail: emailVal),
                   ),
                 );
               },
@@ -130,7 +124,11 @@ class _RegisterPageState extends State<RegisterPage> {
         );
         return;
       } else if (lower.contains('password')) {
-        msg = 'Kata sandi tidak memenuhi kriteria keamanan.';
+        msg = 'Kata sandi tidak memenuhi kriteria keamanan (minimal 6 karakter).';
+      } else if (lower.contains('rate limit')) {
+        msg = 'Terlalu banyak permintaan pendaftaran. Harap tunggu beberapa saat.';
+      } else if (lower.contains('network') || lower.contains('socket')) {
+        msg = 'Koneksi internet bermasalah. Pastikan perangkat Anda terhubung ke internet.';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -146,7 +144,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Terjadi kesalahan: ${e.toString().replaceAll('Exception:', '').trim()}'),
+          content: Text('Gagal melakukan pendaftaran: ${e.toString().replaceAll('Exception:', '').trim()}'),
           backgroundColor: AppColors.red,
           behavior: SnackBarBehavior.floating,
         ),

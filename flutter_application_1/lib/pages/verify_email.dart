@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../props/app_colors.dart';
 import '../props/app_text.dart';
@@ -27,31 +26,105 @@ class VerifyEmailPage extends StatefulWidget {
   State<VerifyEmailPage> createState() => _VerifyEmailPageState();
 }
 
-class _VerifyEmailPageState extends State<VerifyEmailPage> {
-  // Proyek Supabase ini menggunakan 8-digit token verifikasi secara default
-  static const int _defaultCodeLength = 8;
+class _VerifyEmailPageState extends State<VerifyEmailPage> with WidgetsBindingObserver {
+  // Kode OTP pendaftaran berstandar 6 digit angka
+  static const int _codeLength = 6;
   static const int _resendSeconds = 60;
+  static const int _maxAttempts = 5;
 
-  int _codeLength = _defaultCodeLength;
   final _code = TextEditingController();
   final _focus = FocusNode();
   Timer? _timer;
+  StreamSubscription<AuthState>? _authSubscription;
   int _seconds = _resendSeconds;
+  int _failedAttempts = 0;
   bool _loading = false;
   String? _errorMessage;
+
+  bool get _isBlocked => _failedAttempts >= _maxAttempts;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startTimer();
+    _listenToAuthChange();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
     _timer?.cancel();
     _code.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Saat pengguna kembali ke aplikasi setelah mengklik tautan di email
+      _checkLinkConfirmation(showLoading: false);
+    }
+  }
+
+  void _listenToAuthChange() {
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final user = data.session?.user;
+      if (user != null && user.emailConfirmedAt != null) {
+        if (!mounted) return;
+        _handleSuccess();
+      }
+    });
+  }
+
+  Future<void> _checkLinkConfirmation({bool showLoading = false}) async {
+    if (_loading) return;
+    if (widget.password == null || widget.password!.isEmpty) return;
+    if (showLoading) setState(() => _loading = true);
+
+    try {
+      final res = await Supabase.instance.client.auth.signInWithPassword(
+        email: widget.email,
+        password: widget.password!,
+      );
+
+      if (res.user != null && res.user!.emailConfirmedAt != null) {
+        if (!mounted) return;
+        if (showLoading) setState(() => _loading = false);
+        await _handleSuccess();
+        return;
+      }
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      if (showLoading) {
+        setState(() => _loading = false);
+        final lower = e.message.toLowerCase();
+        if (lower.contains('email not confirmed')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tautan email belum diklik atau belum terkonfirmasi di server. Silakan klik tombol di email Anda atau masukkan kode OTP 6-digit.'),
+              backgroundColor: AppColors.charcoal,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.message),
+              backgroundColor: AppColors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted && showLoading) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   void _startTimer() {
@@ -74,39 +147,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     return '$m:$s';
   }
 
-  Future<void> _openMailApp() async {
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-    );
-    try {
-      if (await canLaunchUrl(emailLaunchUri)) {
-        await launchUrl(emailLaunchUri);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Buka aplikasi Gmail Anda untuk melihat kode verifikasi.'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Silakan periksa aplikasi Gmail pada perangkat Anda.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _resend() async {
     if (_seconds > 0 || _loading) return;
     setState(() {
       _errorMessage = null;
+      _loading = true;
     });
 
     try {
@@ -116,9 +161,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       );
 
       _code.clear();
+      _failedAttempts = 0;
       _startTimer();
 
       if (mounted) {
+        setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -128,7 +175,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Email verifikasi baru telah dikirim ke ${widget.email}. Periksa notifikasi Gmail Anda.',
+                    'Email verifikasi baru telah dikirimkan ke ${widget.email}. Periksa kotak masuk Gmail Anda.',
                     style: const TextStyle(fontSize: 12.5),
                   ),
                 ),
@@ -140,29 +187,29 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
         );
       }
     } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
       String msg = e.message;
       if (msg.toLowerCase().contains('rate limit')) {
         msg = 'Terlalu sering meminta kode. Silakan tunggu hingga hitung mundur selesai.';
       }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.red,
+        ),
+      );
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal mengirim ulang email. Periksa koneksi internet Anda.'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal mengirim ulang email OTP. Periksa koneksi internet Anda.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.red,
+        ),
+      );
     }
   }
 
@@ -170,35 +217,35 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     if (_errorMessage != null) {
       setState(() => _errorMessage = null);
     }
-
-    final clean = value.trim();
-
-    // Otomatis menyesuaikan jika pengguna menempelkan kode 6 digit atau 8 digit
-    if (clean.length == 6 && _codeLength != 6) {
-      setState(() => _codeLength = 6);
-    } else if (clean.length == 8 && _codeLength != 8) {
-      setState(() => _codeLength = 8);
-    }
-
     setState(() {});
 
-    if (clean.length == _codeLength) {
+    final clean = value.trim();
+    if (clean.length == _codeLength && !_isBlocked) {
       _verify();
     }
   }
 
   Future<void> _verify() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final token = _code.text.trim().replaceAll(' ', '');
 
-    if (token.isEmpty) {
+    if (_isBlocked) {
       setState(() {
-        _errorMessage = 'Harap masukkan kode OTP verifikasi dari email Anda.';
+        _errorMessage =
+            'Batas 5 kali percobaan OTP tercapai. Silakan kirim ulang kode baru setelah hitung mundur selesai.';
       });
       return;
     }
 
-    if (token.length != 8 && token.length != 6) {
+    final token = _code.text.trim().replaceAll(' ', '');
+
+    if (token.isEmpty) {
+      setState(() {
+        _errorMessage = 'Harap masukkan 6 digit kode OTP dari email Anda.';
+      });
+      return;
+    }
+
+    if (token.length != _codeLength) {
       setState(() {
         _errorMessage = 'Kode OTP harus berjumlah $_codeLength digit lengkap.';
       });
@@ -243,15 +290,29 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     if (verified) {
       await _handleSuccess();
     } else {
-      String displayMsg = 'Kode verifikasi tidak cocok atau telah kedaluwarsa.';
-      if (failureMessage != null) {
-        final lower = failureMessage.toLowerCase();
-        if (lower.contains('expired')) {
-          displayMsg = 'Kode OTP telah kedaluwarsa. Silakan ketuk Kirim Ulang.';
-        } else if (lower.contains('invalid') || lower.contains('not match') || lower.contains('wrong')) {
-          displayMsg = 'Kode OTP salah. Silakan periksa kembali pesan masuk di Gmail Anda.';
-        } else if (lower.contains('network') || lower.contains('socket')) {
-          displayMsg = 'Koneksi internet bermasalah. Periksa jaringan Anda.';
+      _failedAttempts++;
+      final remaining = _maxAttempts - _failedAttempts;
+
+      String displayMsg;
+      if (remaining <= 0) {
+        displayMsg =
+            'Batas 5 kali percobaan OTP tercapai. Harap minta kode OTP baru setelah hitung mundur selesai.';
+      } else {
+        if (failureMessage != null) {
+          final lower = failureMessage.toLowerCase();
+          if (lower.contains('expired')) {
+            displayMsg = 'Kode OTP telah kedaluwarsa. Silakan ketuk Kirim Ulang.';
+          } else if (lower.contains('invalid') ||
+              lower.contains('not match') ||
+              lower.contains('wrong')) {
+            displayMsg = 'Kode OTP salah. Sisa percobaan: $remaining kali.';
+          } else if (lower.contains('network') || lower.contains('socket')) {
+            displayMsg = 'Koneksi internet bermasalah. Periksa jaringan Anda.';
+          } else {
+            displayMsg = 'Kode OTP tidak cocok. Sisa percobaan: $remaining kali.';
+          }
+        } else {
+          displayMsg = 'Kode OTP tidak cocok. Sisa percobaan: $remaining kali.';
         }
       }
 
@@ -276,7 +337,19 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   }
 
   Future<void> _handleSuccess() async {
-    // Sesi dibersihkan agar pengguna masuk secara resmi menggunakan email & kata sandi
+    // 1. Sinkronisasi status dan profil ke tabel database Supabase
+    try {
+      final curUser = Supabase.instance.client.auth.currentUser;
+      if (curUser != null) {
+        await Supabase.instance.client.from('profiles').upsert({
+          'id': curUser.id,
+          'display_name': widget.name,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (_) {}
+
+    // 2. Sesi dibersihkan agar pengguna masuk secara resmi menggunakan email & kata sandi
     try {
       await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
     } catch (_) {}
@@ -315,7 +388,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Akun Anda telah aktif dan terverifikasi. Silakan masuk menggunakan email dan kata sandi yang telah didaftarkan.',
+                'Email Anda telah terverifikasi dan akun aktif di database. Silakan masuk menggunakan kata sandi Anda.',
                 textAlign: TextAlign.center,
                 style: AppText.body(13, color: AppColors.textMuted),
               ),
@@ -350,308 +423,317 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     );
   }
 
-  void _toggleCodeLength() {
-    setState(() {
-      _codeLength = _codeLength == 8 ? 6 : 8;
-      _code.clear();
-      _errorMessage = null;
-    });
+  Future<bool> _onWillPop() async {
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Batalkan Verifikasi?',
+          style: AppText.display(18, color: AppColors.charcoal),
+        ),
+        content: Text(
+          'Pendaftaran akun Anda belum selesai. Email belum terverifikasi dan belum dapat digunakan untuk masuk.',
+          style: AppText.body(13, color: AppColors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Tetap di Sini', style: TextStyle(color: AppColors.charcoal, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Batalkan & Keluar', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    return shouldLeave ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
     final codeText = _code.text.trim();
-    final ready = codeText.length == _codeLength || codeText.length == 6 || codeText.length == 8;
+    final ready = codeText.length == _codeLength && !_isBlocked;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Header Navigasi
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    InkWell(
-                      onTap: () => Navigator.of(context).maybePop(),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.line, width: 1),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 18,
-                          color: AppColors.charcoal,
-                        ),
-                      ),
-                    ),
-                    const FoodieHeaderLogo(),
-                  ],
-                ),
-                const SizedBox(height: 28),
-
-                // Ikon Hero Email
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    color: AppColors.orange.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.mark_email_read_rounded,
-                      size: 38,
-                      color: AppColors.orange,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                // Judul & Keterangan
-                Text(
-                  'Verifikasi Registrasi Akun',
-                  textAlign: TextAlign.center,
-                  style: AppText.display(24, color: AppColors.textDark),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Masukkan $_codeLength digit kode OTP pendaftaran yang dikirimkan ke:',
-                  textAlign: TextAlign.center,
-                  style: AppText.body(13, color: AppColors.textMuted),
-                ),
-                const SizedBox(height: 12),
-
-                // Pill Badge Gmail
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.line),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Header Navigasi
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(
-                        Icons.email_outlined,
-                        size: 15,
-                        color: AppColors.slateBlue,
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          widget.email,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
+                      InkWell(
+                        onTap: () async {
+                          final shouldPop = await _onWillPop();
+                          if (shouldPop && context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.line, width: 1),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 18,
                             color: AppColors.charcoal,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const FoodieHeaderLogo(),
                     ],
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 28),
 
-                // Tombol Buka Aplikasi Gmail Langsung
-                OutlinedButton.icon(
-                  onPressed: _openMailApp,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.charcoal,
-                    side: const BorderSide(color: AppColors.line),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  // Ikon Hero Email
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: AppColors.orange.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  ),
-                  icon: const Icon(Icons.outgoing_mail, size: 18, color: AppColors.orange),
-                  label: const Text(
-                    'Buka Aplikasi Gmail',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Input OTP Box (8 atau 6 digit responsif)
-                SizedBox(
-                  height: 52,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ListenableBuilder(
-                        listenable: _code,
-                        builder: (context, _) {
-                          final text = _code.text;
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(_codeLength, (i) {
-                              final char = i < text.length ? text[i] : '';
-                              final isActive =
-                                  i == text.length.clamp(0, _codeLength - 1);
-                              return _OtpBox(
-                                char: char,
-                                active: isActive,
-                                isCompact: _codeLength == 8,
-                                hasError: _errorMessage != null,
-                              );
-                            }),
-                          );
-                        },
+                    child: const Center(
+                      child: Icon(
+                        Icons.mark_email_read_rounded,
+                        size: 38,
+                        color: AppColors.orange,
                       ),
-                      Positioned.fill(
-                        child: Opacity(
-                          opacity: 0,
-                          child: TextField(
-                            controller: _code,
-                            focusNode: _focus,
-                            autofocus: true,
-                            keyboardType: TextInputType.number,
-                            maxLength: _codeLength,
-                            enableSuggestions: false,
-                            autocorrect: false,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            onChanged: _onCodeChanged,
-                            decoration: const InputDecoration(
-                              counterText: '',
-                              border: InputBorder.none,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Judul & Keterangan
+                  Text(
+                    'Verifikasi Registrasi Akun',
+                    textAlign: TextAlign.center,
+                    style: AppText.display(24, color: AppColors.textDark),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Masukkan 6 digit kode OTP atau klik tombol pada email yang dikirimkan ke:',
+                    textAlign: TextAlign.center,
+                    style: AppText.body(13, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Pill Badge Gmail
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.email_outlined,
+                          size: 15,
+                          color: AppColors.slateBlue,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            widget.email,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.charcoal,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Input OTP Box (6 digit responsif dan nyaman)
+                  SizedBox(
+                    height: 54,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        ListenableBuilder(
+                          listenable: _code,
+                          builder: (context, _) {
+                            final text = _code.text;
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: List.generate(_codeLength, (i) {
+                                final char = i < text.length ? text[i] : '';
+                                final isActive =
+                                    i == text.length.clamp(0, _codeLength - 1);
+                                return _OtpBox(
+                                  char: char,
+                                  active: isActive,
+                                  hasError: _errorMessage != null,
+                                );
+                              }),
+                            );
+                          },
+                        ),
+                        Positioned.fill(
+                          child: Opacity(
+                            opacity: 0,
+                            child: TextField(
+                              controller: _code,
+                              focusNode: _focus,
+                              autofocus: true,
+                              keyboardType: TextInputType.number,
+                              maxLength: _codeLength,
+                              enableSuggestions: false,
+                              autocorrect: false,
+                              enabled: !_isBlocked && !_loading,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              onChanged: _onCodeChanged,
+                              decoration: const InputDecoration(
+                                counterText: '',
+                                border: InputBorder.none,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // Pesan Error jika ada
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 12),
+                  // Pesan Error jika ada
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.red.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.info_outline,
+                              size: 15, color: AppColors.red),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.red,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // Tombol Verifikasi Utama (Kode OTP)
+                  PrimaryButton(
+                    label: _isBlocked ? 'Percobaan Diblokir' : 'Verifikasi Kode OTP',
+                    loading: _loading,
+                    onPressed: ready ? _verify : null,
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Tombol Cek Status jika User Mengklik Tautan di Email
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _loading ? null : () => _checkLinkConfirmation(showLoading: true),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.charcoal,
+                        side: const BorderSide(color: AppColors.line),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      icon: const Icon(Icons.verified_outlined, size: 18, color: AppColors.orange),
+                      label: const Text(
+                        'Sudah Klik Tombol di Email? Cek Status',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Kirim Ulang Kode & Countdown
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.info_outline,
-                          size: 14, color: AppColors.red),
-                      const SizedBox(width: 6),
-                      Flexible(
+                      const Text(
+                        'Tidak menerima email? ',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: (_seconds == 0 && !_loading) ? _resend : null,
                         child: Text(
-                          _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.red,
+                          _seconds == 0
+                              ? 'Kirim Ulang Email'
+                              : 'Kirim Ulang ($_timeLabel)',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: _seconds == 0
+                                ? AppColors.orange
+                                : AppColors.textMuted,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ],
 
-                const SizedBox(height: 10),
+                  const SizedBox(height: 24),
 
-                // Opsi Ganti Format Digit (8 / 6 digit)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _toggleCodeLength,
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                    ),
-                    child: Text(
-                      _codeLength == 8
-                          ? 'Menerima kode 6 digit?'
-                          : 'Kembali ke format 8 digit',
+                  // Status Batas Percobaan
+                  if (_failedAttempts > 0 && !_isBlocked)
+                    Text(
+                      'Sisa percobaan verifikasi: ${_maxAttempts - _failedAttempts} dari $_maxAttempts kali',
                       style: const TextStyle(
                         fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.slateBlue,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Tombol Verifikasi Utama
-                PrimaryButton(
-                  label: 'Verifikasi Pendaftaran',
-                  loading: _loading,
-                  onPressed: ready ? _verify : null,
-                ),
-
-                const SizedBox(height: 20),
-
-                // Kirim Ulang Kode & Countdown
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Tidak menerima email? ',
-                      style: TextStyle(
-                        fontSize: 12.5,
                         color: AppColors.textMuted,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: _seconds == 0 ? _resend : null,
-                      child: Text(
-                        _seconds == 0
-                            ? 'Kirim Ulang'
-                            : 'Kirim Ulang ($_timeLabel)',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: _seconds == 0
-                              ? AppColors.orange
-                              : AppColors.textMuted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 28),
-
-                // Tombol Navigasi ke Login
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Sudah memiliki akun terverifikasi? ',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: _navigateToLogin,
-                      child: const Text(
-                        'Masuk Sekarang',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.charcoal,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -663,21 +745,19 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
 class _OtpBox extends StatelessWidget {
   final String char;
   final bool active;
-  final bool isCompact;
   final bool hasError;
 
   const _OtpBox({
     required this.char,
     required this.active,
-    this.isCompact = false,
     this.hasError = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final filled = char.isNotEmpty;
-    final width = isCompact ? 36.0 : 46.0;
-    final height = isCompact ? 48.0 : 54.0;
+    const width = 48.0;
+    const height = 54.0;
 
     Color borderColor = AppColors.line;
     if (hasError) {
@@ -718,8 +798,8 @@ class _OtpBox extends StatelessWidget {
       child: Text(
         char.isEmpty ? '•' : char,
         style: TextStyle(
-          fontSize: char.isEmpty ? 16 : 20,
-          fontWeight: FontWeight.w700,
+          fontSize: char.isEmpty ? 16 : 22,
+          fontWeight: FontWeight.w800,
           color: char.isEmpty ? AppColors.line : AppColors.textDark,
         ),
       ),

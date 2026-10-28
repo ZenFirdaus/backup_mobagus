@@ -14,6 +14,7 @@ import '../services/hive_service.dart';
 import 'home.dart';
 import 'onboarding.dart';
 import 'register.dart';
+import 'verify_email.dart';
 import 'forgot_password_page.dart';
 import '../services/supabase_service.dart';
 
@@ -122,6 +123,27 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       setState(() => _loading = false);
 
+      // Cegah login jika email belum diverifikasi di database
+      if (res.user != null && res.user!.emailConfirmedAt == null) {
+        await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+        if (!mounted) return;
+        setState(() => _loading = false);
+        _showSnackBar(
+          'Email belum diverifikasi. Harap verifikasi kode OTP terlebih dahulu.',
+          bg: AppColors.red,
+        );
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailPage(
+              name: emailText.split('@').first,
+              email: emailText,
+              password: pwd,
+            ),
+          ),
+        );
+        return;
+      }
+
       await SupabaseService.instance.initStorage(force: true);
       final prof = await SupabaseService.instance.getProfile();
       final name = (prof?.displayName != null && prof!.displayName.trim().isNotEmpty)
@@ -140,25 +162,46 @@ class _LoginPageState extends State<LoginPage> {
       if (msg.toLowerCase().contains('invalid login credentials')) {
         msg = 'Email atau kata sandi salah. Silakan periksa kembali.';
       } else if (msg.toLowerCase().contains('email not confirmed')) {
-        msg = 'Email belum diverifikasi. Masuk langsung dalam mode demo.';
-        _showSnackBar(msg, bg: AppColors.orange);
-        final name = emailText.split('@').first;
-        await _saveUserSession(name, emailText, pwd);
-        SupabaseService.instance.setDemoUser(emailText);
-        await SupabaseService.instance.initStorage(force: true);
-        await _handlePostLoginNavigation(name, emailText, pwd);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+                'Email Anda belum diverifikasi. Masukkan kode OTP terlebih dahulu.'),
+            backgroundColor: AppColors.red,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Verifikasi',
+              textColor: Colors.white,
+              onPressed: () async {
+                try {
+                  await Supabase.instance.client.auth.resend(
+                    type: OtpType.signup,
+                    email: emailText,
+                  );
+                } catch (_) {}
+                if (!mounted) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => VerifyEmailPage(
+                      name: emailText.split('@').first,
+                      email: emailText,
+                      password: pwd,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
         return;
       }
       _showSnackBar(msg, bg: AppColors.red);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      final fallbackName = emailText.split('@').first;
-      final resolvedName = fallbackName.isEmpty ? 'Kurator Rasa' : fallbackName;
-      await _saveUserSession(resolvedName, emailText, pwd);
-      SupabaseService.instance.setDemoUser(emailText);
-      await SupabaseService.instance.initStorage(force: true);
-      await _handlePostLoginNavigation(resolvedName, emailText, pwd);
+      _showSnackBar(
+        'Gagal masuk. Periksa kembali email, kata sandi, dan koneksi internet Anda.',
+        bg: AppColors.red,
+      );
     }
   }
 
